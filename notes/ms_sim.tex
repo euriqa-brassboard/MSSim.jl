@@ -261,4 +261,20 @@ and $\delta(t')$ is the (symmetric) detuning of the lasers from the carrier.
 (If phase modulation is used, $\theta(t)$ and $\theta_k(t)$
 may be discontinuous functions).
 
+
+Using Magnus expansion, we can write down the unitary evalution of the system as
+\eqar{
+  U_{MS}(\tau)=&\exp\sqr{\sum_{j=1,2}\sum_{k}\frac{\eta_{kj}}{2}\paren{\alpha^k(\tau)a^\dagger_k-{\alpha^*}^k(\tau)a_k}\sigma^j_x}\exp\paren{\ui\Theta(\tau)\sigma^1_x\sigma^2_x}
+}
+where
+\eqar{
+  \alpha^k(\tau)=&\int_0^\tau\Omega(t)\ue^{\ui\theta_k(t)}\ud t
+}
+describes the displacement of the $k$-th mode, and
+\eqar{
+  \Theta(\tau)=&\frac{1}{2}\sum_k\eta_{k1}\eta_{k2}\int_0^\tau\!\!\ud t\int_0^t\!\!\ud t'
+  \ \ \Omega(t)\Omega(t')\sin(\theta_k(t)-\theta_k(t'))
+}
+is the angle of the two-qubit rotation.
+
 \end{document}
