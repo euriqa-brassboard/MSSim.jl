@@ -234,5 +234,31 @@ For a typical gate sequence, what we care about are
   in the spin space.
 \end{enumerate}
 
+\section{M{\o}lmer-S{\o}rensen interaction}
+
+The effective Hamiltonian for a M{\o}lmer-S{\o}rensen gate sequence can be written as
+\eqar{
+  H_{MS}=&\frac{\Omega(t)}{2}\sum_{j=1,2}\sum_{k}\eta_{jk}\paren{a_k\ue^{-\ui\theta_k(t)}+a_k^\dagger\ue^{\ui\theta_k(t)}}\sigma^j_x
+}
+where $j$ is the ion index (simplified to $1$ and $2$)
+and $k$ is the motional mode index.
+For the ``fixed'' parameters, $\eta_{jk}$ is the Lamb-Dicke parameter for the $j$-th
+ion on the $k$-th mode. $a_k$ and $a^\dagger_k$ are the creation and annihilation
+operators for the $k$-th mode and the $\sigma_x^j$ is the single qubit spin operator
+we are coupling to which we'll set as $x$ in this note.
+(The error on the spin axis is ignored.)
+For the ``variable'' parameters in the pulse sequence,
+$\Omega(t)$ is the time dependent two-photon Rabi frequency (controlled by laser power)
+and $\theta_k(t)$ is the time-dependent phase offset between the laser and the $k$-th
+mode with,
+\eqar{
+  \theta_k(t)=&\omega_kt-\theta(t)\\
+  =&\omega_kt-\int_0^t\delta(t')\ud t'
+}
+where $\omega_k$ is the frequency of the $k$-th mode,
+$\theta(t)$ is the half the phase difference of the two lasers
+and $\delta(t')$ is the (symmetric) detuning of the lasers from the carrier.
+(If phase modulation is used, $\theta(t)$ and $\theta_k(t)$
+may be discontinuous functions).
 
 \end{document}
