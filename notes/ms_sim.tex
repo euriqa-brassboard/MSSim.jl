@@ -219,7 +219,7 @@ pulse sequence.
 We'll discuss a simple two tone pulse sequence where the two tones
 are perfectly symmetric around the carrier.
 We'll ignore any error in the carrier frequency in this note.
-Crosstalk, coupling to carrier and other sideband orders are also ignored.
+Crosstalk, coupling to carrier and other sideband orders are also ignored.\\
 
 For a typical gate sequence, what we care about are
 \begin{enumerate}
@@ -259,8 +259,7 @@ where $\omega_k$ is the frequency of the $k$-th mode,
 $\theta(t)$ is the half the phase difference of the two lasers
 and $\delta(t')$ is the (symmetric) detuning of the lasers from the carrier.
 (If phase modulation is used, $\theta(t)$ and $\theta_k(t)$
-may be discontinuous functions).
-
+may be discontinuous functions).\\
 
 Using Magnus expansion, we can write down the unitary evalution of the system as
 \eqar{
@@ -275,6 +274,22 @@ describes the displacement of the $k$-th mode, and
   \Theta(\tau)=&\frac{1}{2}\sum_k\eta_{k1}\eta_{k2}\int_0^\tau\!\!\ud t\int_0^t\!\!\ud t'
   \ \ \Omega(t)\Omega(t')\sin(\theta_k(t)-\theta_k(t'))
 }
-is the angle of the two-qubit rotation.
+is the angle of the two-qubit rotation. For a proper MS gate of length $T$,
+we need to have $\alpha^k(T)=0$ for all $k$s and the rotation angle
+at the end of the pulse $\Theta(T)$ matching the angle we want.\\
+
+For the purpose of optimization, the quantities we care about are.
+\begin{enumerate}
+\item Closure
+  \eqar{
+    \alpha^k(T)=&\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}\ud t
+  }
+\item Gradient of closure w.r.t. mode frequencies
+  \eqar{
+    \frac{\partial}{\partial\omega_k}\alpha^k(T)=&\int_0^T\frac{\partial}{\partial\omega_k}\Omega(t)\ue^{\ui\theta_k(t)}\ud t\\
+    =&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}\frac{\partial\theta_k(t)}{\partial\omega_k}\ud t\\
+    =&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}t\ud t
+  }
+\end{enumerate}
 
 \end{document}
