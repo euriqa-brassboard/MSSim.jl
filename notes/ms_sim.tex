@@ -303,7 +303,16 @@ For the purpose of optimization, the quantities we care about are.
 \item Enclosed area
   \eqar{
     A_k=&\int_0^T\!\!\ud t\int_0^t\!\!\ud t'
-    \ \Omega(t)\Omega(t')\sin(\theta_k(t)-\theta_k(t'))
+    \ \Omega(t)\Omega(t')\sin(\theta_k(t)-\theta_k(t'))\\
+    =&\int_0^T\!\!\ud t\int_0^t\!\!\ud t'
+    \ \Omega(t)\Omega(t')\sin(\omega_k(t-t')-(\theta(t)-\theta(t')))
+  }
+\item Gradient of enclosed area w.r.t. mode frequencies
+  \eqar{
+    \frac{\partial}{\partial\omega_k}A_k=&\int_0^T\!\!\ud t\int_0^t\!\!\ud t'
+    \ \Omega(t)\Omega(t')\sin(\theta_k(t)-\theta_k(t'))\\
+    =&\int_0^T\!\!\ud t\int_0^t\!\!\ud t'
+    \ \Omega(t)\Omega(t')\sin(\omega_k(t-t')-(\theta(t)-\theta(t')))
   }
 \end{enumerate}
 
