@@ -213,7 +213,7 @@
 
 \section{Goal}
 Derive the expression for simulating and optimizing a M{\o}lmer-S{\o}rensen gate
-pulse sequence.
+pulse sequence.\\
 
 \section{Setup and scope}
 We'll discuss a simple two tone pulse sequence where the two tones
@@ -235,7 +235,6 @@ For a typical gate sequence, what we care about are
 \end{enumerate}
 
 \section{M{\o}lmer-S{\o}rensen interaction}
-
 The effective Hamiltonian for a M{\o}lmer-S{\o}rensen gate sequence can be written as
 \eqar{
   H_{MS}=&\frac{\Omega(t)}{2}\sum_{j=1,2}\sum_{k}\eta_{jk}\paren{a_k\ue^{-\ui\theta_k(t)}+a_k^\dagger\ue^{\ui\theta_k(t)}}\sigma^j_x
@@ -314,7 +313,29 @@ When closure is assumed, this can be re-written as,
 which is proportional to average displacement.
 Moreover, if the pulse is symmetric, zeroing this value will also automatically
 zero the final displacement thus remove the need to optimize
-two values at the same time.
+two values at the same time.\\
 
+\section{Segmented pulse}
+When parameterizing the pulse shape used to drive MS gate,
+the pulse is usually decomposed into a few segments (in time)
+and the pulse shape within each segment is only sensitive to
+few parameters. We can take advantage of this structure
+to reduce the computational complexity when optimizing for
+a large number of free parameters by only dealing with one segment
+(and therefore few parameters) at a time.\\
+
+More specifically, during the optimization process,
+we care not only about the values listed above (closure, area,
+and their gradient w.r.t. mode frequency)
+but also their gradient w.r.t. the pulse shape parameters.
+By dealing with the effect of each segment properly,
+we can compute all the gradient within $\mathrm{O}(N_p + N_s)$
+instead of $\mathrm{O}(N_pN_s)$, where $N_p$ is the number of parameters
+and $N_s$ is the number of segments.\\
+
+This is trivial to do for closure since it is a single integral
+and therefore is completely linear w.r.t. different segment of the integrand.
+The gradient of the integral on one segment is directly that on the final result
+and is independent of the functional form in any other segments.\\
 
 \end{document}
