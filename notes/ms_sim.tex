@@ -329,13 +329,57 @@ we care not only about the values listed above (closure, area,
 and their gradient w.r.t. mode frequency)
 but also their gradient w.r.t. the pulse shape parameters.
 By dealing with the effect of each segment properly,
-we can compute all the gradient within $\mathrm{O}(N_p + N_s)$
-instead of $\mathrm{O}(N_pN_s)$, where $N_p$ is the number of parameters
+we can compute all the gradient within $\mathcal{O}(N_p + N_s)$
+instead of $\mathcal{O}(N_pN_s)$, where $N_p$ is the number of parameters
 and $N_s$ is the number of segments.\\
 
 This is trivial to do for closure since it is a single integral
 and therefore is completely linear w.r.t. different segment of the integrand.
 The gradient of the integral on one segment is directly that on the final result
 and is independent of the functional form in any other segments.\\
+
+The enclosed area, and the average displacement, is more complicated however,
+since they involve a double integral so the gradient of the integral
+within the segment is not the same as the effect on the final value.
+The change is still linear but does require a conversion factor
+caused by the later segments.\\
+
+To calculate this, let's first consider a generic double integral
+\eqar{
+  I=&\int_0^T\!\!\ud t\ A(t)\int_0^t\!\!\ud t'\ B(t')
+}
+which should cover both cases we are interested above
+with the appropriate definition of the $A$ and $B$ functions.\\
+
+Now let's assume that there are $N_s$ segments. The $n$-th one starts
+at $t_{n}$ and ends at $t_{n+1}$ with $t_0=0$ and $t_{N_s}=T$.
+\eqar{
+  I=&\int_0^T\!\!\ud t\ A(t)\int_0^t\!\!\ud t'\ B(t')\\
+  =&\sum_{n=0}^{N_s-1}\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ A(t)\int_0^t\!\!\ud t'\ B(t')\\
+  =&\sum_{n=0}^{N_s-1}\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ A(t)
+  \paren{\sum_{n'=0}^{n-1}\int_{t_{n'}}^{t_{n'+1}}\!\!\ud t'\ B(t')+\int_{t_n}^{t}\!\!\ud t'\ B(t')}\\
+  =&\sum_{n=0}^{N_s-1}\sum_{n'=0}^{n-1}\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ A(t)
+  \int_{t_{n'}}^{t_{n'+1}}\!\!\ud t'\ B(t')+\sum_{n=0}^{N_s-1}\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ A(t)\int_{t_n}^{t}\!\!\ud t'\ B(t')\\
+  =&\sum_{n=0}^{N_s-1}\sum_{n'=0}^{n-1}A_{n}B_{n'}+\sum_{n=0}^{N_s-1}C_n
+}
+where $A_n\equiv\dint_{t_n}^{t_{n+1}}A(t)\ud t$, $B_n\equiv\dint_{t_n}^{t_{n+1}}B(t)\ud t$,
+and $C_n\equiv\dint_{t_{n}}^{t_{n+1}}\!\!\ud t\ A(t)\dint_{t_n}^{t}\!\!\ud t'\ B(t')$.
+All three of these values only depend on the value of the $A$ and $B$ functions
+within the corresponding segments and can be computed with $\mathcal{O}(1)$ time.
+Moreover, by pre-computing the $\dsum_{n'=0}^{n-1}B_{n'}$ values ($N_s-1$ values in total),
+the two dimentional summation can be computed in $\mathcal{O}(N_s)$ time
+and therefore the whole expression can be computed within $\mathcal{O}(N_s)$ time.\\
+
+As for the derivatives, the derivatives of $A_n$, $B_n$, $C_n$ w.r.t.
+the corresponding parameters can be computed within $\mathcal{O}(N_p)$ time.
+We then have
+\eqar{
+  \pdiff{I}{A_n}=&\sum_{n'=0}^{n-1}B_{n'}\\
+  \pdiff{I}{B_n}=&\sum_{n'=0}^{N_s-1}\sum_{n''=0}^{n'-1}A_{n'}\delta_{n,n''}\\
+  =&\sum_{n'=n+1}^{N_s-1}A_{n'}\\
+  \pdiff{I}{C_n}=&1
+}
+which can be all computed within $\mathcal{O}(N_s)$ time so the full set of
+all direvatives can be computed within $\mathcal{O}(N_s+N_p)$ time.
 
 \end{document}
