@@ -382,4 +382,19 @@ We then have
 which can be all computed within $\mathcal{O}(N_s)$ time so the full set of
 all direvatives can be computed within $\mathcal{O}(N_s+N_p)$ time.
 
+\subsection{Segment evaluation}
+Let's limit the pulse shape we support within each segment to linear in terms of
+amplitude and phase (note that a linear phase ramp is a constant frequency shift,
+linear frequency ramp isn't currently supported).
+Under these assumptions, the most generic nontrivial form of $A$ and $B$
+we need to deal with is
+\eqar{
+  &(a_0t^2 + b_0t + c_0)\ue^{\ui \paren{a_1 t + b_1}}
+}
+Symbolically evaluating this integral we have,
+\eqar{
+  &\int(a_0t^2 + b_0t + c_0)\ue^{\ui \paren{a_1 t + b_1}}\ud t\\
+  =&\frac{\ui\ue^{\ui \paren{a_1 t + b_1}}}{a_1^3}\paren{a_0\paren{a_1^2t^2+2\ui a_1 t-2}+a_1\paren{a_1c_0+b_0\paren{a_1t+\ui}}}
+}
+
 \end{document}
