@@ -389,12 +389,50 @@ linear frequency ramp isn't currently supported).
 Under these assumptions, the most generic nontrivial form of $A$ and $B$
 we need to deal with is
 \eqar{
-  &(a_0t^2 + b_0t + c_0)\ue^{\ui \paren{a_1 t + b_1}}
+  &(a_0t^2 + b_0t + c_0)\ue^{\ui \paren{\omega t + \varphi_0}}
 }
-Symbolically evaluating this integral we have,
+Combining $A_i$, $B_i$ and $C_i$, we actually care about the integral
+$\displaystyle F_n(\omega, t)\equiv\int t^n\ue^{\ui \paren{\omega t}}\ud t$
+up to $n=4$ order (see below) (the phase factor $\varphi_0$ is ignored
+since it's just a global multiplicity factor). From symbolic evaluation we have,
 \eqar{
-  &\int(a_0t^2 + b_0t + c_0)\ue^{\ui \paren{a_1 t + b_1}}\ud t\\
-  =&\frac{\ui\ue^{\ui \paren{a_1 t + b_1}}}{a_1^3}\paren{a_0\paren{a_1^2t^2+2\ui a_1 t-2}+a_1\paren{a_1c_0+b_0\paren{a_1t+\ui}}}
+  F_0(\omega, t)=&\frac{-\ui}{\omega}\ue^{\ui\omega t}\\
+  F_1(\omega, t)=&\frac{-\ui\omega t + 1}{\omega^2}\ue^{\ui\omega t}\\
+  F_2(\omega, t)=&\frac{-\ui\omega^2t^2+2\omega t+2\ui}{\omega^3}\ue^{\ui\omega t}\\
+  F_3(\omega, t)=&\frac{-\ui\omega^3t^3+3\omega^2t^2+6\ui\omega t-6}{\omega^4}\ue^{\ui\omega t}\\
+  F_4(\omega, t)=&\frac{-\ui\omega^4t^4+4\omega^3t^3+12\ui\omega t-24\omega t-24\ui}{\omega^5}\ue^{\ui\omega t}
+}
+
+For a pulse sequence where the amplitude and phase of the pulse are given by
+\eqar{
+  \Omega(t)=&\Omega_n+\Omega'_n\paren{t-t_n}&(t_n\leqslant t<t_{n+1})\\
+  \theta(t)=&\theta_n+\bar\omega_n\paren{t-t_n}&(t_n\leqslant t<t_{n+1})
+}
+where $\bar\omega_n$ is the motional drive frequency from the laser
+(half of red-blue sideband difference) during the $n$-th segment.\\
+
+For closure, the shift within each segment is,
+\eqar{
+  \alpha_k^n\equiv&\int_{t_n}^{t_{n+1}}\Omega(t)\ue^{\ui\theta_k(t)}\ud t\\
+  =&\int_{t_n}^{t_{n+1}}\paren{\Omega_n+\Omega'_n\paren{t-t_n}}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\ud t\\
+  =&\int_{0}^{\tau_n}\paren{\Omega_n+\Omega'_n t}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n t}}\ud t\\
+  =&\ue^{-\ui\theta_n}\paren{\Omega_nF_0(\omega_k-\bar\omega_n, \tau_n)+\Omega'_nF_1(\omega_k-\bar\omega_n, \tau_n)}
+}
+where $\tau_n\equiv t_{n+1}-t_n$. And the final closure is the sum of the value within each segment,
+\eqar{
+  \alpha_k(T)=&\sum_{n=0}^{N_s-1}\alpha_k^n
+}
+
+For closure gradient w.r.t. mode frequencies, the gradient integral for each segment,
+\eqar{
+  \beta_k^n\equiv&\int_{t_n}^{t_{n+1}}\Omega(t)t\ue^{\ui\theta_k(t)}\ud t\\
+  =&\int_{t_n}^{t_{n+1}}\paren{\Omega_n+\Omega'_n\paren{t-t_n}}t\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\ud t\\
+  =&\int_{0}^{\tau_n}\paren{\Omega_n+\Omega'_n t}\paren{t+t_n}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n t}}\ud t\\
+  =&\ue^{-\ui\theta_n}\paren{\Omega_nt_nF_0(\omega_k-\bar\omega_n, \tau_n)+\paren{\Omega_n+\Omega'_nt_n}F_1(\omega_k-\bar\omega_n, \tau_n)+\Omega'_nF_2(\omega_k-\bar\omega_n, \tau_n)}
+}
+and the full gradient,
+\eqar{
+  \pdiff{\alpha_k(T)}{\omega_k}=&\ui\sum_{n=0}^{N_s-1}\beta_k^n
 }
 
 \end{document}
