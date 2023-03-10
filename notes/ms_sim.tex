@@ -301,14 +301,14 @@ For the purpose of optimization, the quantities we care about are.
   two values at the same time.
 \item Enclosed area
   \eqar{
-    A_k=&\mathrm{Im}\paren{\int_0^T\!\!\ud t\int_0^t\!\!\ud t'
+    \mathcal{A}_k=&\mathrm{Im}\paren{\int_0^T\!\!\ud t\int_0^t\!\!\ud t'
       \ \Omega(t)\Omega(t')\ue^{\ui\theta_k(t)-\ui\theta_k(t')}}\\
     =&\mathrm{Im}\paren{\int_0^T\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_0^t\!\!\ud t'
       \ \Omega(t')\ue^{-\ui\theta_k(t')}}
   }
 \item Gradient of enclosed area w.r.t. mode frequencies
   \eqar{
-    \pdiff{A_k}{\omega_k}
+    \pdiff{\mathcal{A}_k}{\omega_k}
     =&\mathrm{Re}\paren{\int_0^T\!\!\ud t\ t\Omega(t)\ue^{\ui\theta_k(t)}\int_0^t\!\!\ud t'
       \ \Omega(t')\ue^{-\ui\theta_k(t')}-\int_0^T\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_0^t\!\!\ud t'
       \ t'\Omega(t')\ue^{-\ui\theta_k(t')}}
@@ -415,10 +415,12 @@ For closure, the shift within each segment is,
 \eqar{
   \alpha_k^n\equiv&\int_{t_n}^{t_{n+1}}\Omega(t)\ue^{\ui\theta_k(t)}\ud t\\
   =&\int_{t_n}^{t_{n+1}}\paren{\Omega_n+\Omega'_n\paren{t-t_n}}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\ud t\\
-  =&\int_{0}^{\tau_n}\paren{\Omega_n+\Omega'_n t}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n t}}\ud t\\
-  =&\ue^{-\ui\theta_n}\paren{\Omega_nF_0(\omega_k-\bar\omega_n, \tau_n)+\Omega'_nF_1(\omega_k-\bar\omega_n, \tau_n)}
+  =&\int_{0}^{\tau_n}\paren{\Omega_n+\Omega'_n t}\ue^{\ui\paren{\omega_kt+\varphi_k^n-\bar\omega_n t}}\ud t\\
+  =&\ue^{\ui\varphi_k^n}\paren{\Omega_nF_0(\delta_k^n, \tau_n)+\Omega'_nF_1(\delta_k^n, \tau_n)}
 }
-where $\tau_n\equiv t_{n+1}-t_n$. And the final closure is the sum of the value within each segment,
+where $\tau_n\equiv t_{n+1}-t_n$ is the length of the $n$-th segment, $\delta_k^n\equiv\omega_k-\bar\omega_n$ is the detuning of the $n$-th segment from the $k$-th mode, $\varphi_k^n\equiv\omega_kt_n-\theta_n$ is the initial phase difference with the $k$-th mode at the beginning of the $n$-th segment.\\
+
+And the final closure is the sum of the value within each segment,
 \eqar{
   \alpha_k(T)=&\sum_{n=0}^{N_s-1}\alpha_k^n
 }
@@ -427,12 +429,27 @@ For closure gradient w.r.t. mode frequencies, the gradient integral for each seg
 \eqar{
   \beta_k^n\equiv&\int_{t_n}^{t_{n+1}}\Omega(t)t\ue^{\ui\theta_k(t)}\ud t\\
   =&\int_{t_n}^{t_{n+1}}\paren{\Omega_n+\Omega'_n\paren{t-t_n}}t\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\ud t\\
-  =&\int_{0}^{\tau_n}\paren{\Omega_n+\Omega'_n t}\paren{t+t_n}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n t}}\ud t\\
-  =&\ue^{-\ui\theta_n}\paren{\Omega_nt_nF_0(\omega_k-\bar\omega_n, \tau_n)+\paren{\Omega_n+\Omega'_nt_n}F_1(\omega_k-\bar\omega_n, \tau_n)+\Omega'_nF_2(\omega_k-\bar\omega_n, \tau_n)}
+  =&\int_{0}^{\tau_n}\paren{\Omega_n+\Omega'_n t}\paren{t+t_n}\ue^{\ui\paren{\omega_kt+\varphi_k^n-\bar\omega_n t}}\ud t\\
+  =&\ue^{\ui\varphi_k^n}\paren{\Omega_nt_nF_0(\delta_k^n, \tau_n)+\paren{\Omega_n+\Omega'_nt_n}F_1(\delta_k^n, \tau_n)+\Omega'_nF_2(\delta_k^n, \tau_n)}
 }
 and the full gradient,
 \eqar{
   \pdiff{\alpha_k(T)}{\omega_k}=&\ui\sum_{n=0}^{N_s-1}\beta_k^n
 }
+
+For the average displacement, the $A_n$ terms are simply $\tau_n$ and the $B_n$ terms
+are $\alpha_k^n$. The $C_n$ terms has to be computed,
+\eqar{
+  \bar\alpha_k^n=&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\int_{t_n}^{t}\!\!\ud t'\ \Omega(t')\ue^{\ui\theta_k(t')}\\
+  =&\int_{0}^{\tau_n}\!\!\ud t\int_{t_n}^{t_n+t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_n\paren{t'-t_n}}\ue^{\ui\paren{\omega_kt'-\theta_n-\bar\omega_n\paren{t'-t_n}}}\\
+  =&\ue^{\ui\varphi_k^n}\int_{0}^{\tau_n}\!\!\ud t\int_{0}^{t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_n t'}\ue^{\ui\delta_k^nt'}\\
+  =&\ue^{\ui\varphi_k^n}\int_{0}^{\tau_n}\!\!\ud t
+  \paren{\paren{\frac{\Omega'_n-\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}-\ui\frac{\Omega'_nt}{\delta_k^n}}\ue^{\ui\delta_k^nt}-\frac{\Omega'_n-\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}}\\
+  =&\ue^{\ui\varphi_k^n}
+  \paren{\frac{\Omega'_n-\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}F_0(\delta_k^n, \tau_n)-\frac{\ui\Omega'_n}{\delta_k^n}F_1(\delta_k^n, \tau_n)-\frac{\Omega'_n-\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}\tau_n}\\
+}
+
+For the enclosed area, the $A_n$ and $B_n$ terms are both the $\alpha_k^n$
+computed above,
 
 \end{document}
