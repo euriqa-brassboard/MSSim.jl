@@ -421,11 +421,39 @@ For closure, the shift within each segment is,
   \alpha_k^n\equiv&\int_{t_n}^{t_{n+1}}\Omega(t)\ue^{\ui\theta_k(t)}\ud t\\
   =&\int_{t_n}^{t_{n+1}}\paren{\Omega_n+\Omega'_n\paren{t-t_n}}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\ud t\\
   =&\int_{0}^{\tau_n}\paren{\Omega_n+\Omega'_n t}\ue^{\ui\paren{\omega_kt+\varphi_k^n-\bar\omega_n t}}\ud t\\
-  =&\ue^{\ui\varphi_k^n}\paren{\Omega_nF_0(\delta_k^n, \tau_n)+\Omega'_nF_1(\delta_k^n, \tau_n)-\Omega_nF_0(\delta_k^n, 0)-\Omega'_nF_1(\delta_k^n, 0)}
+  =&\ue^{\ui\varphi_k^n}\paren{\Omega_nF_0(\delta_k^n, \tau_n)+\Omega'_nF_1(\delta_k^n, \tau_n)-\Omega_nF_0(\delta_k^n, 0)-\Omega'_nF_1(\delta_k^n, 0)}\\
+  =&\frac{\ue^{\ui\varphi_k^n}}{{\delta_k^n}^2}\paren{
+    \paren{-\ui\Omega_n\delta_k^n+\Omega'_n}\paren{\ue^{\ui\delta_k^n\tau_n}-1}
+    -\ui\Omega'_n\delta_k^n\tau_n\ue^{\ui\delta_k^n\tau_n}}\\
+  =&\ue^{\ui\varphi_k^n}\lparen{
+    \Omega'_n\tau_n^2\frac{\cos\paren{\delta_k^n\tau_n}-1}{{\delta_k^n}^2\tau_n^2}
+    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\frac{\sin\paren{\delta_k^n\tau_n}}{\delta_k^n\tau_n}
+  }
 }
 where $\tau_n\equiv t_{n+1}-t_n$ is the length of the $n$-th segment, $\delta_k^n\equiv\omega_k-\bar\omega_n$ is the detuning of the $n$-th segment from the $k$-th mode, $\varphi_k^n\equiv\omega_kt_n-\theta_n$ is the initial phase difference with the $k$-th mode at the beginning of the $n$-th segment.\\
 
-And the final closure is the sum of the value within each segment,
+We can further transform this into a form that is easier to evaluate
+around $\delta_k^n=0$,
+\eqar{
+  \alpha_k^n=&\ue^{\ui\varphi_k^n}\lparen{
+    \Omega'_n\tau_n^2\frac{\cos\paren{\delta_k^n\tau_n}-1}{{\delta_k^n}^2\tau_n^2}
+    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\frac{\sin\paren{\delta_k^n\tau_n}}{\delta_k^n\tau_n}
+  }\\
+  &\rparen{
+    -\ui\Omega_n\delta_k^n\tau_n^2\frac{\cos\paren{\delta_k^n\tau_n}-1}{{\delta_k^n}^2\tau_n^2}
+    -\ui\Omega'_n\tau_n^2\frac{\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
+  }\\
+  =&\ue^{\ui\varphi_k^n}\lparen{
+    \frac{\Omega'_n\tau_n^2-\ui\Omega_n\delta_k^n\tau_n^2}{2}
+    \mathrm{sinc}_\pi^2\paren{\frac{\delta_k^n\tau_n}{2\pi}}
+  }\\
+  &\rparen{
+    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\mathrm{sinc}_\pi\paren{\frac{\delta_k^n\tau_n}{\pi}}
+    -\frac{\ui\Omega'_n\tau_n^2}{\pi}\mathrm{cosc}_\pi\paren{\frac{\delta_k^n\tau_n}{\pi}}
+  }
+}
+
+The final closure is the sum of the value within each segment,
 \eqar{
   \alpha_k(T)=&\sum_{n=0}^{N_s-1}\alpha_k^n
 }
@@ -441,27 +469,41 @@ are $\alpha_k^n$. The $C_n$ terms has to be computed,
   =&\frac{\ue^{\ui\varphi_k^n}}{{\delta_k^n}^2}
   \lparen{\paren{\Omega'_n-\ui\Omega_n\delta_k^n}F_0(\delta_k^n, \tau_n)-\ui\Omega'_n\delta_k^nF_1(\delta_k^n, \tau_n)}\\
   &\rparen{-\paren{\Omega'_n-\ui\Omega_n\delta_k^n}F_0(\delta_k^n, 0)+\ui\Omega'_n\delta_k^nF_1(\delta_k^n, 0)-\paren{\Omega'_n-\ui\Omega_n\delta_k^n}\tau_n}\\
+  =&\frac{\ue^{\ui\varphi_k^n}}{{\delta_k^n}^2}
+  \paren{\frac{-\Omega_n\delta_k^n-2\ui\Omega'_n}{{\delta_k^n}}\paren{\ue^{\ui{\delta_k^n}\tau_n} - 1}-\Omega'_n\tau_n\ue^{\ui{\delta_k^n}\tau_n}-\paren{\Omega'_n-\ui\Omega_n\delta_k^n}\tau_n}\\
 }
 
 For the enclosed area, the $A_n$ and $B_n$ terms are both the $\alpha_k^n$
 computed above. The $C_n$ terms,
 \eqar{
-  \gamma_k^n=&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_{t_n}^{t}\!\!\ud t'\ \Omega(t')\ue^{\ui\theta_k(t')}\\
-  =&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ \paren{\Omega_n+\Omega'_n\paren{t-t_n}}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\int_{t_n}^{t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_n\paren{t'-t_n}}\ue^{\ui\paren{\omega_kt'-\theta_n-\bar\omega_n\paren{t'-t_n}}}\\
-  =&\ue^{\ui2\varphi_k^n}\int_{0}^{\tau_n}\!\!\ud t\ \paren{\Omega_n+\Omega'_nt}\ue^{\ui\delta_k^nt}\int_{0}^{t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_nt'}\ue^{\ui\delta_k^nt'}\\
-  =&\ue^{\ui2\varphi_k^n}\int_{0}^{\tau_n}\!\!\ud t\ \paren{\Omega_n+\Omega'_nt}\ue^{\ui\delta_k^nt}
-  \paren{\paren{\frac{\Omega'_n-\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}-\ui\frac{\Omega'_nt}{\delta_k^n}}\ue^{\ui\delta_k^nt}-\frac{\Omega'_n-\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}}\\
-  =&\frac{\ue^{\ui2\varphi_k^n}}{{\delta_k^n}^2}\int_{0}^{\tau_n}\!\!\ud t\paren{
-    \paren{\Omega_n+\Omega'_nt}\paren{\paren{\Omega'_n-\ui\Omega_n\delta_k^n}-\ui\Omega'_n\delta_k^nt}\ue^{\ui2\delta_k^nt}-\paren{\Omega_n+\Omega'_nt}\paren{\Omega'_n-\ui\Omega_n\delta_k^n}\ue^{\ui\delta_k^nt}}\\
-  =&\frac{\ue^{\ui2\varphi_k^n}}{{\delta_k^n}^2}
-  \lparen{
-    \Omega_n\paren{\Omega'_n-\ui\Omega_n\delta_k^n}F_0(2\delta_k^n, \tau_n)
-    +\Omega'_n\paren{\Omega'_n-\ui2\Omega_n\delta_k^n}F_1(2\delta_k^n, \tau_n)
-    -\ui{\Omega'_n}^2\delta_k^nF_2(2\delta_k^n, \tau_n)
-  }\\
-  &\rparen{
-    -\paren{\Omega'_n-\ui\Omega_n\delta_k^n}
-    \paren{\Omega_nF_0(\delta_k^n, \tau_n)+\Omega'_nF_1(\delta_k^n, \tau_n)}
+  \gamma_k^n=&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_{t_n}^{t}\!\!\ud t'\ \Omega(t')\ue^{-\ui\theta_k(t')}\\
+  =&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ \paren{\Omega_n+\Omega'_n\paren{t-t_n}}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\int_{t_n}^{t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_n\paren{t'-t_n}}\ue^{-\ui\paren{\omega_kt'-\theta_n-\bar\omega_n\paren{t'-t_n}}}\\
+  =&\int_{0}^{\tau_n}\!\!\ud t\ \paren{\Omega_n+\Omega'_nt}\ue^{\ui\delta_k^nt}\int_{0}^{t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_nt'}\ue^{-\ui\delta_k^nt'}\\
+  =&\int_{0}^{\tau_n}\!\!\ud t\ \paren{\Omega_n+\Omega'_nt}\ue^{\ui\delta_k^nt}
+  \paren{\paren{\frac{\Omega'_n+\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}+\ui\frac{\Omega'_nt}{\delta_k^n}}\ue^{-\ui\delta_k^nt}-\frac{\Omega'_n+\ui\Omega_n\delta_k^n}{{\delta_k^n}^2}}\\
+  =&\frac{1}{{\delta_k^n}^2}\int_{0}^{\tau_n}\!\!\ud t
+  \ \paren{
+    \paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega_n
+    +\paren{\Omega'_n+2\ui\Omega_n\delta_k^n}\Omega'_nt
+    +\ui{\Omega'_n}^2\delta_k^nt^2
+    -\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\paren{\Omega_n+\Omega'_nt}
+    \ue^{\ui\delta_k^nt}}\\
+  =&\frac{1}{{\delta_k^n}^2}
+  \lparen{\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega_n\tau_n+\frac{1}{2}\paren{\Omega'_n+2\ui\Omega_n\delta_k^n}\Omega'_n\tau_n^2+\frac{1}{3}\ui{\Omega'_n}^2\delta_k^n\tau_n^3}\\
+  &\rparen{-\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega_n\paren{F_0(\delta_k^n, \tau_n)-F_0(\delta_k^n, 0)}-\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega'_n\paren{F_1(\delta_k^n, \tau_n)-F_1(\delta_k^n, 0)}}\\
+  =&\frac{1}{{\delta_k^n}^2}
+  \lparen{\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega_n\tau_n+\frac{1}{2}\paren{\Omega'_n+2\ui\Omega_n\delta_k^n}\Omega'_n\tau_n^2+\frac{1}{3}\ui{\Omega'_n}^2\delta_k^n\tau_n^3}\\
+  &\rparen{+\frac{\ui}{{\delta_k^n}}\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega_n
+    \paren{\ue^{\ui{\delta_k^n}\tau_n}-1}
+    -\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega'_n
+    \paren{\frac{-\ui{\delta_k^n}\tau_n + 1}{{\delta_k^n}^2}\ue^{\ui{\delta_k^n}\tau_n}
+      -\frac{1}{{\delta_k^n}^2}}}\\
+  =&\frac{1}{{\delta_k^n}^2}
+  \lparen{\paren{\Omega'_n+\ui\Omega_n\delta_k^n}\Omega_n\tau_n+\frac{1}{2}\paren{\Omega'_n+2\ui\Omega_n\delta_k^n}\Omega'_n\tau_n^2+\frac{1}{3}\ui{\Omega'_n}^2\delta_k^n\tau_n^3}\\
+  &\rparen{-\frac{1}{{\delta_k^n}^2}\paren{\Omega_n^2{\delta_k^n}^2+{\Omega'_n}^2}
+    \paren{\ue^{\ui{\delta_k^n}\tau_n}-1}
+    +\ui\paren{\Omega'_n+\ui\Omega_n\delta_k^n}
+    \frac{\Omega'_n\tau_n}{{\delta_k^n}}\ue^{\ui{\delta_k^n}\tau_n}
   }\\
 }
 
