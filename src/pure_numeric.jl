@@ -1,0 +1,36 @@
+#!/usr/bin/julia
+
+module PureNumeric
+
+using QuadGK
+
+# Some useful integral for simulating MS gates.
+# Done completely numerically. This is likely the slowest
+# but should be useful to test other faster implementations.
+
+function displacement(t0, t1, Ω, θ)
+    f(t) = Ω(t) * exp(im * θ(t))
+    res, err = quadgk(f, t0, t1)
+    return res
+end
+
+function cumulative_displacement(t0, t1, Ω, θ)
+    f(t) = displacement(t0, t, Ω, θ)
+    res, err = quadgk(f, t0, t1)
+    return res
+end
+
+function enclosed_area_complex(t0, t1, Ω, θ)
+    f(t) = Ω(t) * exp(im * θ(t)) * displacement(t0, t, Ω, t->-θ(t))
+    res, err = quadgk(f, t0, t1)
+    return res
+end
+
+function enclosed_area(t0, t1, Ω, θ)
+    # Only getting the interesting part of the integral.
+    f(t) = imag(Ω(t) * exp(im * θ(t)) * displacement(t0, t, Ω, t->-θ(t)))
+    res, err = quadgk(f, t0, t1)
+    return res
+end
+
+end
