@@ -444,12 +444,11 @@ around $\delta_k^n=0$,
     -\ui\Omega'_n\tau_n^2\frac{\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
   }\\
   =&\ue^{\ui\varphi_k^n}\lparen{
-    \frac{\Omega'_n\tau_n^2-\ui\Omega_n\delta_k^n\tau_n^2}{2}
-    \mathrm{sinc}_\pi^2\paren{\frac{\delta_k^n\tau_n}{2\pi}}
+    \paren{\ui\Omega_n\delta_k^n\tau_n^2-\Omega'_n\tau_n^2}\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
   }\\
   &\rparen{
-    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\mathrm{sinc}_\pi\paren{\frac{\delta_k^n\tau_n}{\pi}}
-    -\frac{\ui\Omega'_n\tau_n^2}{\pi}\mathrm{cosc}_\pi\paren{\frac{\delta_k^n\tau_n}{\pi}}
+    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\mathrm{sinc}\paren{\delta_k^n\tau_n}
+    -\ui\Omega'_n\tau_n^2\mathrm{cosc}\paren{\delta_k^n\tau_n}
   }
 }
 
@@ -470,7 +469,36 @@ are $\alpha_k^n$. The $C_n$ terms has to be computed,
   \lparen{\paren{\Omega'_n-\ui\Omega_n\delta_k^n}F_0(\delta_k^n, \tau_n)-\ui\Omega'_n\delta_k^nF_1(\delta_k^n, \tau_n)}\\
   &\rparen{-\paren{\Omega'_n-\ui\Omega_n\delta_k^n}F_0(\delta_k^n, 0)+\ui\Omega'_n\delta_k^nF_1(\delta_k^n, 0)-\paren{\Omega'_n-\ui\Omega_n\delta_k^n}\tau_n}\\
   =&\frac{\ue^{\ui\varphi_k^n}}{{\delta_k^n}^2}
-  \paren{\frac{-\Omega_n\delta_k^n-2\ui\Omega'_n}{{\delta_k^n}}\paren{\ue^{\ui{\delta_k^n}\tau_n} - 1}-\Omega'_n\tau_n\ue^{\ui{\delta_k^n}\tau_n}-\paren{\Omega'_n-\ui\Omega_n\delta_k^n}\tau_n}\\
+  \paren{\frac{-\Omega_n\delta_k^n-2\ui\Omega'_n}{{\delta_k^n}}\paren{\ue^{\ui{\delta_k^n}\tau_n} - 1}-\Omega'_n\tau_n\ue^{\ui{\delta_k^n}\tau_n}-\paren{\Omega'_n-\ui\Omega_n\delta_k^n}\tau_n}
+}
+
+Again, for an better expression around $\delta_k^n=0$,
+\eqar{
+  \bar\alpha_k^n=&\frac{\ue^{\ui\varphi_k^n}}{{\delta_k^n}^2}
+  \lparen{
+    -\Omega_n\paren{\cos\paren{{\delta_k^n}\tau_n}-1}
+    +\frac{2\Omega'_n\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}}
+    -\Omega'_n\tau_n\cos\paren{{\delta_k^n}\tau_n}
+    -\Omega'_n\tau_n
+  }\\
+  &\rparen{
+    -\ui\Omega_n\sin\paren{{\delta_k^n}\tau_n}
+    -2\ui\frac{\Omega'_n\paren{\cos\paren{{\delta_k^n}\tau_n}-1}}{{\delta_k^n}}
+    -\ui\Omega'_n\tau_n\sin\paren{{\delta_k^n}\tau_n}
+    +\ui\Omega_n\delta_k^n\tau_n
+  }\\
+  =&\ue^{\ui\varphi_k^n}\tau_n
+  \lparen{
+    \Omega_n\tau_n\frac{1-\cos\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^2\tau_n^2}
+    +\Omega'_n\tau_n^2\frac{2\sin\paren{{\delta_k^n}\tau_n}
+      -{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}
+      -{\delta_k^n}\tau_n
+    }{{\delta_k^n}^3\tau_n^3}
+  }\\
+  &\rparen{
+    +\ui\Omega_n\tau_n\frac{\delta_k^n\tau_n-\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^2\tau_n^2}
+    -\ui\Omega'_n\tau_n^2\frac{2\cos\paren{{\delta_k^n}\tau_n}-2+\delta_k^n\tau_n\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^3\tau_n^3}
+  }
 }
 
 For the enclosed area, the $A_n$ and $B_n$ terms are both the $\alpha_k^n$
