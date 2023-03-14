@@ -498,7 +498,7 @@ Again, for an better expression around $\delta_k^n=0$,
 For the enclosed area, the $A_n$ and $B_n$ terms are both the $\alpha_k^n$
 computed above. The $C_n$ terms,
 \eqar{
-  \gamma_k^n=&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_{t_n}^{t}\!\!\ud t'\ \Omega(t')\ue^{-\ui\theta_k(t')}\\
+  \gamma_k^n\equiv&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_{t_n}^{t}\!\!\ud t'\ \Omega(t')\ue^{-\ui\theta_k(t')}\\
   =&\int_{t_{n}}^{t_{n+1}}\!\!\ud t\ \paren{\Omega_n+\Omega'_n\paren{t-t_n}}\ue^{\ui\paren{\omega_kt-\theta_n-\bar\omega_n\paren{t-t_n}}}\int_{t_n}^{t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_n\paren{t'-t_n}}\ue^{-\ui\paren{\omega_kt'-\theta_n-\bar\omega_n\paren{t'-t_n}}}\\
   =&\int_{0}^{\tau_n}\!\!\ud t\ \paren{\Omega_n+\Omega'_nt}\ue^{\ui\delta_k^nt}\int_{0}^{t}\!\!\ud t'\ \paren{\Omega_n+\Omega'_nt'}\ue^{-\ui\delta_k^nt'}\\
   =&\int_{0}^{\tau_n}\!\!\ud t\ \paren{\Omega_n+\Omega'_nt}\ue^{\ui\delta_k^nt}
@@ -526,7 +526,33 @@ computed above. The $C_n$ terms,
     \paren{\ue^{\ui{\delta_k^n}\tau_n}-1}
     +\ui\paren{\Omega'_n+\ui\Omega_n\delta_k^n}
     \frac{\Omega'_n\tau_n}{{\delta_k^n}}\ue^{\ui{\delta_k^n}\tau_n}
+  }
+}
+For an better expression around $\delta_k^n=0$,
+\eqar{
+  \gamma_k^n=&\frac{1}{{\delta_k^n}^2}
+  \lparen{
+    \paren{\Omega_n^2+\Omega_n\Omega'_n\tau_n}\paren{1-\cos\paren{{\delta_k^n}\tau_n}}
+    +{\Omega'_n}^2\frac{{\delta_k^n}^2\tau_n^2/2+1-\cos\paren{{\delta_k^n}\tau_n}
+      -{\delta_k^n}\tau_n\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^2}
   }\\
+  &\rparen{
+    +\ui\paren{\Omega_n^2+\Omega_n\Omega'_n\tau_n}\paren{\delta_k^n\tau_n-\sin\paren{{\delta_k^n}\tau_n}}
+    +\ui{\Omega'_n}^2\frac{
+      {\delta_k^n}^3\tau_n^3/3
+      -\sin\paren{{\delta_k^n}\tau_n}
+      +{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}
+    }{{\delta_k^n}^2}
+  }\\
+  =&\paren{\Omega_n^2\tau_n^2+\Omega_n\Omega'_n\tau_n^3}\frac{1-\cos\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^2\tau_n^2}
+  +{\Omega'_n}^2\tau_n^4\frac{{\delta_k^n}^2\tau_n^2/2+1-\cos\paren{{\delta_k^n}\tau_n}
+    -{\delta_k^n}\tau_n\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^4\tau_n^4}\\
+  &+\ui\paren{\Omega_n^2\tau_n^2+\Omega_n\Omega'_n\tau_n^3}\frac{\delta_k^n\tau_n-\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^2\tau_n^2}
+  +\ui{\Omega'_n}^2\tau_n^4\frac{
+    {\delta_k^n}^3\tau_n^3/3
+    -\sin\paren{{\delta_k^n}\tau_n}
+    +{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}
+  }{{\delta_k^n}^4\tau_n^4}
 }
 
 \end{document}
