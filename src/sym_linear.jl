@@ -26,7 +26,7 @@ end
 
 # Twice the enclosed area
 function enclosed_area_complex_kernel(o, o′, d, s, c)
-    a1 = o^2 + o * o′
+    a1 = o * (o + o′)
     a2 = o′^2
     C1 = Utils.cos_f1(d, s, c)
     S1 = Utils.sin_f1(d, s, c)
@@ -37,7 +37,7 @@ end
 
 # Twice the enclosed area
 function enclosed_area_kernel(o, o′, d, s, c)
-    a1 = o^2 + o * o′
+    a1 = o * (o + o′)
     a2 = o′^2
     S1 = Utils.sin_f1(d, s, c)
     S3 = Utils.sin_f3(d, s, c)
