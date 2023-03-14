@@ -424,11 +424,7 @@ For closure, the shift within each segment is,
   =&\ue^{\ui\varphi_k^n}\paren{\Omega_nF_0(\delta_k^n, \tau_n)+\Omega'_nF_1(\delta_k^n, \tau_n)-\Omega_nF_0(\delta_k^n, 0)-\Omega'_nF_1(\delta_k^n, 0)}\\
   =&\frac{\ue^{\ui\varphi_k^n}}{{\delta_k^n}^2}\paren{
     \paren{-\ui\Omega_n\delta_k^n+\Omega'_n}\paren{\ue^{\ui\delta_k^n\tau_n}-1}
-    -\ui\Omega'_n\delta_k^n\tau_n\ue^{\ui\delta_k^n\tau_n}}\\
-  =&\ue^{\ui\varphi_k^n}\lparen{
-    \Omega'_n\tau_n^2\frac{\cos\paren{\delta_k^n\tau_n}-1}{{\delta_k^n}^2\tau_n^2}
-    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\frac{\sin\paren{\delta_k^n\tau_n}}{\delta_k^n\tau_n}
-  }
+    -\ui\Omega'_n\delta_k^n\tau_n\ue^{\ui\delta_k^n\tau_n}}
 }
 where $\tau_n\equiv t_{n+1}-t_n$ is the length of the $n$-th segment, $\delta_k^n\equiv\omega_k-\bar\omega_n$ is the detuning of the $n$-th segment from the $k$-th mode, $\varphi_k^n\equiv\omega_kt_n-\theta_n$ is the initial phase difference with the $k$-th mode at the beginning of the $n$-th segment.\\
 
@@ -443,10 +439,8 @@ around $\delta_k^n=0$,
     -\ui\Omega_n\delta_k^n\tau_n^2\frac{\cos\paren{\delta_k^n\tau_n}-1}{{\delta_k^n}^2\tau_n^2}
     -\ui\Omega'_n\tau_n^2\frac{\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
   }\\
-  =&\ue^{\ui\varphi_k^n}\lparen{
+  =&\ue^{\ui\varphi_k^n}\paren{
     \paren{\ui\Omega_n\delta_k^n\tau_n^2-\Omega'_n\tau_n^2}\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
-  }\\
-  &\rparen{
     +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\mathrm{sinc}\paren{\delta_k^n\tau_n}
     -\ui\Omega'_n\tau_n^2\mathrm{cosc}\paren{\delta_k^n\tau_n}
   }
