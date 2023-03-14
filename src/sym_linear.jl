@@ -39,9 +39,9 @@ end
 function enclosed_area_kernel(o, o′, d, s, c)
     a1 = o^2 + o * o′
     a2 = o′^2
-    C1 = Utils.cos_f1(d, s, c)
-    C3 = Utils.cos_f3(d, s, c)
-    return a1 * C1 + a2 * C3
+    S1 = Utils.sin_f1(d, s, c)
+    S3 = Utils.sin_f3(d, s, c)
+    return a1 * S1 + a2 * S3
 end
 
 function displacement(τ, Ω, Ω′, φ, δ)
