@@ -9,12 +9,10 @@ module Utils
 fastabs(x::Number) = abs(x)
 fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
 
-const _threshold = 0.01
-
-macro _combined_func(name)
+macro _combined_func(name, threshold=0.01)
     quote
         @inline $(esc(name))(x::T, s, c) where T =
-            fastabs(x) <= _threshold ?
+            fastabs(x) <= $threshold ?
             $(esc(Symbol("_$(name)_small")))(float(x)) :
             $(esc(Symbol("_$(name)_big")))(float(x), s, c)
     end
@@ -23,31 +21,30 @@ end
 # sin(x) / x
 @inline _sinc_small(x::T) where T =
     evalpoly(x^2, (T(1), -1 / T(6), 1 / T(120), -1 / T(5_040),
-                   1 / T(362_880), -1 / T(39_916_800), 1 / T(6_227_020_800)))
+                   1 / T(362_880), -1 / T(39_916_800)))
 @inline _sinc_big(x, s, c) = s / x
-@_combined_func sinc
+@_combined_func sinc 0.05
 
 # (x * cos(x) - sin(x)) / x^2
 @inline _cosc_small(x::T) where T =
     x * evalpoly(x^2, (-1 / T(3), 1 / T(30), -1 / T(840), 1 / T(45_360),
                        -1 / T(3_991_680), 1 / T(518_918_400), -1 / T(93_405_312_000)))
 @inline _cosc_big(x, s, c) = (x * c - s) / x^2
-@_combined_func cosc
+@_combined_func cosc 0.2
 
 # (1 - cos(x)) / x^2
 @inline _cos_f1_small(x::T) where T =
     evalpoly(x^2, (1 / T(2), -1 / T(24), 1 / T(720), -1 / T(40_320),
                    1 / T(3_628_800), -1 / T(479_001_600), 1 / T(87_178_291_200)))
 @inline _cos_f1_big(x, s, c) = (1 - c) / x^2
-@_combined_func cos_f1
+@_combined_func cos_f1 0.25
 
 # (x - sin(x)) / x^2
 @inline _sin_f1_small(x::T) where T =
     x * evalpoly(x^2, (1 / T(6), -1 / T(120), 1 / T(5_040), -1 / T(362_880),
-                       1 / T(39_916_800), -1 / T(6_227_020_800),
-                       1 / T(1_307_670_368_000)))
+                       1 / T(39_916_800), -1 / T(6_227_020_800)))
 @inline _sin_f1_big(x, s, c) = (x - s) / x^2
-@_combined_func sin_f1
+@_combined_func sin_f1 0.2
 
 # (2 * cos(x) - 2 + x * sin(x)) / x^3
 @inline _cos_f2_small(x::T) where T =
@@ -55,21 +52,21 @@ end
                        -1 / T(47_900_160), 1 / T(7_264_857_600),
                        1 / T(1_494_484_992_000)))
 @inline _cos_f2_big(x, s, c) = (2 * c - 2 + x * s) / x^3
-@_combined_func cos_f2
+@_combined_func cos_f2 0.25
 
 # (2 * sin(x) - x * cos(x) - x) / x^3
 @inline _sin_f2_small(x::T) where T =
     evalpoly(x^2, (1 / T(6), -1 / T(40), 1 / T(1_008), -1 / T(51_840),
                    1 / T(4_435_200), -1 / T(566_092_800), 1 / T(100_590_336_000)))
 @inline _sin_f2_big(x, s, c) = (2 * s - x * c - x) / x^3
-@_combined_func sin_f2
+@_combined_func sin_f2 0.25
 
 # (x^2/2 + 1 - cos(x) - x * sin(x)) / x^4
 @inline _cos_f3_small(x::T) where T =
     evalpoly(x^2, (1 / T(8), -1 / T(144), 1 / T(5_760), -1 / T(403_200),
                    1 / T(43_545_600), -1 / T(6_706_022_400), 1 / T(1_394_852_659_200)))
 @inline _cos_f3_big(x, s, c) = (x^2 / 2 + 1 - c - x * s) / x^4
-@_combined_func cos_f3
+@_combined_func cos_f3 0.3
 
 # (x^3/3 - sin(x) + x * cos(x)) / x^4
 @inline _sin_f3_small(x::T) where T =
@@ -77,6 +74,6 @@ end
                        1 / T(518_918_400), -1 / T(93_405_312_000),
                        1 / T(22_230_464_256_000)))
 @inline _sin_f3_big(x, s, c) = (x^3 / 3 - s + x * c) / x^4
-@_combined_func sin_f3
+@_combined_func sin_f3 0.3
 
 end
