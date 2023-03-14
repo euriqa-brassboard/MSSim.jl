@@ -3,6 +3,7 @@
 module Utils
 
 using Test
+using DualNumbers
 using MSSim
 
 function test_diffs(_f, _f_big, threshold=1e-15)
@@ -14,13 +15,16 @@ function test_diffs(_f, _f_big, threshold=1e-15)
         s, c = sincos(x)
         return _f(x, s, c)
     end
-    x = range(0, 1, 100001)[2:end]
-    v = f.(x)
-    vbig = f_big.(big.(x))
+    xs = range(0, 1, 100001)[2:end]
+    v = f.(xs)
+    vbig = f_big.(big.(xs))
+    err = abs.(Float64.(v .- vbig))
+    @test all(err .<= threshold)
 
-    diff = abs.(Float64.(v .- vbig))
-    @show maximum(diff)
-    @test all(diff .<= threshold)
+    diff = [f(dual(x, 1)).epsilon for x in xs]
+    diff_big = [f_big(dual(big(x), big(1))).epsilon for x in xs]
+    diff_err = abs.(Float64.(diff .- diff_big))
+    @test all(diff_err .<= threshold * 8)
 end
 
 @testset "sinc" begin
