@@ -24,6 +24,7 @@ function cumulative_displacement_kernel(o, o′, d, s, c)
     return complex(o * C1 + o′ * S2, o * S1 - o′ * C2)
 end
 
+# Twice the enclosed area
 function enclosed_area_complex_kernel(o, o′, d, s, c)
     a1 = o^2 + o * o′
     a2 = o′^2
@@ -34,6 +35,7 @@ function enclosed_area_complex_kernel(o, o′, d, s, c)
     return complex(a1 * C1 + a2 * C3, a1 * S1 + a2 * S3)
 end
 
+# Twice the enclosed area
 function enclosed_area_kernel(o, o′, d, s, c)
     a1 = o^2 + o * o′
     a2 = o′^2
@@ -60,6 +62,7 @@ function cumulative_displacement(τ, Ω, Ω′, φ, δ)
     return phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c)
 end
 
+# Twice the enclosed area
 function enclosed_area_complex(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
@@ -68,6 +71,7 @@ function enclosed_area_complex(τ, Ω, Ω′, φ, δ)
     return enclosed_area_complex_kernel(o, o′, d, s, c)
 end
 
+# Twice the enclosed area
 function enclosed_area(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
