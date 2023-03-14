@@ -1,0 +1,54 @@
+#!/usr/bin/julia
+
+module SymLinear
+
+using MSSim
+const PN = MSSim.PureNumeric
+const SL = MSSim.SymLinear
+using Test
+
+function get_Ω_θ_func(Ω, Ω′, φ, δ)
+    return t->Ω + Ω′ * t, t->φ + δ * t
+end
+
+const τs = [0, 1, 5, 10, 20]
+const Ωs = [-20, -10, -5, -1, -0.1, -0.02, -0.001, 0, 0.001, 0.02, 1, 5, 10, 20]
+const Ω′s = [-20, -10, -5, -1, -0.1, -0.02, -0.001, 0,
+               0.001, 0.02, 1, 5, 10, 20] ./ 10
+const φs = range(0, 2π, 17)
+const δs = [-20, -10, -5, -1, -0.1, -0.02, -0.001, 0,
+             0.001, 0.02, 1, 5, 10, 20] ./ 10
+
+const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
+
+@testset "Displacement" begin
+    for (τ, Ω, Ω′, φ, δ) in all_params
+        Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)
+        v_num = PN.displacement(0, τ, Ωf, θf)
+        v_sym = SL.SegInt.displacement(τ, Ω, Ω′, φ, δ)
+        @test v_num ≈ v_sym atol = 1e-12 rtol = 1e-12
+    end
+end
+
+@testset "Cumulative Displacement" begin
+    for (τ, Ω, Ω′, φ, δ) in all_params
+        Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)
+        v_num = PN.cumulative_displacement(0, τ, Ωf, θf)
+        v_sym = SL.SegInt.cumulative_displacement(τ, Ω, Ω′, φ, δ)
+        @test v_num ≈ v_sym atol = 1e-12 rtol = 1e-12
+    end
+end
+
+@testset "Enclosed Area" begin
+    for (τ, Ω, Ω′, φ, δ) in all_params
+        Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)
+        v_num = PN.enclosed_area(0, τ, Ωf, θf)
+        v_sym = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, δ)
+        @test v_num ≈ v_sym atol = 1e-10 rtol = 1e-10
+        vc_num = PN.enclosed_area_complex(0, τ, Ωf, θf)
+        vc_sym = SL.SegInt.enclosed_area_complex(τ, Ω, Ω′, φ, δ)
+        @test vc_num ≈ vc_sym atol = 1e-10 rtol = 1e-10
+    end
+end
+
+end
