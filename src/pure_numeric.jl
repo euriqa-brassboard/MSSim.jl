@@ -9,7 +9,7 @@ using QuadGK
 # but should be useful to test other faster implementations.
 
 function displacement(t0, t1, Ω, θ)
-    f(t) = Ω(t) * exp(im * θ(t))
+    f(t) = Ω(t) * cis(θ(t))
     res, err = quadgk(f, t0, t1)
     return res
 end
@@ -21,14 +21,14 @@ function cumulative_displacement(t0, t1, Ω, θ)
 end
 
 function enclosed_area_complex(t0, t1, Ω, θ)
-    f(t) = Ω(t) * exp(im * θ(t)) * displacement(t0, t, Ω, t->-θ(t))
+    f(t) = Ω(t) * cis(θ(t)) * displacement(t0, t, Ω, t->-θ(t))
     res, err = quadgk(f, t0, t1)
     return res
 end
 
 function enclosed_area(t0, t1, Ω, θ)
     # Only getting the interesting part of the integral.
-    f(t) = imag(Ω(t) * exp(im * θ(t)) * displacement(t0, t, Ω, t->-θ(t)))
+    f(t) = Ω(t) * imag(cis(θ(t)) * displacement(t0, t, Ω, t->-θ(t)))
     res, err = quadgk(f, t0, t1)
     return res
 end
