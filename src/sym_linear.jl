@@ -34,6 +34,34 @@ function cumulative_displacement(τ, Ω, Ω′, φ, δ)
     return phase0 * τ * (o * C1 + o′ * S2 + im * (o * S1 - o′ * C2))
 end
 
+function enclosed_area_complex(τ, Ω, Ω′, φ, δ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+
+    a1 = o^2 + o * o′
+    a2 = o′^2
+
+    s, c = sincos(d)
+    C1 = Utils.cos_f1(d, s, c)
+    S1 = Utils.sin_f1(d, s, c)
+    C3 = Utils.cos_f3(d, s, c)
+    S3 = Utils.sin_f3(d, s, c)
+    return a1 * C1 + a2 * C3 + im * (a1 * S1 + a2 * S3)
+end
+
+function enclosed_area(τ, Ω, Ω′, φ, δ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    a1 = o^2 + o * o′
+    a2 = o′^2
+    s, c = sincos(d)
+    C1 = Utils.cos_f1(d, s, c)
+    C3 = Utils.cos_f3(d, s, c)
+    return a1 * C1 + a2 * C3
+end
+
 end
 
 end
