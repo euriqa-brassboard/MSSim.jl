@@ -57,9 +57,23 @@ end
 
 # (2 * sin(x) - x * cos(x) - x) / x^3
 @inline _sin_f2_small(x::T) where T =
-    evalpoly(x^2, T(1 / 6), T(-1 / 40), T(1 / 1008), T(-1 / 51_840),
+    evalpoly(x^2, T(1 / 6), T(-1 / 40), T(1 / 1_008), T(-1 / 51_840),
              T(1 / 4_435_200), T(-1 / 566_092_800), T(1 / 100_590_336_000))
 @inline _sin_f2_big(x, s, c) = (2 * s - x * c - x) / x^3
 @_combined_func sin_f2
+
+# (x^2/2 + 1 - cos(x) - x * sin(x)) / x^4
+@inline _cos_f3_small(x::T) where T =
+    evalpoly(x^2, T(1 / 8), T(-1 / 144), T(1 / 5_760), T(-1 / 403_200),
+             T(1 / 43_545_600), T(-1 / 6_706_022_400), T(1 / 1_394_852_659_200))
+@inline _cos_f3_big(x, s, c) = (x^2 / 2 + 1 - c - x * s) / x^4
+@_combined_func cos_f3
+
+# (x^3/3 - sin(x) + x * cos(x)) / x^4
+@inline _sin_f3_small(x::T) where T =
+    x * evalpoly(x^2, T(1 / 30), T(-1 / 840), T(1 / 45_360), T(-1 / 3_991_680),
+                 T(1 / 518_918_400), T(-1 / 93_405_312_000), T(1 / 22_230_464_256_000))
+@inline _sin_f3_big(x, s, c) = (x^3 / 3 - s + x * c) / x^4
+@_combined_func sin_f3
 
 end
