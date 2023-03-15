@@ -3,7 +3,7 @@
 module Utils
 
 using Test
-using DualNumbers
+using ForwardDiff
 using MSSim
 
 function test_diffs(_f, _f_big, threshold=1e-15)
@@ -21,8 +21,8 @@ function test_diffs(_f, _f_big, threshold=1e-15)
     err = abs.(Float64.(v .- vbig))
     @test all(err .<= threshold)
 
-    diff = [f(dual(x, 1)).epsilon for x in xs]
-    diff_big = [f_big(dual(big(x), big(1))).epsilon for x in xs]
+    diff = [ForwardDiff.derivative(f, x) for x in xs]
+    diff_big = [ForwardDiff.derivative(f_big, big(x)) for x in xs]
     diff_err = abs.(Float64.(diff .- diff_big))
     @test all(diff_err .<= threshold * 8)
 end
