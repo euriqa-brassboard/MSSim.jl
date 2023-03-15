@@ -9,14 +9,14 @@ module SegInt
 import ...Utils
 
 # Integral for each segments
-function displacement_kernel(o, o′, d, s, c)
+@inline function displacement_kernel(o, o′, d, s, c)
     S = Utils.sinc(d, s, c)
     C = Utils.cosc(d, s, c)
     C1 = Utils.cos_f1(d, s, c)
     return complex((o + o′) * S - o′ * C1, o * d * C1 - o′ * C)
 end
 
-function cumulative_displacement_kernel(o, o′, d, s, c)
+@inline function cumulative_displacement_kernel(o, o′, d, s, c)
     C1 = Utils.cos_f1(d, s, c)
     S1 = Utils.sin_f1(d, s, c)
     C2 = Utils.cos_f2(d, s, c)
@@ -25,7 +25,7 @@ function cumulative_displacement_kernel(o, o′, d, s, c)
 end
 
 # Twice the enclosed area
-function enclosed_area_complex_kernel(o, o′, d, s, c)
+@inline function enclosed_area_complex_kernel(o, o′, d, s, c)
     a1 = o * (o + o′)
     a2 = o′^2
     C1 = Utils.cos_f1(d, s, c)
@@ -36,7 +36,7 @@ function enclosed_area_complex_kernel(o, o′, d, s, c)
 end
 
 # Twice the enclosed area
-function enclosed_area_kernel(o, o′, d, s, c)
+@inline function enclosed_area_kernel(o, o′, d, s, c)
     a1 = o * (o + o′)
     a2 = o′^2
     S1 = Utils.sin_f1(d, s, c)
