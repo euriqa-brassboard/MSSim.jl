@@ -16,15 +16,11 @@ function test_diffs(_f, _f_big, threshold=1e-15)
         return _f(x, s, c)
     end
     xs = range(0, 1, 100001)[2:end]
-    v = f.(xs)
-    vbig = f_big.(big.(xs))
-    err = abs.(Float64.(v .- vbig))
-    @test all(err .<= threshold)
-
-    diff = [ForwardDiff.derivative(f, x) for x in xs]
-    diff_big = [ForwardDiff.derivative(f_big, big(x)) for x in xs]
-    diff_err = abs.(Float64.(diff .- diff_big))
-    @test all(diff_err .<= threshold * 8)
+    for x in xs
+        @test f(x) ≈ f_big(big(x)) atol=threshold rtol=0
+        @test(ForwardDiff.derivative(f, x) ≈ ForwardDiff.derivative(f_big, big(x)),
+              atol=threshold * 8, rtol=0)
+    end
 end
 
 @testset "sin_c1" begin
