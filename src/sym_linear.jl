@@ -81,6 +81,39 @@ function enclosed_area(τ, Ω, Ω′, φ, δ)
     return enclosed_area_kernel(o, o′, d, s, c)
 end
 
+# The values we may care about in each segments
+# * Displacement (dis)
+# * Gradient of displacement w.r.t. initial phase (disφ)
+# * Gradient of displacement w.r.t. detuning (disδ)
+# * Cumulative displacement (cumdis)
+# * Enclosed area (area)
+# * Gradient of enclosed area w.r.t. initial phase (areaφ)
+# * Gradient of enclosed area w.r.t. detuning (areaδ)
+# As well as the gradient of everything above w.r.t. each of the input parameters
+
+@inline function compute_dis_area(τ, Ω, Ω′, φ, δ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = @inline sincos(d)
+    sφ, cφ = @inline sincos(φ)
+    phase0 = complex(cφ, sφ)
+    return @inline (phase0 * displacement_kernel(o, o′, d, s, c),
+                    enclosed_area_kernel(o, o′, d, s, c))
+end
+
+@inline function compute_dis_cumdis_area(τ, Ω, Ω′, φ, δ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = @inline sincos(d)
+    sφ, cφ = @inline sincos(φ)
+    phase0 = complex(cφ, sφ)
+    return @inline (phase0 * displacement_kernel(o, o′, d, s, c),
+                    phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c),
+                    enclosed_area_kernel(o, o′, d, s, c))
+end
+
 function compute_all_gradients(τ, Ω, Ω′, φ, δ)
     sφ, cφ = @inline sincos(φ)
     d = ForwardDiff.Dual(δ * τ, (δ, 0.0, 0.0, 0.0, τ))
