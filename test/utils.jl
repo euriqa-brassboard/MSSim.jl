@@ -27,12 +27,12 @@ function test_diffs(_f, _f_big, threshold=1e-15)
     @test all(diff_err .<= threshold * 8)
 end
 
-@testset "sinc" begin
-    test_diffs(MSSim.Utils.sinc, MSSim.Utils._sinc_big)
+@testset "sin_c1" begin
+    test_diffs(MSSim.Utils.sin_c1, MSSim.Utils._sin_c1_big)
 end
 
-@testset "cosc" begin
-    test_diffs(MSSim.Utils.cosc, MSSim.Utils._cosc_big)
+@testset "sin_c2" begin
+    test_diffs(MSSim.Utils.sin_c2, MSSim.Utils._sin_c2_big)
 end
 
 @testset "cos_f1" begin

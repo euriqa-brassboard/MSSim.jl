@@ -3,8 +3,6 @@
 module Utils
 
 # Math utility functions
-# Note that the sinc and cosc functions below are different from the Base julia version
-# in that the input is directly the angle given to the sin and cos functions.
 
 fastabs(x::Number) = abs(x)
 fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
@@ -19,19 +17,19 @@ macro _combined_func(name, threshold)
 end
 
 # sin(x) / x
-@inline _sinc_small(x::T) where T =
+@inline _sin_c1_small(x::T) where T =
     @inline evalpoly(x^2, (T(1), -1 / T(6), 1 / T(120), -1 / T(5_040),
                            1 / T(362_880), -1 / T(39_916_800), 1 / T(6_227_020_800)))
-@inline _sinc_big(x, s, c) = s / x
-@_combined_func sinc 0.3
+@inline _sin_c1_big(x, s, c) = s / x
+@_combined_func sin_c1 0.3
 
-# (x * cos(x) - sin(x)) / x^2
-@inline _cosc_small(x::T) where T =
-    x * @inline evalpoly(x^2, (-1 / T(3), 1 / T(30), -1 / T(840), 1 / T(45_360),
-                               -1 / T(3_991_680), 1 / T(518_918_400),
-                               -1 / T(93_405_312_000)))
-@inline _cosc_big(x, s, c) = (c * x - s) / x^2
-@_combined_func cosc 0.5
+# (sin(x) - x * cos(x)) / x^2
+@inline _sin_c2_small(x::T) where T =
+    x * @inline evalpoly(x^2, (1 / T(3), -1 / T(30), 1 / T(840), -1 / T(45_360),
+                               1 / T(3_991_680), -1 / T(518_918_400),
+                               1 / T(93_405_312_000)))
+@inline _sin_c2_big(x, s, c) = (s - c * x) / x^2
+@_combined_func sin_c2 0.5
 
 # (1 - cos(x)) / x^2
 @inline _cos_f1_small(x::T) where T =

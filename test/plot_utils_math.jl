@@ -28,50 +28,50 @@ function compute_diffs(f_small, _f_big)
     return x, d64_small, d64_big, d32_small, d32_big
 end
 
-const sinc_x, sinc_d64_small, sinc_d64_big, sinc_d32_small, sinc_d32_big =
-    compute_diffs(MSSim.Utils._sinc_small, MSSim.Utils._sinc_big)
+const sin_c1_x, sin_c1_d64_small, sin_c1_d64_big, sin_c1_d32_small, sin_c1_d32_big =
+    compute_diffs(MSSim.Utils._sin_c1_small, MSSim.Utils._sin_c1_big)
 
 figure(figsize=[6.4 * 2, 4.8])
 
 subplot(1, 2, 1)
-plot(sinc_x, sinc_d64_big, label="big")
-plot(sinc_x, sinc_d64_small, label="small")
+plot(sin_c1_x, sin_c1_d64_big, label="big")
+plot(sin_c1_x, sin_c1_d64_small, label="small")
 legend(fontsize=10, ncol=2)
 ylim([0, 1.5e-16])
 ylabel("Error")
-title("sinc 64")
+title("sin_c1 64")
 grid()
 
 subplot(1, 2, 2)
-plot(sinc_x, sinc_d32_big, label="big")
-plot(sinc_x, sinc_d32_small, label="small")
+plot(sin_c1_x, sin_c1_d32_big, label="big")
+plot(sin_c1_x, sin_c1_d32_small, label="small")
 legend(fontsize=10, ncol=2)
 ylim([0, 0.9e-7])
 ylabel("Error")
-title("sinc 32")
+title("sin_c1 32")
 grid()
 
-const cosc_x, cosc_d64_small, cosc_d64_big, cosc_d32_small, cosc_d32_big =
-    compute_diffs(MSSim.Utils._cosc_small, MSSim.Utils._cosc_big)
+const sin_c2_x, sin_c2_d64_small, sin_c2_d64_big, sin_c2_d32_small, sin_c2_d32_big =
+    compute_diffs(MSSim.Utils._sin_c2_small, MSSim.Utils._sin_c2_big)
 
 figure(figsize=[6.4 * 2, 4.8])
 
 subplot(1, 2, 1)
-plot(cosc_x, cosc_d64_big, label="big")
-plot(cosc_x, cosc_d64_small, label="small")
+plot(sin_c2_x, sin_c2_d64_big, label="big")
+plot(sin_c2_x, sin_c2_d64_small, label="small")
 legend(fontsize=10, ncol=2)
 ylim([0, 3e-16])
 ylabel("Error")
-title("cosc 64")
+title("sin_c2 64")
 grid()
 
 subplot(1, 2, 2)
-plot(cosc_x, cosc_d32_big, label="big")
-plot(cosc_x, cosc_d32_small, label="small")
+plot(sin_c2_x, sin_c2_d32_big, label="big")
+plot(sin_c2_x, sin_c2_d32_small, label="small")
 legend(fontsize=10, ncol=2)
 ylim([0, 2e-7])
 ylabel("Error")
-title("cosc 32")
+title("sin_c2 32")
 grid()
 
 const cos_f1_x, cos_f1_d64_small, cos_f1_d64_big, cos_f1_d32_small, cos_f1_d32_big =
