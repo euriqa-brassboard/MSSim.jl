@@ -31,6 +31,10 @@ end
     test_diffs(MSSim.Utils.sin_c2, MSSim.Utils._sin_c2_big)
 end
 
+@testset "sin_c3" begin
+    test_diffs(MSSim.Utils.sin_c3, MSSim.Utils._sin_c3_big)
+end
+
 @testset "cos_f1" begin
     test_diffs(MSSim.Utils.cos_f1, MSSim.Utils._cos_f1_big)
 end

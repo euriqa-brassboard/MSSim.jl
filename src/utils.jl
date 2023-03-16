@@ -31,6 +31,14 @@ end
 @inline _sin_c2_big(x, s, c) = (s - c * x) / x^2
 @_combined_func sin_c2 0.5
 
+# ((x^2 - 2) * sin(x) + 2 * x * cos(x)) / x^3
+@inline _sin_c3_small(x::T) where T =
+    @inline evalpoly(x^2, (1 / T(3), -1 / T(10), 1 / T(168), -1 / T(6_480),
+                           1 / T(443_520), -1 / T(47_174_400),
+                           1 / T(7_185_024_000), -1 / T(1_482_030_950_400)))
+@inline _sin_c3_big(x, s, c) = 2 * (x * c - s) / x^3 + s / x
+@_combined_func sin_c3 0.7
+
 # (1 - cos(x)) / x^2
 @inline _cos_f1_small(x::T) where T =
     @inline evalpoly(x^2, (1 / T(2), -1 / T(24), 1 / T(720), -1 / T(40_320),

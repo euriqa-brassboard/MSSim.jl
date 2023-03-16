@@ -74,6 +74,29 @@ ylabel("Error")
 title("sin_c2 32")
 grid()
 
+const sin_c3_x, sin_c3_d64_small, sin_c3_d64_big, sin_c3_d32_small, sin_c3_d32_big =
+    compute_diffs(MSSim.Utils._sin_c3_small, MSSim.Utils._sin_c3_big)
+
+figure(figsize=[6.4 * 2, 4.8])
+
+subplot(1, 2, 1)
+plot(sin_c3_x, sin_c3_d64_big, label="big")
+plot(sin_c3_x, sin_c3_d64_small, label="small")
+legend(fontsize=10, ncol=2)
+ylim([0, 1e-15])
+ylabel("Error")
+title("sin_c3 64")
+grid()
+
+subplot(1, 2, 2)
+plot(sin_c3_x, sin_c3_d32_big, label="big")
+plot(sin_c3_x, sin_c3_d32_small, label="small")
+legend(fontsize=10, ncol=2)
+ylim([0, 4e-7])
+ylabel("Error")
+title("sin_c3 32")
+grid()
+
 const cos_f1_x, cos_f1_d64_small, cos_f1_d64_big, cos_f1_d32_small, cos_f1_d32_big =
     compute_diffs(MSSim.Utils._cos_f1_small, MSSim.Utils._cos_f1_big)
 
