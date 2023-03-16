@@ -70,7 +70,7 @@ struct SeqComputeBuffer{T}
 end
 
 function compute_sequence!(
-    result::SeqResultData{T,A,CD,AG}
+    result::SeqResultData{T,A,CD,AG},
     segments::AbstractVector{SD},
     buffer::SeqComputeBuffer{T}) where SD <: SegDataNoGrad{T,A,CD,AG} where {T,A,CD,AG}
 
