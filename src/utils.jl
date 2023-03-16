@@ -46,12 +46,12 @@ end
 @inline _sin_f1_big(x, s, c) = (x - s) / x^2
 @_combined_func sin_f1 0.3
 
-# (2 * cos(x) - 2 + x * sin(x)) / x^3
+# (2 - 2 * cos(x) - x * sin(x)) / x^3
 @inline _cos_f2_small(x::T) where T =
-    x * @inline evalpoly(x^2, (-1 / T(12), 1 / T(180), -1 / T(6_720), 1 / T(453_600),
-                               -1 / T(47_900_160), 1 / T(7_264_857_600),
-                               -1 / T(1_494_484_992_000)))
-@inline _cos_f2_big(x, s, c) = (2 * (c - 1) + s * x) / x^3
+    x * @inline evalpoly(x^2, (1 / T(12), -1 / T(180), 1 / T(6_720), -1 / T(453_600),
+                               1 / T(47_900_160), -1 / T(7_264_857_600),
+                               1 / T(1_494_484_992_000)))
+@inline _cos_f2_big(x, s, c) = (2 * (1 - c) - s * x) / x^3
 @_combined_func cos_f2 0.55
 
 # (2 * sin(x) - x * cos(x) - x) / x^3

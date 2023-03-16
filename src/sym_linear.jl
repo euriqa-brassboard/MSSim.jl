@@ -22,7 +22,7 @@ end
     S1 = Utils.sin_f1(d, s, c)
     C2 = Utils.cos_f2(d, s, c)
     S2 = Utils.sin_f2(d, s, c)
-    return complex(o * C1 + o′ * S2, o * S1 - o′ * C2)
+    return complex(o * C1 + o′ * S2, o * S1 + o′ * C2)
 end
 
 # Twice the enclosed area
