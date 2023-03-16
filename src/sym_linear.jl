@@ -83,11 +83,9 @@ end
 
 # The values we may care about in each segments
 # * Displacement (dis)
-# * Gradient of displacement w.r.t. initial phase (disφ)
 # * Gradient of displacement w.r.t. detuning (disδ)
 # * Cumulative displacement (cumdis)
 # * Enclosed area (area)
-# * Gradient of enclosed area w.r.t. initial phase (areaφ)
 # * Gradient of enclosed area w.r.t. detuning (areaδ)
 # As well as the gradient of everything above w.r.t. each of the input parameters
 
