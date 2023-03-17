@@ -9,10 +9,15 @@ is_dummy(::Type{T}) where T = false
 struct AreaData{T}
     dis::Complex{T}
     area::T
+    AreaData{T}(dis, area) where T = new(dis, area)
+    AreaData{T}() where T = new(zero(T), zero(T))
 end
 
 struct CumDisData{T,CT}
     cumdis::CT
+    CumDisData{T,CT}(cumdis) where {T,CT} = new(cumdis)
+    CumDisData{T,CT}() where {T,CT} = new(zero(T))
+    CumDisData{Nothing,Nothing}() = new(nothing)
 end
 const DummyCumDisData = CumDisData{Nothing,Nothing}
 is_dummy(::Type{DummyCumDisData}) = true
@@ -20,6 +25,9 @@ is_dummy(::Type{DummyCumDisData}) = true
 struct AreaModeData{T,CT}
     disδ::CT
     areaδ::T
+    AreaModeData{T,CT}(disδ, areaδ) where {T,CT} = new(disδ, areaδ)
+    AreaModeData{T,CT}() where {T,CT} = new(zero(T), zero(T))
+    AreaModeData{Nothing,Nothing}() = new(nothing, nothing)
 end
 const DummyAreaModeData = AreaModeData{Nothing,Nothing}
 is_dummy(::Type{DummyAreaModeData}) = true
@@ -49,6 +57,13 @@ mutable struct SeqResultData{T,A,CD,AG}
     area_grad::Matrix{A}
     cumdis_grad::Matrix{CD}
     area_mode_grad::Matrix{AG}
+
+    function SeqResultData{T,A,CD,AG}(nseg, ngrad) where {T,A,CD,AG}
+        return new(zero(T), A(), CD(), AG(),
+                   Matrix{A}(undef, nseg, ngrad),
+                   Matrix{CD}(undef, nseg, ngrad),
+                   Matrix{AG}(undef, nseg, ngrad))
+    end
 end
 
 struct SeqComputeBuffer{T}
@@ -69,6 +84,9 @@ struct SeqComputeBuffer{T}
     # Used to compute:
     # * Gradient of area w.r.t. parameters and detuning
     disφ_backward::Vector{Complex{T}}
+    function SeqComputeBuffer{T}() where T
+        return new(Complex{T}[], T[], T[], Complex{T}[])
+    end
 end
 
 function compute_sequence!(
