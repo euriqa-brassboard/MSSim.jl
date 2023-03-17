@@ -13,6 +13,13 @@ function get_Ω_θ_func(Ω, Ω′, φ, δ)
     return t->Ω + Ω′ * t, t->φ + δ * t
 end
 
+get_value(v) = v.value
+get_value(v::Complex) = complex(get_value(real(v)), get_value(imag(v)))
+
+get_partial(v, i) = v.partials[i]
+get_partial(v::Complex, i) = complex(get_partial(real(v), i),
+                                     get_partial(imag(v), i))
+
 const τs = [0, 1, 5, 10, 20]
 const Ωs = [-20, -10, -5, -1, -0.1, -0.02, -0.001, 0, 0.001, 0.02, 1, 5, 10, 20]
 const Ω′s = [-20, -10, -5, -1, -0.1, -0.02, -0.001, 0,
@@ -29,8 +36,8 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
         v_num = PN.displacement(0, τ, Ωf, θf)
         v_sym = SL.SegInt.displacement(τ, Ω, Ω′, φ, ForwardDiff.Dual(δ, (1.0,)))
         vd_sym = SL.SegInt.displacement_δ(τ, Ω, Ω′, φ, δ)
-        v_sym_v = complex(real(v_sym).value, imag(v_sym).value)
-        v_sym_d = complex(real(v_sym).partials[1], imag(v_sym).partials[1])
+        v_sym_v = get_value(v_sym)
+        v_sym_d = get_partial(v_sym, 1)
         @test v_num ≈ v_sym_v atol = 1e-12 rtol = 1e-12
         @test v_sym_d ≈ vd_sym atol = 1e-12 rtol = 1e-12
     end
@@ -51,8 +58,8 @@ end
         v_num = PN.enclosed_area(0, τ, Ωf, θf)
         v_sym = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, ForwardDiff.Dual(δ, (1.0,)))
         vd_sym = SL.SegInt.enclosed_area_δ(τ, Ω, Ω′, φ, δ)
-        v_sym_v = complex(real(v_sym).value, imag(v_sym).value)
-        v_sym_d = complex(real(v_sym).partials[1], imag(v_sym).partials[1])
+        v_sym_v = get_value(v_sym)
+        v_sym_d = get_partial(v_sym, 1)
         @test v_num ≈ v_sym_v atol = 1e-10 rtol = 1e-10
         @test v_sym_d ≈ vd_sym atol = 1e-12 rtol = 1e-12
         vc_num = PN.enclosed_area_complex(0, τ, Ωf, θf)
