@@ -17,6 +17,15 @@ using ForwardDiff
     return complex((o + o′) * S_C1 - o′ * C1, o * d * C1 + o′ * S_C2)
 end
 
+@inline function displacement_δ_kernel(o, o′, d, s, c)
+    C1 = Utils.cos_f1(d, s, c)
+    C2 = Utils.cos_f2(d, s, c)
+    S_C2 = Utils.sin_c2(d, s, c)
+    S_C3 = Utils.sin_c3(d, s, c)
+    return complex(-o′ * C2 - (o + o′) * S_C2,
+                   o * C1 + o * d * C2 + o′ * S_C3)
+end
+
 @inline function cumulative_displacement_kernel(o, o′, d, s, c)
     C1 = Utils.cos_f1(d, s, c)
     S1 = Utils.sin_f1(d, s, c)
@@ -43,6 +52,14 @@ end
     S1 = Utils.sin_f1(d, s, c)
     S3 = Utils.sin_f3(d, s, c)
     return a1 * S1 + a2 * S3
+end
+
+@inline function enclosed_area_δ_kernel(o, o′, d, s, c)
+    a1 = o * (o + o′)
+    a2 = o′^2
+    S2 = Utils.sin_f2(d, s, c)
+    S4 = Utils.sin_f4(d, s, c)
+    return a1 * S2 + a2 * S4
 end
 
 function displacement(τ, Ω, Ω′, φ, δ)
