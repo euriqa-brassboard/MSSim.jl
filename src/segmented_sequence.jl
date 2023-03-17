@@ -11,17 +11,17 @@ struct AreaData{T}
     area::T
 end
 
-struct CumDisData{T}
-    cumdis::Complex{T}
+struct CumDisData{T,CT}
+    cumdis::CT
 end
-const DummyCumDisData = CumDisData{Nothing}
+const DummyCumDisData = CumDisData{Nothing,Nothing}
 is_dummy(::Type{DummyCumDisData}) = true
 
-struct AreaModeData{T}
-    disδ::Complex{T}
+struct AreaModeData{T,CT}
+    disδ::CT
     areaδ::T
 end
-const DummyAreaModeData = AreaModeData{Nothing}
+const DummyAreaModeData = AreaModeData{Nothing,Nothing}
 is_dummy(::Type{DummyAreaModeData}) = true
 
 struct SegData{T,A,CD,AG,Ngrad}

@@ -5,6 +5,7 @@ module SymLinear
 using MSSim
 const PN = MSSim.PureNumeric
 const SL = MSSim.SymLinear
+const SegSeq = MSSim.SegSeq
 
 using Test
 using ForwardDiff
@@ -65,6 +66,40 @@ end
         vc_num = PN.enclosed_area_complex(0, τ, Ωf, θf)
         vc_sym = SL.SegInt.enclosed_area_complex(τ, Ω, Ω′, φ, δ)
         @test vc_num ≈ vc_sym atol = 1e-10 rtol = 1e-10
+    end
+end
+
+@testset "Compute values" begin
+    for (τ, Ω, Ω′, φ, δ) in all_params
+        v_dis = SL.SegInt.displacement(τ, Ω, Ω′, φ, δ)
+        v_disδ = SL.SegInt.displacement_δ(τ, Ω, Ω′, φ, δ)
+        v_cumdis = SL.SegInt.cumulative_displacement(τ, Ω, Ω′, φ, δ)
+        v_area = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, δ)
+        v_areaδ = SL.SegInt.enclosed_area_δ(τ, Ω, Ω′, φ, δ)
+
+        for ((T_CD, CT_CD),
+             (T_AG, CT_AG)) in Iterators.product(((Nothing, Nothing),
+                                                  (Float64, ComplexF64)),
+                                                 ((Nothing, Nothing),
+                                                  (Float64, ComplexF64)))
+            CD = SegSeq.CumDisData{T_CD,CT_CD}
+            AG = SegSeq.AreaModeData{T_AG,CT_AG}
+            area, cumdis, area_mode, area_grad, cumdis_grad, area_mode_grad =
+                SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ,
+                                         SegSeq.AreaData{Float64}, CD, AG, Val(false))
+            @test area.dis ≈ v_dis
+            @test area.area ≈ v_area
+            if T_CD !== Nothing
+                @test cumdis.cumdis ≈ v_cumdis
+            end
+            if T_AG !== Nothing
+                @test area_mode.disδ ≈ v_disδ
+                @test area_mode.areaδ ≈ v_areaδ
+            end
+            @test area_grad == ()
+            @test cumdis_grad == ()
+            @test area_mode_grad == ()
+        end
     end
 end
 
