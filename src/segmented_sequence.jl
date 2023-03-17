@@ -131,15 +131,15 @@ function compute_sequence!(
 
         np_τ += seg.τ
         np_dis += seg.area.dis
-        np_area += conj(p_dis) * seg.area.dis + seg.area.area
+        np_area += imag(conj(p_dis) * seg.area.dis) + seg.area.area
         if need_cumdis
             np_cumdis += p_dis * seg.τ + seg.cumdis.cumdis
         end
         if need_area_mode
             real_disδ = seg.area_mode.disδ + Utils.mulim(seg.area.dis * p_τ)
             np_real_disδ += real_disδ
-            np_areaδ += (conj(p_dis) * real_disδ +
-                buffer.dis_backward[i] * conj(real_disδ) + seg.area_mode.areaδ)
+            np_areaδ += (imag(conj(p_dis) * real_disδ) +
+                imag(buffer.dis_backward[i] * conj(real_disδ)) + seg.area_mode.areaδ)
         end
 
         p_τ = np_τ
