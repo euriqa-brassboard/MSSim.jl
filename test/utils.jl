@@ -15,7 +15,7 @@ function test_diffs(_f, _f_big, threshold=1e-15)
         s, c = sincos(x)
         return _f(x, s, c)
     end
-    xs = range(0, 1, 100001)[2:end]
+    xs = range(0, 3, 300001)[2:end]
     for x in xs
         @test f(x) ≈ f_big(big(x)) atol=threshold rtol=0
         @test(ForwardDiff.derivative(f, x) ≈ ForwardDiff.derivative(f_big, big(x)),
@@ -57,6 +57,14 @@ end
 
 @testset "sin_f3" begin
     test_diffs(MSSim.Utils.sin_f3, MSSim.Utils._sin_f3_big)
+end
+
+@testset "sin_f4" begin
+    test_diffs(MSSim.Utils.sin_f4, MSSim.Utils._sin_f4_big)
+end
+
+@testset "sin_f5" begin
+    test_diffs(MSSim.Utils.sin_f5, MSSim.Utils._sin_f5_big)
 end
 
 end
