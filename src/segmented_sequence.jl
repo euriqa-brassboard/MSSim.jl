@@ -5,18 +5,18 @@ module SegSeq
 is_dummy(::Type{T}) where T = false
 
 struct AreaData{T}
-    dis::T
+    dis::Complex{T}
     area::T
 end
 
 struct CumDisData{T}
-    cumdis::T
+    cumdis::Complex{T}
 end
 const DummyCumDisData = CumDisData{Nothing}
 is_dummy(::Type{DummyCumDisData}) = true
 
 struct AreaModeData{T}
-    disδ::T
+    disδ::Complex{T}
     areaδ::T
 end
 const DummyAreaModeData = AreaModeData{Nothing}
@@ -55,7 +55,7 @@ struct SeqComputeBuffer{T}
     # * Gradient of area w.r.t. detuning
     # * Gradient of area w.r.t. parameters
     # * Gradient of area w.r.t. parameters and detuning
-    dis_backward::Vector{T}
+    dis_backward::Vector{Complex{T}}
     # Partial sum of the last n (0 to N-1) time step lengths.
     # Used to compute:
     # * Gradient of cumulative displacement w.r.t. parameters
@@ -66,7 +66,7 @@ struct SeqComputeBuffer{T}
     # Partial sum of the last n (0 to N-1) gradient of displacement w.r.t. detuning.
     # Used to compute:
     # * Gradient of area w.r.t. parameters and detuning
-    disφ_backward::Vector{T}
+    disφ_backward::Vector{Complex{T}}
 end
 
 function compute_sequence!(
@@ -86,7 +86,7 @@ function compute_sequence!(
     resize!(buffer.τ_forward, 0)
     resize!(buffer.disφ_backward, 0)
     if need_area_mode
-        p_dis = zero(T)
+        p_dis = complex(zero(T))
         for i in nseg:-1:1
             seg = segments[i]
             buffer.dis_backward[i] = p_dis
