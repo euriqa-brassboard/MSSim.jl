@@ -78,21 +78,20 @@ end
 
         for (include_cumdis, include_area_mode) in Iterators.product((false, true),
                                                                      (false, true))
-            area, cumdis, area_mode, area_grad, cumdis_grad, area_mode_grad =
-                SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
+            d = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
                                          Val(include_area_mode), Val(false))
-            @test area.dis ≈ v_dis
-            @test area.area ≈ v_area
+            @test d.area.dis ≈ v_dis
+            @test d.area.area ≈ v_area
             if include_cumdis
-                @test cumdis.cumdis ≈ v_cumdis
+                @test d.cumdis.cumdis ≈ v_cumdis
             end
             if include_area_mode
-                @test area_mode.disδ ≈ v_disδ
-                @test area_mode.areaδ ≈ v_areaδ
+                @test d.area_mode.disδ ≈ v_disδ
+                @test d.area_mode.areaδ ≈ v_areaδ
             end
-            @test area_grad == ()
-            @test cumdis_grad == ()
-            @test area_mode_grad == ()
+            @test d.area_grad == ()
+            @test d.cumdis_grad == ()
+            @test d.area_mode_grad == ()
         end
     end
 end

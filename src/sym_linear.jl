@@ -165,7 +165,8 @@ end
             cumdis_grad = ()
             area_mode_grad = ()
         end
-        return area, cumdis, area_mode, area_grad, cumdis_grad, area_mode_grad
+        return SegSeq.SegData{T,A,CD,AG,0}(τ, area, cumdis, area_mode,
+                                           area_grad, cumdis_grad, area_mode_grad)
     end
 end
 
