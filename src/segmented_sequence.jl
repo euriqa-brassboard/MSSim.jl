@@ -133,7 +133,7 @@ function compute_sequence!(
         np_dis += seg.area.dis
         np_area += conj(p_dis) * seg.area.dis + seg.area.area
         if need_cumdis
-            np_cumdis += conj(p_dis) * seg.τ + seg.cumdis.cumdis
+            np_cumdis += p_dis * seg.τ + seg.cumdis.cumdis
         end
         if need_area_mode
             real_disδ = seg.area_mode.disδ + Utils.mulim(seg.area.dis * p_τ)
