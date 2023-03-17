@@ -71,6 +71,15 @@ function displacement(τ, Ω, Ω′, φ, δ)
     return phase0 * displacement_kernel(o, o′, d, s, c)
 end
 
+function displacement_δ(τ, Ω, Ω′, φ, δ)
+    phase0 = cis(φ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = sincos(d)
+    return phase0 * τ * displacement_δ_kernel(o, o′, d, s, c)
+end
+
 function cumulative_displacement(τ, Ω, Ω′, φ, δ)
     phase0 = cis(φ)
     d = δ * τ
@@ -96,6 +105,14 @@ function enclosed_area(τ, Ω, Ω′, φ, δ)
     o′ = Ω′ * τ^2
     s, c = sincos(d)
     return enclosed_area_kernel(o, o′, d, s, c)
+end
+
+function enclosed_area_δ(τ, Ω, Ω′, φ, δ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = sincos(d)
+    return τ * enclosed_area_δ_kernel(o, o′, d, s, c)
 end
 
 # The values we may care about in each segments
