@@ -5,7 +5,6 @@ module SymLinear
 using MSSim
 const PN = MSSim.PureNumeric
 const SL = MSSim.SymLinear
-const SegSeq = MSSim.SegSeq
 
 using Test
 using ForwardDiff
