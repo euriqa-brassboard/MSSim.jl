@@ -126,8 +126,9 @@ end
 # * Gradient of enclosed area w.r.t. detuning (areaδ)
 # As well as the gradient of everything above w.r.t. each of the input parameters
 
-@inline function (compute_values(τ, Ω, Ω′, φ, δ, ::Type{A}, ::Type{CD}, ::Type{AG})
-                  where {A,CD,AG})
+@inline function (compute_values(τ, Ω, Ω′, φ, δ, ::Type{A}, ::Type{CD}, ::Type{AG},
+                                 ::Val{include_grad})
+                  where {A,CD,AG,include_grad})
     @inline begin
         d = δ * τ
         o = Ω * τ
@@ -150,7 +151,14 @@ end
             area_mode = AG(phase0_τ * displacement_δ_kernel(o, o′, d, s, c),
                            τ * enclosed_area_δ_kernel(o, o′, d, s, c))
         end
-        return area, cumdis, area_mode
+        if include_grad
+            error("Not yet supported.")
+        else
+            area_grad = ()
+            cumdis_grad = ()
+            area_mode_grad = ()
+        end
+        return area, cumdis, area_mode, area_grad, cumdis_grad, area_mode_grad
     end
 end
 
