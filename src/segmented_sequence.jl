@@ -2,7 +2,7 @@
 
 module SegSeq
 
-_is_dummy(::Type{T}) where T = false
+is_dummy(::Type{T}) where T = false
 
 struct AreaData{T}
     dis::T
@@ -13,14 +13,14 @@ struct CumDisData{T}
     cumdis::T
 end
 const DummyCumDisData = CumDisData{Nothing}
-_is_dummy(::Type{DummyCumDisData}) = true
+is_dummy(::Type{DummyCumDisData}) = true
 
 struct AreaModeData{T}
     disδ::T
     areaδ::T
 end
 const DummyAreaModeData = AreaModeData{Nothing}
-_is_dummy(::Type{DummyAreaModeData}) = true
+is_dummy(::Type{DummyAreaModeData}) = true
 
 struct SegData{T,A,CD,AG,Ngrad}
     τ::T
@@ -33,10 +33,10 @@ struct SegData{T,A,CD,AG,Ngrad}
     area_mode_grad::NTuple{Ngrad,AG}
 end
 const SegDataNoGrad{T,A,CD,AG} = SegData{T,A,CD,AG,0}
-_is_cumdis_dummy(::Type{SegData{T,A,CD,AG,Ngrad}}) where {T,A,CD,AG,Ngrad} =
-    _is_dummy(CD)
-_is_area_mode_dummy(::Type{SegData{T,A,CD,AG,Ngrad}}) where {T,A,CD,AG,Ngrad} =
-    _is_dummy(AG)
+is_cumdis_dummy(::Type{SegData{T,A,CD,AG,Ngrad}}) where {T,A,CD,AG,Ngrad} =
+    is_dummy(CD)
+is_area_mode_dummy(::Type{SegData{T,A,CD,AG,Ngrad}}) where {T,A,CD,AG,Ngrad} =
+    is_dummy(AG)
 
 mutable struct SeqResultData{T,A,CD,AG}
     τ::T
@@ -75,8 +75,8 @@ function compute_sequence!(
     buffer::SeqComputeBuffer{T}) where SD <: SegDataNoGrad{T,A,CD,AG} where {T,A,CD,AG}
 
     nseg = length(segments)
-    need_cumdis = !_is_cumdis_dummy(SD)
-    need_area_mode = !_is_area_mode_dummy(SD)
+    need_cumdis = !is_cumdis_dummy(SD)
+    need_area_mode = !is_area_mode_dummy(SD)
     if need_area_mode
         resize!(buffer.dis_backward, nseg)
     else
