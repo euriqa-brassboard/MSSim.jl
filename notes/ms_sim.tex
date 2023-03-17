@@ -555,4 +555,43 @@ For an better expression around $\delta_k^n=0$,
   }{{\delta_k^n}^4\tau_n^4}
 }
 
+Now the gradients w.r.t. mode frequency/detuning.
+\eqar{
+  \pdiff{\alpha_k^n}{\delta_k^n}=&\ue^{\ui\varphi_k^n}\pdiff{}{\delta_k^n}\paren{
+    \paren{\ui\Omega_n\delta_k^n\tau_n^2-\Omega'_n\tau_n^2}\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
+    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\mathrm{sinc}\paren{\delta_k^n\tau_n}
+    -\ui\Omega'_n\tau_n^2\mathrm{cosc}\paren{\delta_k^n\tau_n}
+  }\\
+  =&\ue^{\ui\varphi_k^n}\tau_n\lparen{
+    \ui\Omega_n\tau_n\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
+    +\paren{\ui\Omega_n\delta_k^n\tau_n^2-\Omega'_n\tau_n^2}
+    \frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3\tau_n^3}
+  }\\
+  &\rparen{
+    +\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\mathrm{cosc}\paren{\delta_k^n\tau_n}
+    +\ui\Omega'_n\tau_n^2
+    \frac{\paren{{\delta_k^n}^2\tau_n^2-2}\sin\paren{\delta_k^n\tau_n}+2\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^3\tau_n^3}
+  }
+}
+\eqar{
+  \pdiff{\mathrm{Im}\paren{\gamma_k^n}}{\delta_k^n}=&
+  \paren{\Omega_n^2\tau_n^2+\Omega_n\Omega'_n\tau_n^3}\pdiff{}{\delta_k^n}\frac{\delta_k^n\tau_n-\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^2\tau_n^2}\\
+  &+{\Omega'_n}^2\tau_n^4\pdiff{}{\delta_k^n}\frac{
+    {\delta_k^n}^3\tau_n^3/3
+    -\sin\paren{{\delta_k^n}\tau_n}
+    +{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}
+  }{{\delta_k^n}^4\tau_n^4}\\
+  =&\tau_n\lparen{
+    \paren{\Omega_n^2\tau_n^2+\Omega_n\Omega'_n\tau_n^3}
+    \frac{-\delta_k^n\tau_n+2\sin\paren{{\delta_k^n}\tau_n}-{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^3\tau_n^3}
+  }\\
+  &\rparen{+{\Omega'_n}^2\tau_n^4\frac{
+      -{\delta_k^n}^3\tau_n^3/3
+      +\paren{4-{\delta_k^n}^2\tau_n^2}\sin\paren{{\delta_k^n}\tau_n}
+      -4{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}
+    }{{\delta_k^n}^5\tau_n^5}
+  }
+}
+
+
 \end{document}
