@@ -7,6 +7,8 @@ module SymLinear
 module SegInt
 
 import ...Utils
+import ...SegSeq
+
 using ForwardDiff
 
 # Integral for each segments
@@ -123,27 +125,32 @@ end
 # * Gradient of enclosed area w.r.t. detuning (areaδ)
 # As well as the gradient of everything above w.r.t. each of the input parameters
 
-@inline function compute_dis_area(τ, Ω, Ω′, φ, δ)
-    d = δ * τ
-    o = Ω * τ
-    o′ = Ω′ * τ^2
-    s, c = @inline sincos(d)
-    sφ, cφ = @inline sincos(φ)
-    phase0 = complex(cφ, sφ)
-    return @inline (phase0 * displacement_kernel(o, o′, d, s, c),
-                    enclosed_area_kernel(o, o′, d, s, c))
-end
+@inline function (compute_values(τ, Ω, Ω′, φ, δ, ::Type{A}, ::Type{CD}, ::Type{AG})
+                  where {A,CD,AG})
+    @inline begin
+        d = δ * τ
+        o = Ω * τ
+        o′ = Ω′ * τ^2
+        s, c = sincos(d)
+        sφ, cφ = sincos(φ)
+        phase0 = complex(cφ, sφ)
+        phase0_τ = phase0 * τ
 
-@inline function compute_dis_cumdis_area(τ, Ω, Ω′, φ, δ)
-    d = δ * τ
-    o = Ω * τ
-    o′ = Ω′ * τ^2
-    s, c = @inline sincos(d)
-    sφ, cφ = @inline sincos(φ)
-    phase0 = complex(cφ, sφ)
-    return @inline (phase0 * displacement_kernel(o, o′, d, s, c),
-                    phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c),
-                    enclosed_area_kernel(o, o′, d, s, c))
+        area = A(phase0 * displacement_kernel(o, o′, d, s, c),
+                 enclosed_area_kernel(o, o′, d, s, c))
+        if SegSeq.is_dummy(CD)
+            cumdis = CD(nothing)
+        else
+            cumdis = CD(phase0_τ * cumulative_displacement_kernel(o, o′, d, s, c))
+        end
+        if SegSeq.is_dummy(AG)
+            area_mode = AG(nothing, nothing)
+        else
+            area_mode = AG(phase0_τ * displacement_δ_kernel(o, o′, d, s, c),
+                           τ * enclosed_area_δ_kernel(o, o′, d, s, c))
+        end
+        return area, cumdis, area_mode
+    end
 end
 
 function compute_all_gradients(τ, Ω, Ω′, φ, δ)
