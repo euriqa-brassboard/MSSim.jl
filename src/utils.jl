@@ -4,6 +4,8 @@ module Utils
 
 # Math utility functions
 
+@inline mulim(x) = @inline complex(-imag(x), real(x))
+
 fastabs(x::Number) = abs(x)
 fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
 

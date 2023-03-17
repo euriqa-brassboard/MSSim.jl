@@ -2,6 +2,8 @@
 
 module SegSeq
 
+using ..Utils
+
 is_dummy(::Type{T}) where T = false
 
 struct AreaData{T}
@@ -116,7 +118,7 @@ function compute_sequence!(
             np_cumdis += conj(p_dis) * seg.τ + seg.cumdis.cumdis
         end
         if need_area_mode
-            real_disδ = seg.area_mode.disδ + im * seg.area.dis * p_τ
+            real_disδ = seg.area_mode.disδ + Utils.mulim(seg.area.dis * p_τ)
             np_real_disδ += real_disδ
             np_areaδ += (conj(p_dis) * real_disδ +
                 buffer.dis_backward[i] * conj(real_disδ) + seg.area_mode.areaδ)

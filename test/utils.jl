@@ -23,6 +23,12 @@ function test_diffs(_f, _f_big, threshold=1e-15)
     end
 end
 
+@testset "mulim" begin
+    for x in (0, 2, 1.2, 2im, 1.5im, 3 - 2im, 5.6 + 3.8im)
+        @test MSSim.Utils.mulim(x) == im * x
+    end
+end
+
 @testset "sin_c1" begin
     test_diffs(MSSim.Utils.sin_c1, MSSim.Utils._sin_c1_big)
 end
