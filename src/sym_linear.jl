@@ -16,7 +16,8 @@ using ForwardDiff
     S_C1 = Utils.sin_c1(d, s, c)
     S_C2 = Utils.sin_c2(d, s, c)
     C1 = Utils.cos_f1(d, s, c)
-    return complex((o + o′) * S_C1 - o′ * C1, o * d * C1 + o′ * S_C2)
+    return complex((o + o′) * S_C1 - o′ * C1,
+                   o * d * C1 + o′ * S_C2)
 end
 
 @inline function displacement_δ_kernel(o, o′, d, s, c)
