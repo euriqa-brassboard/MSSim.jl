@@ -5,7 +5,9 @@ module SymLinear
 using MSSim
 const PN = MSSim.PureNumeric
 const SL = MSSim.SymLinear
+
 using Test
+using ForwardDiff
 
 function get_Ω_θ_func(Ω, Ω′, φ, δ)
     return t->Ω + Ω′ * t, t->φ + δ * t
@@ -25,8 +27,12 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
     for (τ, Ω, Ω′, φ, δ) in all_params
         Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)
         v_num = PN.displacement(0, τ, Ωf, θf)
-        v_sym = SL.SegInt.displacement(τ, Ω, Ω′, φ, δ)
-        @test v_num ≈ v_sym atol = 1e-12 rtol = 1e-12
+        v_sym = SL.SegInt.displacement(τ, Ω, Ω′, φ, ForwardDiff.Dual(δ, (1.0,)))
+        vd_sym = SL.SegInt.displacement_δ(τ, Ω, Ω′, φ, δ)
+        v_sym_v = complex(real(v_sym).value, imag(v_sym).value)
+        v_sym_d = complex(real(v_sym).partials[1], imag(v_sym).partials[1])
+        @test v_num ≈ v_sym_v atol = 1e-12 rtol = 1e-12
+        @test v_sym_d ≈ vd_sym atol = 1e-12 rtol = 1e-12
     end
 end
 
@@ -43,8 +49,12 @@ end
     for (τ, Ω, Ω′, φ, δ) in all_params
         Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)
         v_num = PN.enclosed_area(0, τ, Ωf, θf)
-        v_sym = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, δ)
-        @test v_num ≈ v_sym atol = 1e-10 rtol = 1e-10
+        v_sym = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, ForwardDiff.Dual(δ, (1.0,)))
+        vd_sym = SL.SegInt.enclosed_area_δ(τ, Ω, Ω′, φ, δ)
+        v_sym_v = complex(real(v_sym).value, imag(v_sym).value)
+        v_sym_d = complex(real(v_sym).partials[1], imag(v_sym).partials[1])
+        @test v_num ≈ v_sym_v atol = 1e-10 rtol = 1e-10
+        @test v_sym_d ≈ vd_sym atol = 1e-12 rtol = 1e-12
         vc_num = PN.enclosed_area_complex(0, τ, Ωf, θf)
         vc_sym = SL.SegInt.enclosed_area_complex(τ, Ω, Ω′, φ, δ)
         @test vc_num ≈ vc_sym atol = 1e-10 rtol = 1e-10

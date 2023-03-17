@@ -22,8 +22,8 @@ end
     C2 = Utils.cos_f2(d, s, c)
     S_C2 = Utils.sin_c2(d, s, c)
     S_C3 = Utils.sin_c3(d, s, c)
-    return complex(-o′ * C2 - (o + o′) * S_C2,
-                   o * C1 + o * d * C2 + o′ * S_C3)
+    return complex(o′ * C2 - (o + o′) * S_C2,
+                   o * C1 - o * d * C2 + o′ * S_C3)
 end
 
 @inline function cumulative_displacement_kernel(o, o′, d, s, c)
