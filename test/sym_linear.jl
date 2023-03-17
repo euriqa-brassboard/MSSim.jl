@@ -77,22 +77,17 @@ end
         v_area = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, δ)
         v_areaδ = SL.SegInt.enclosed_area_δ(τ, Ω, Ω′, φ, δ)
 
-        for ((T_CD, CT_CD),
-             (T_AG, CT_AG)) in Iterators.product(((Nothing, Nothing),
-                                                  (Float64, ComplexF64)),
-                                                 ((Nothing, Nothing),
-                                                  (Float64, ComplexF64)))
-            CD = SegSeq.CumDisData{T_CD,CT_CD}
-            AG = SegSeq.AreaModeData{T_AG,CT_AG}
+        for (include_cumdis, include_area_mode) in Iterators.product((false, true),
+                                                                     (false, true))
             area, cumdis, area_mode, area_grad, cumdis_grad, area_mode_grad =
-                SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ,
-                                         SegSeq.AreaData{Float64}, CD, AG, Val(false))
+                SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
+                                         Val(include_area_mode), Val(false))
             @test area.dis ≈ v_dis
             @test area.area ≈ v_area
-            if T_CD !== Nothing
+            if include_cumdis
                 @test cumdis.cumdis ≈ v_cumdis
             end
-            if T_AG !== Nothing
+            if include_area_mode
                 @test area_mode.disδ ≈ v_disδ
                 @test area_mode.areaδ ≈ v_areaδ
             end
