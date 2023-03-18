@@ -127,4 +127,47 @@ end
     end
 end
 
+@testset "Average zero" begin
+    T = Float64
+    CT = Complex{T}
+    A = SS.AreaData{T}
+    CD = SS.CumDisData{T,CT}
+    AG = SS.AreaModeData{T,CT}
+
+    buffer = SS.SeqComputeBuffer{T}()
+    result = SS.SeqResultData{T,A,CD,AG}(4, 0)
+
+    p0 = 0
+    p1 = 1 + 1im
+    p2 = 0 - 2im
+    p3 = -1 + 1im
+    p4 = 0
+
+    l1 = p1 - p0
+    l2 = p2 - p1
+    l3 = p3 - p2
+    l4 = p4 - p3
+
+    for (τ, Ω, φ) in Iterators.product(τs, Ωs, φs)
+        d1 = SL.SegInt.compute_values(τ, Ω * abs(l1), 0, φ + angle(l1), 0,
+                                      Val(true), Val(true), Val(false))
+        d2 = SL.SegInt.compute_values(τ, Ω * abs(l2), 0, φ + angle(l2), 0,
+                                      Val(true), Val(true), Val(false))
+        d3 = SL.SegInt.compute_values(τ, Ω * abs(l3), 0, φ + angle(l3), 0,
+                                      Val(true), Val(true), Val(false))
+        d4 = SL.SegInt.compute_values(τ, Ω * abs(l4), 0, φ + angle(l4), 0,
+                                      Val(true), Val(true), Val(false))
+
+        SS.compute_sequence!(result, [d1, d2, d3, d4], buffer)
+        @test result.τ == 4 * τ
+        @test result.area.dis ≈ 0 atol=1e-10
+        @test result.area.area ≈ -(Ω * τ)^2 * 4
+        @test result.cumdis.cumdis ≈ 0 atol=1e-10
+        @test result.area_mode.disδ ≈ 0 atol=1e-10
+        if τ != 0 && Ω != 0
+            @test result.area_mode.areaδ != 0
+        end
+    end
+end
+
 end
