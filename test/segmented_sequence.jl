@@ -38,6 +38,27 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
         @test result.cumdis.cumdis == d.cumdis.cumdis
         @test result.area_mode.disδ == d.area_mode.disδ
         @test result.area_mode.areaδ == d.area_mode.areaδ
+
+        for (need_cumdis, need_area_mode) in Iterators.product((false, true),
+                                                               (false, true))
+            CD′ = need_cumdis ? CD : SS.DummyCumDisData
+            AG′ = need_area_mode ? AG : SS.DummyAreaModeData
+
+            result′ = SS.SeqResultData{T,A,CD′,AG′}(1, 0)
+            d′ = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
+                                           Val(need_area_mode), Val(false))
+            SS.compute_sequence!(result′, [d′], buffer)
+            @test result.τ == τ
+            @test result.area.dis == d.area.dis
+            @test result.area.area == d.area.area
+            if need_cumdis
+                @test result.cumdis.cumdis == d.cumdis.cumdis
+            end
+            if need_area_mode
+                @test result.area_mode.disδ == d.area_mode.disδ
+                @test result.area_mode.areaδ == d.area_mode.areaδ
+            end
+        end
     end
 end
 
@@ -80,6 +101,29 @@ end
         @test result2.cumdis.cumdis ≈ 2 * d.cumdis.cumdis + τ * d.area.dis
         @test result2.area_mode.disδ ≈ 2 * d.area_mode.disδ + im * τ * d.area.dis
         @test result2.area_mode.areaδ ≈ τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
+
+        for (need_cumdis, need_area_mode) in Iterators.product((false, true),
+                                                               (false, true))
+            CD′ = need_cumdis ? CD : SS.DummyCumDisData
+            AG′ = need_area_mode ? AG : SS.DummyAreaModeData
+
+            result′ = SS.SeqResultData{T,A,CD′,AG′}(2, 0)
+            d′ = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
+                                           Val(need_area_mode), Val(false))
+            SS.compute_sequence!(result′, [d′, d′], buffer)
+            @test result′.τ == 2 * τ
+            @test result′.area.dis ≈ 2 * d.area.dis atol=1e-8
+            @test result′.area.area ≈ 2 * d.area.area atol=1e-8
+            if need_cumdis
+                @test result′.cumdis.cumdis ≈ 2 * d.cumdis.cumdis + τ * d.area.dis
+            end
+            if need_area_mode
+                @test result′.area_mode.disδ ≈
+                    2 * d.area_mode.disδ + im * τ * d.area.dis
+                @test result′.area_mode.areaδ ≈
+                    τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
+            end
+        end
 
         for τ′ in τs
             d0 = SL.SegInt.compute_values(τ′, 0.0, 0.0, 0.0, 0.0,
