@@ -68,6 +68,16 @@ end
     end
 end
 
+@testset "Special cases" begin
+    for (τ, Ω, φ) in Iterators.product(τs, Ωs, φs)
+        @test SL.SegInt.displacement(τ, Ω, 0, φ, 0) ≈ τ * Ω * cis(φ)
+        @test SL.SegInt.displacement_δ(τ, Ω, 0, φ, 0) ≈ im * τ^2 * Ω * cis(φ) / 2
+        @test SL.SegInt.cumulative_displacement(τ, Ω, 0, φ, 0) ≈ τ^2 * Ω * cis(φ) / 2
+        @test SL.SegInt.enclosed_area(τ, Ω, 0, φ, 0) == 0
+        @test SL.SegInt.enclosed_area_δ(τ, Ω, 0, φ, 0) ≈ abs2(τ * Ω) * τ / 6
+    end
+end
+
 @testset "Compute values" begin
     for (τ, Ω, Ω′, φ, δ) in all_params
         v_dis = SL.SegInt.displacement(τ, Ω, Ω′, φ, δ)
