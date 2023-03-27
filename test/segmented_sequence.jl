@@ -212,4 +212,79 @@ end
     end
 end
 
+struct SegParam{T}
+    τ::T
+    Ω::T
+    Ω′::T
+    φ::T
+    δ::T
+end
+
+function get_Ω_θ_func(params::AbstractVector{SegParam{T}}) where T
+    nparams = length(params)
+    total_times = Vector{T}(undef, length(params) + 1)
+    total_times[1] = 0
+    cur_time = T(0)
+    for (i, param) in enumerate(params)
+        cur_time += param.τ
+        total_times[i + 1] = cur_time
+    end
+    function find_segment(t)
+        idx = searchsortedfirst(total_times, t) - 1
+        t0 = get(total_times, idx, zero(T))
+        param = get(params, idx, SegParam{T}(zero(T), zero(T), zero(T),
+                                             zero(T), zero(T)))
+        return t0, param
+    end
+    function Ωf(t)
+        t0, param = find_segment(t)
+        return param.Ω + param.Ω′ * (t - t0)
+    end
+    function θf(t)
+        t0, param = find_segment(t)
+        return param.φ + param.δ * (t - t0)
+    end
+    return Ωf, θf
+end
+
+function get_seg_data(params::AbstractVector{SegParam{T}}) where T
+    return [SL.SegInt.compute_values(param.τ, param.Ω, param.Ω′, param.φ, param.δ,
+                                     Val(true), Val(true), Val(false))
+            for param in params]
+end
+
+@testset "Random sequence" begin
+    T = Float64
+    CT = Complex{T}
+    A = SS.AreaData{T}
+    CD = SS.CumDisData{T,CT}
+    AG = SS.AreaModeData{T,CT}
+
+    buffer = SS.SeqComputeBuffer{T}()
+    result = SS.SeqResultData{T,A,CD,AG}()
+
+    all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
+
+    function test_nseg(nseg)
+        params = [rand(all_params_array) for i in 1:nseg]
+        total_time = sum(param.τ for param in params)
+        Ωf, θf = get_Ω_θ_func(params)
+        seg_data = get_seg_data(params)
+        SS.compute_sequence!(result, seg_data, buffer)
+        dis = PN.displacement(0, total_time, Ωf, θf, rtol=1e-8, atol=1e-8)
+        cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
+                                             rtol=1e-8, atol=1e-8)
+        area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=5e-6, atol=5e-6)
+        @test result.τ ≈ total_time
+        @test result.area.dis ≈ dis rtol=1e-3 atol=1e-3
+        @test result.area.area ≈ area rtol=3e-2 atol=3e-2
+        @test result.cumdis.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
+    end
+    for i in 1:100
+        test_nseg(1)
+        test_nseg(2)
+        test_nseg(5)
+    end
+end
+
 end
