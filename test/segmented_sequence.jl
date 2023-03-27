@@ -27,7 +27,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SeqResultData{T,A,CD,AG}(1, 0)
+    result = SS.SeqResultData{T,A,CD,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
         d = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
@@ -44,19 +44,19 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
             CD′ = need_cumdis ? CD : SS.DummyCumDisData
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
-            result′ = SS.SeqResultData{T,A,CD′,AG′}(1, 0)
+            result′ = SS.SeqResultData{T,A,CD′,AG′}()
             d′ = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                            Val(need_area_mode), Val(false))
             SS.compute_sequence!(result′, [d′], buffer)
-            @test result.τ == τ
-            @test result.area.dis == d.area.dis
-            @test result.area.area == d.area.area
+            @test result′.τ == τ
+            @test result′.area.dis == d.area.dis
+            @test result′.area.area == d.area.area
             if need_cumdis
-                @test result.cumdis.cumdis == d.cumdis.cumdis
+                @test result′.cumdis.cumdis == d.cumdis.cumdis
             end
             if need_area_mode
-                @test result.area_mode.disδ == d.area_mode.disδ
-                @test result.area_mode.areaδ == d.area_mode.areaδ
+                @test result′.area_mode.disδ == d.area_mode.disδ
+                @test result′.area_mode.areaδ == d.area_mode.areaδ
             end
         end
     end
@@ -70,9 +70,7 @@ end
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result2 = SS.SeqResultData{T,A,CD,AG}(2, 0)
-    result3 = SS.SeqResultData{T,A,CD,AG}(3, 0)
-    result4 = SS.SeqResultData{T,A,CD,AG}(4, 0)
+    result = SS.SeqResultData{T,A,CD,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
         d = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
@@ -84,30 +82,30 @@ end
         @test nd.cumdis.cumdis ≈ d.cumdis.cumdis - d.area.dis * τ
         @test nd.area_mode.disδ ≈ d.area_mode.disδ - im * τ * d.area.dis
         @test nd.area_mode.areaδ ≈ d.area_mode.areaδ
-        SS.compute_sequence!(result2, [d, nd], buffer)
-        @test result2.τ ≈ 2 * τ
-        @test result2.area.dis ≈ 0 atol=1e-8
-        @test result2.area.area ≈ 0 atol=1e-8
-        @test result2.cumdis.cumdis ≈ 2 * d.cumdis.cumdis
-        @test result2.area_mode.disδ ≈ 2 * d.area_mode.disδ - 2 * im * τ * d.area.dis
-        @test result2.area_mode.areaδ ≈
+        SS.compute_sequence!(result, [d, nd], buffer)
+        @test result.τ ≈ 2 * τ
+        @test result.area.dis ≈ 0 atol=1e-8
+        @test result.area.area ≈ 0 atol=1e-8
+        @test result.cumdis.cumdis ≈ 2 * d.cumdis.cumdis
+        @test result.area_mode.disδ ≈ 2 * d.area_mode.disδ - 2 * im * τ * d.area.dis
+        @test result.area_mode.areaδ ≈
             (2 * imag(d.area_mode.disδ * conj(d.area.dis))
              - 2 * τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ)
 
-        SS.compute_sequence!(result2, [d, d], buffer)
-        @test result2.τ ≈ 2 * τ
-        @test result2.area.dis ≈ 2 * d.area.dis atol=1e-8
-        @test result2.area.area ≈ 2 * d.area.area atol=1e-8
-        @test result2.cumdis.cumdis ≈ 2 * d.cumdis.cumdis + τ * d.area.dis
-        @test result2.area_mode.disδ ≈ 2 * d.area_mode.disδ + im * τ * d.area.dis
-        @test result2.area_mode.areaδ ≈ τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
+        SS.compute_sequence!(result, [d, d], buffer)
+        @test result.τ ≈ 2 * τ
+        @test result.area.dis ≈ 2 * d.area.dis atol=1e-8
+        @test result.area.area ≈ 2 * d.area.area atol=1e-8
+        @test result.cumdis.cumdis ≈ 2 * d.cumdis.cumdis + τ * d.area.dis
+        @test result.area_mode.disδ ≈ 2 * d.area_mode.disδ + im * τ * d.area.dis
+        @test result.area_mode.areaδ ≈ τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
 
         for (need_cumdis, need_area_mode) in Iterators.product((false, true),
                                                                (false, true))
             CD′ = need_cumdis ? CD : SS.DummyCumDisData
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
-            result′ = SS.SeqResultData{T,A,CD′,AG′}(2, 0)
+            result′ = SS.SeqResultData{T,A,CD′,AG′}()
             d′ = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                            Val(need_area_mode), Val(false))
             SS.compute_sequence!(result′, [d′, d′], buffer)
@@ -128,45 +126,45 @@ end
         for τ′ in τs
             d0 = SL.SegInt.compute_values(τ′, 0.0, 0.0, 0.0, 0.0,
                                           Val(true), Val(true), Val(false))
-            SS.compute_sequence!(result2, [d0, d], buffer)
-            @test result2.τ ≈ τ + τ′
-            @test result2.area.dis == d.area.dis
-            @test result2.area.area == d.area.area
-            @test result2.cumdis.cumdis == d.cumdis.cumdis
-            @test result2.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
-            @test result2.area_mode.areaδ == d.area_mode.areaδ
+            SS.compute_sequence!(result, [d0, d], buffer)
+            @test result.τ ≈ τ + τ′
+            @test result.area.dis == d.area.dis
+            @test result.area.area == d.area.area
+            @test result.cumdis.cumdis == d.cumdis.cumdis
+            @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
+            @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result2, [d, d0], buffer)
-            @test result2.τ ≈ τ + τ′
-            @test result2.area.dis == d.area.dis
-            @test result2.area.area == d.area.area
-            @test result2.cumdis.cumdis ≈ d.cumdis.cumdis + τ′ * d.area.dis
-            @test result2.area_mode.disδ == d.area_mode.disδ
-            @test result2.area_mode.areaδ == d.area_mode.areaδ
+            SS.compute_sequence!(result, [d, d0], buffer)
+            @test result.τ ≈ τ + τ′
+            @test result.area.dis == d.area.dis
+            @test result.area.area == d.area.area
+            @test result.cumdis.cumdis ≈ d.cumdis.cumdis + τ′ * d.area.dis
+            @test result.area_mode.disδ == d.area_mode.disδ
+            @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result3, [d0, d0, d], buffer)
-            @test result3.τ ≈ τ + τ′ * 2
-            @test result3.area.dis == d.area.dis
-            @test result3.area.area == d.area.area
-            @test result3.cumdis.cumdis == d.cumdis.cumdis
-            @test result3.area_mode.disδ ≈ d.area_mode.disδ + 2 * im * τ′ * d.area.dis
-            @test result3.area_mode.areaδ == d.area_mode.areaδ
+            SS.compute_sequence!(result, [d0, d0, d], buffer)
+            @test result.τ ≈ τ + τ′ * 2
+            @test result.area.dis == d.area.dis
+            @test result.area.area == d.area.area
+            @test result.cumdis.cumdis == d.cumdis.cumdis
+            @test result.area_mode.disδ ≈ d.area_mode.disδ + 2 * im * τ′ * d.area.dis
+            @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result3, [d0, d, d0], buffer)
-            @test result3.τ ≈ τ + τ′ * 2
-            @test result3.area.dis == d.area.dis
-            @test result3.area.area == d.area.area
-            @test result3.cumdis.cumdis ≈ d.cumdis.cumdis + τ′ * d.area.dis
-            @test result3.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
-            @test result3.area_mode.areaδ == d.area_mode.areaδ
+            SS.compute_sequence!(result, [d0, d, d0], buffer)
+            @test result.τ ≈ τ + τ′ * 2
+            @test result.area.dis == d.area.dis
+            @test result.area.area == d.area.area
+            @test result.cumdis.cumdis ≈ d.cumdis.cumdis + τ′ * d.area.dis
+            @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
+            @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result3, [d, d0, d0], buffer)
-            @test result3.τ ≈ τ + τ′ * 2
-            @test result3.area.dis == d.area.dis
-            @test result3.area.area == d.area.area
-            @test result3.cumdis.cumdis ≈ d.cumdis.cumdis + 2 * τ′ * d.area.dis
-            @test result3.area_mode.disδ == d.area_mode.disδ
-            @test result3.area_mode.areaδ == d.area_mode.areaδ
+            SS.compute_sequence!(result, [d, d0, d0], buffer)
+            @test result.τ ≈ τ + τ′ * 2
+            @test result.area.dis == d.area.dis
+            @test result.area.area == d.area.area
+            @test result.cumdis.cumdis ≈ d.cumdis.cumdis + 2 * τ′ * d.area.dis
+            @test result.area_mode.disδ == d.area_mode.disδ
+            @test result.area_mode.areaδ == d.area_mode.areaδ
         end
     end
 end
@@ -179,7 +177,7 @@ end
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SeqResultData{T,A,CD,AG}(4, 0)
+    result = SS.SeqResultData{T,A,CD,AG}()
 
     p0 = 0
     p1 = 1 + 1im

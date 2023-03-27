@@ -50,7 +50,7 @@ mutable struct SeqResultData{T,A,CD,AG}
     area::A
     cumdis::CD
     area_mode::AG
-    function SeqResultData{T,A,CD,AG}(nseg) where {T,A,CD,AG}
+    function SeqResultData{T,A,CD,AG}() where {T,A,CD,AG}
         return new(zero(T), A(), CD(), AG())
     end
 end
