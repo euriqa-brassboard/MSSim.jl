@@ -15,7 +15,7 @@ function displacement(t0, t1, Ω, θ; atol=1e-8, rtol=1e-8)
 end
 
 function cumulative_displacement(t0, t1, Ω, θ; atol=1e-8, rtol=1e-8)
-    f(t) = displacement(t0, t, Ω, θ; atol=atol, rtol=rtol)
+    f(t) = (t1 - t) * Ω(t) * cis(θ(t))
     res, err = quadgk(f, t0, t1; atol=atol, rtol=rtol)
     return res
 end
