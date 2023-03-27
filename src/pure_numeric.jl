@@ -22,7 +22,8 @@ end
 
 # Twice the enclosed area
 function enclosed_area_complex(t0, t1, Ω, θ; atol=1e-8, rtol=1e-8)
-    f(t) = Ω(t) * cis(θ(t)) * displacement(t0, t, Ω, t->-θ(t); atol=atol, rtol=rtol)
+    f(t) = Ω(t) * cis(θ(t)) * displacement(t0, t, Ω, t->-θ(t);
+                                             atol=atol / 1000, rtol=rtol / 1000)
     res, err = quadgk(f, t0, t1; atol=atol, rtol=rtol)
     return res
 end
@@ -31,7 +32,7 @@ end
 function enclosed_area(t0, t1, Ω, θ; atol=1e-8, rtol=1e-8)
     # Only getting the interesting part of the integral.
     f(t) = Ω(t) * imag(cis(θ(t)) * displacement(t0, t, Ω, t->-θ(t),
-                                                  atol=atol, rtol=rtol))
+                                                  atol=atol / 1000, rtol=rtol / 1000))
     res, err = quadgk(f, t0, t1; atol=atol, rtol=rtol)
     return res
 end
