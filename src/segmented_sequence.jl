@@ -32,37 +32,26 @@ end
 const DummyAreaModeData = AreaModeData{Nothing,Nothing}
 is_dummy(::Type{DummyAreaModeData}) = true
 
-struct SegData{T,A,CD,AG,Ngrad}
+# TODO gradients
+struct SegData{T,A,CD,AG}
     τ::T
     area::A
     cumdis::CD
     area_mode::AG
-
-    area_grad::NTuple{Ngrad,A}
-    cumdis_grad::NTuple{Ngrad,CD}
-    area_mode_grad::NTuple{Ngrad,AG}
 end
-const SegDataNoGrad{T,A,CD,AG} = SegData{T,A,CD,AG,0}
-is_cumdis_dummy(::Type{SegData{T,A,CD,AG,Ngrad}}) where {T,A,CD,AG,Ngrad} =
+is_cumdis_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
     is_dummy(CD)
-is_area_mode_dummy(::Type{SegData{T,A,CD,AG,Ngrad}}) where {T,A,CD,AG,Ngrad} =
+is_area_mode_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
     is_dummy(AG)
 
+# TODO gradients
 mutable struct SeqResultData{T,A,CD,AG}
     τ::T
     area::A
     cumdis::CD
     area_mode::AG
-
-    area_grad::Matrix{A}
-    cumdis_grad::Matrix{CD}
-    area_mode_grad::Matrix{AG}
-
-    function SeqResultData{T,A,CD,AG}(nseg, ngrad) where {T,A,CD,AG}
-        return new(zero(T), A(), CD(), AG(),
-                   Matrix{A}(undef, nseg, ngrad),
-                   Matrix{CD}(undef, nseg, ngrad),
-                   Matrix{AG}(undef, nseg, ngrad))
+    function SeqResultData{T,A,CD,AG}(nseg) where {T,A,CD,AG}
+        return new(zero(T), A(), CD(), AG())
     end
 end
 
@@ -92,7 +81,7 @@ end
 function compute_sequence!(
     result::SeqResultData{T,A,CD,AG},
     segments::AbstractVector{SD},
-    buffer::SeqComputeBuffer{T}) where SD <: SegDataNoGrad{T,A,CD,AG} where {T,A,CD,AG}
+    buffer::SeqComputeBuffer{T}) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
 
     nseg = length(segments)
     need_cumdis = !is_cumdis_dummy(SD)

@@ -99,9 +99,6 @@ end
                 @test d.area_mode.disδ ≈ v_disδ
                 @test d.area_mode.areaδ ≈ v_areaδ
             end
-            @test d.area_grad == ()
-            @test d.cumdis_grad == ()
-            @test d.area_mode_grad == ()
         end
     end
 end

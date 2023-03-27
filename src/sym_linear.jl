@@ -160,13 +160,8 @@ end
         end
         if include_grad
             error("Not yet supported.")
-        else
-            area_grad = ()
-            cumdis_grad = ()
-            area_mode_grad = ()
         end
-        return SegSeq.SegData{T,A,CD,AG,0}(τ, area, cumdis, area_mode,
-                                           area_grad, cumdis_grad, area_mode_grad)
+        return SegSeq.SegData{T,A,CD,AG}(τ, area, cumdis, area_mode)
     end
 end
 
