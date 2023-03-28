@@ -2,6 +2,48 @@
 
 module Utils
 
+struct JaggedMatrix{T} <: AbstractVector{SubArray{T,1,Vector{T},Tuple{UnitRange{Int}},true}}
+    values::Vector{T}
+    idx_ranges::Vector{UnitRange{Int}}
+    function JaggedMatrix{T}() where T
+        return new(T[], UnitRange{Int}[])
+    end
+    global _similar
+    @inline function _similar(m::JaggedMatrix, ::Type{T}) where T
+        return new{T}(similar(m.values, T), copy(m.idx_ranges))
+    end
+end
+
+Base.size(m::JaggedMatrix) = size(m.idx_ranges)
+Base.length(m::JaggedMatrix) = length(m.idx_ranges)
+
+Base.@propagate_inbounds function Base.getindex(m::JaggedMatrix, idx)
+    rng = m.idx_ranges[idx]
+    return @view m.values[rng]
+end
+
+Base.similar(m::JaggedMatrix{T}) where T = _similar(m, T)
+Base.similar(m::JaggedMatrix, ::Type{AT}) where AT <: AbstractVector{T} where T =
+    _similar(m, T)
+
+function Base.push!(m::JaggedMatrix{T}, ary::AbstractArray) where T
+    last_idx = length(m.values)
+    neles = length(ary)
+    append!(m.values, ary)
+    push!(m.idx_ranges, (last_idx + 1):(last_idx + neles))
+    return m
+end
+
+function Base.push!(m::JaggedMatrix{T}, ele::T) where T
+    rng = m.idx_ranges[end]
+    new_rng = first(rng):(last(rng) + 1)
+    push!(m.values, ele)
+    m.idx_ranges[end] = new_rng
+    return m
+end
+
+Base.push!(m::JaggedMatrix{T}, ele) where T = push!(m, convert(T, ele))
+
 # Math utility functions
 
 @inline mulim(x) = @inline complex(-imag(x), real(x))

@@ -24,6 +24,87 @@ function test_diffs(_f, _f_big, threshold=1e-15)
     end
 end
 
+@testset "JaggedMatrix" begin
+    m = U.JaggedMatrix{Float64}()
+    @test length(m) == 0
+    @test size(m) == (0,)
+    @test eltype(eltype(m)) == Float64
+    @test_throws BoundsError push!(m, 1.0)
+    push!(m, [1.0])
+    @test length(m) == 1
+    @test size(m) == (1,)
+    @test m[1] == [1.0]
+    @test typeof(m[1]) == eltype(m)
+    @test_throws BoundsError m[2]
+    push!(m, [3])
+    @test length(m) == 2
+    @test size(m) == (2,)
+    @test m[1] == [1.0]
+    @test m[2] == [3.0]
+    @test_throws BoundsError m[3]
+    push!(m, 4.5)
+    @test length(m) == 2
+    @test size(m) == (2,)
+    @test m[1] == [1.0]
+    @test m[2] == [3.0, 4.5]
+    @test_throws BoundsError m[3]
+    push!(m, 10)
+    @test length(m) == 2
+    @test size(m) == (2,)
+    @test m[1] == [1.0]
+    @test m[2] == [3.0, 4.5, 10.0]
+    @test_throws BoundsError m[3]
+
+    m2 = similar(m)
+    @test length(m2) == 2
+    @test size(m2) == (2,)
+    @test size(m2[1]) == (1,)
+    @test size(m2[2]) == (3,)
+    @test_throws BoundsError m2[3]
+    push!(m2, 10.5)
+    @test size(m2[2]) == (4,)
+    @test size(m[2]) == (3,)
+    push!(m, 20)
+    push!(m, 34)
+    @test size(m2[2]) == (4,)
+    @test size(m[2]) == (5,)
+    push!(m2, [1, 2, 3])
+    @test length(m2) == 3
+    @test size(m2) == (3,)
+    @test size(m2[1]) == (1,)
+    @test size(m2[2]) == (4,)
+    @test m2[3] == [1.0, 2.0, 3.0]
+    @test_throws BoundsError m2[4]
+    @test length(m) == 2
+    @test size(m) == (2,)
+    @test m[1] == [1.0]
+    @test m[2] == [3.0, 4.5, 10.0, 20.0, 34.0]
+    @test_throws BoundsError m[3]
+    m2[1][1] = 3.4
+    m2[2][1] = 0.1
+    m2[2][2] = 0.3
+    m2[2][3] = 0.85
+    @test m2[1] == [3.4]
+    @test m2[2] == [0.1, 0.3, 0.85, 10.5]
+    @test m2[3] == [1.0, 2.0, 3.0]
+
+    m2 = similar(m, AbstractVector{Int})
+    @test length(m2) == 2
+    @test size(m2) == (2,)
+    @test size(m2[1]) == (1,)
+    @test size(m2[2]) == (5,)
+    @test_throws BoundsError m2[3]
+    @test eltype(eltype(m2)) == Int
+
+    m2 = similar(m, Vector{Tuple{Int,Int}})
+    @test length(m2) == 2
+    @test size(m2) == (2,)
+    @test size(m2[1]) == (1,)
+    @test size(m2[2]) == (5,)
+    @test_throws BoundsError m2[3]
+    @test eltype(eltype(m2)) == NTuple{2,Int}
+end
+
 @testset "mulim" begin
     for x in (0, 2, 1.2, 2im, 1.5im, 3 - 2im, 5.6 + 3.8im)
         @test U.mulim(x) == im * x
