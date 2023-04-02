@@ -103,6 +103,10 @@ end
     @test size(m2[2]) == (5,)
     @test_throws BoundsError m2[3]
     @test eltype(eltype(m2)) == NTuple{2,Int}
+
+    empty!(m2)
+    @test length(m2) == 0
+    @test size(m2) == (0,)
 end
 
 @testset "mulim" begin

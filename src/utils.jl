@@ -44,6 +44,12 @@ end
 
 Base.push!(m::JaggedMatrix{T}, ele) where T = push!(m, convert(T, ele))
 
+function Base.empty!(m::JaggedMatrix)
+    empty!(m.values)
+    empty!(m.idx_ranges)
+    return m
+end
+
 # Math utility functions
 
 @inline mulim(x) = @inline complex(-imag(x), real(x))
