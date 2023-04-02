@@ -753,11 +753,112 @@ Area,
 }
 \eqar{
   \pdiff{\mathrm{Im}\paren{\gamma_k^n}}{\Omega'_n}=&\tau_n^2\paren{\Omega_n\tau_n\frac{\delta_k^n\tau_n-\sin\paren{{\delta_k^n}\tau_n}}{{\delta_k^n}^2\tau_n^2}
-  +2{\Omega'_n}\tau_n^2\frac{
-    {\delta_k^n}^3\tau_n^3/3
-    -\sin\paren{{\delta_k^n}\tau_n}
-    +{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}
-  }{{\delta_k^n}^4\tau_n^4}}
+    +2{\Omega'_n}\tau_n^2\frac{
+      {\delta_k^n}^3\tau_n^3/3
+      -\sin\paren{{\delta_k^n}\tau_n}
+      +{\delta_k^n}\tau_n\cos\paren{{\delta_k^n}\tau_n}
+    }{{\delta_k^n}^4\tau_n^4}}
+}
+
+Displacement gradient w.r.t. mode frequency,
+\eqar{
+  \frac{\partial^2\alpha_k^n}{\partial\delta_k^n\partial\tau_n}=&\ue^{\ui\varphi_k^n}\pdiff{}{\tau_n}\lparen{
+    \ui\Omega_n\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2}
+    +\paren{\ui\Omega_n\delta_k^n-\Omega'_n}
+    \frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3}
+  }\\
+  &\rparen{
+    +\paren{\Omega_n+\Omega'_n\tau_n}
+    \frac{{\delta_k^n\tau_n}\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2}
+    +\ui\Omega'_n
+    \frac{\paren{{\delta_k^n}^2\tau_n^2-2}\sin\paren{\delta_k^n\tau_n}+2\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^3}
+  }\\
+  =&\ue^{\ui\varphi_k^n}\lparen{
+    \ui\Omega_n\pdiff{}{\tau_n}\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2}
+    +\paren{\ui\Omega_n\delta_k^n-\Omega'_n}
+    \pdiff{}{\tau_n}\frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3}
+  }\\
+  &+\Omega'_n
+  \frac{{\delta_k^n\tau_n}\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2}
+  +\paren{\Omega_n+\Omega'_n\tau_n}
+  \pdiff{}{\tau_n}\frac{{\delta_k^n\tau_n}\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2}
+  \\
+  &\rparen{
+    +\ui\Omega'_n
+    \pdiff{}{\tau_n}\frac{\paren{{\delta_k^n}^2\tau_n^2-2}\sin\paren{\delta_k^n\tau_n}+2\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^3}
+  }\\
+  =&\ue^{\ui\varphi_k^n}\lparen{
+    \ui\Omega_n\frac{\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}}
+    +\paren{\ui\Omega_n\delta_k^n-\Omega'_n}
+    \frac{
+      {\delta_k^n}\tau_n\cos\paren{\delta_k^n\tau_n}
+      -\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2}
+  }\\
+  &\rparen{
+    +\Omega'_n
+    \frac{{\delta_k^n\tau_n}\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2}
+    -\paren{\Omega_n+\Omega'_n\tau_n}\tau_n\sin\paren{\delta_k^n\tau_n}
+    +\ui\Omega'_n\tau_n^2\cos\paren{\delta_k^n\tau_n}
+  }\\
+  =&\ue^{\ui\varphi_k^n}\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}\paren{
+    \ui\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}
+  }
+}
+\eqar{
+  \frac{\partial^2\alpha_k^n}{\partial\delta_k^n\partial\varphi_k^n}=&\ui\pdiff{\alpha_k^n}{\delta_k^n}
+}
+\eqar{
+  \frac{\partial^2\alpha_k^n}{\partial\delta_k^n\partial\Omega_n}=&\ue^{\ui\varphi_k^n}\tau_n^2\paren{
+    \ui\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
+    +\ui\delta_k^n\tau_n
+    \frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3\tau_n^3}+\mathrm{cosc}\paren{\delta_k^n\tau_n}
+  }
+}
+\eqar{
+  \frac{\partial^2\alpha_k^n}{\partial\delta_k^n\partial\Omega_n}=&\ue^{\ui\varphi_k^n}\tau_n^3\lparen{
+    -\frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3\tau_n^3}
+    +\mathrm{cosc}\paren{\delta_k^n\tau_n}
+  }\\
+  &\rparen{
+    +\ui\frac{\paren{{\delta_k^n}^2\tau_n^2-2}\sin\paren{\delta_k^n\tau_n}+2\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^3\tau_n^3}
+  }
+}
+\eqar{
+  \pdiff[2]{\alpha_k^n}{\delta_k^n}=&\ue^{\ui\varphi_k^n}\tau_n\lparen{
+    \ui\Omega_n\tau_n\pdiff{}{\delta_k^n}\frac{1-\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}
+    +\ui\Omega_n\tau_n^2
+    \frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3\tau_n^3}
+  }\\
+  &+\paren{\ui\Omega_n\delta_k^n\tau_n^2-\Omega'_n\tau_n^2}
+  \pdiff{}{\delta_k^n}\frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3\tau_n^3}
+  \\
+  &+\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}
+  \pdiff{}{\delta_k^n}\frac{\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}-\sin\paren{\delta_k^n\tau_n}}{{\delta_k^n}^2\tau_n^2}\\
+  &\rparen{
+    +\ui\Omega'_n\tau_n^2
+    \pdiff{}{\delta_k^n}\frac{\paren{{\delta_k^n}^2\tau_n^2-2}\sin\paren{\delta_k^n\tau_n}+2\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^3\tau_n^3}
+  }\\
+  =&\ue^{\ui\varphi_k^n}\tau_n^2\lparen{
+    \ui\Omega_n\tau_n
+    \frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3\tau_n^3}
+    +\ui\Omega_n\tau_n
+    \frac{\delta_k^n\tau_n\sin\paren{\delta_k^n\tau_n}+2\cos\paren{\delta_k^n\tau_n}-2}{{\delta_k^n}^3\tau_n^3}
+  }\\
+  &-\paren{\ui\Omega_n\delta_k^n\tau_n^2-\Omega'_n\tau_n^2}
+  \frac{
+    \paren{6-{\delta_k^n}^2\tau_n^2}\cos\paren{{\delta_k^n}\tau_n}
+    -6+4{\delta_k^n}\tau_n\sin\paren{{\delta_k^n}\tau_n}
+  }{{\delta_k^n}^4\tau_n^4}
+  \\
+  &-\paren{\Omega_n\tau_n+\Omega'_n\tau_n^2}
+  \frac{\paren{{\delta_k^n}^2\tau_n^2-2}\sin\paren{\delta_k^n\tau_n}+2\delta_k^n\tau_n\cos\paren{\delta_k^n\tau_n}}{{\delta_k^n}^3\tau_n^3}\\
+  &\rparen{
+    -\ui\Omega'_n\tau_n^2
+    \frac{
+      {\delta_k^n}\tau_n\paren{6-{\delta_k^n}^2\tau_n^2}\cos\paren{{\delta_k^n}\tau_n}
+      +3\paren{{\delta_k^n}^2\tau_n^2-2}\sin\paren{{\delta_k^n}\tau_n}
+    }{{\delta_k^n}^4\tau_n^4}
+  }
 }
 
 \end{document}
