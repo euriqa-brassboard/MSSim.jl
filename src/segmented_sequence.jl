@@ -32,7 +32,6 @@ end
 const DummyAreaModeData = AreaModeData{Nothing,Nothing}
 is_dummy(::Type{DummyAreaModeData}) = true
 
-# TODO gradients
 struct SegData{T,A,CD,AG}
     τ::T
     area::A
@@ -44,14 +43,19 @@ is_cumdis_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
 is_area_mode_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
     is_dummy(AG)
 
-# TODO gradients
 mutable struct SeqResultData{T,A,CD,AG}
     τ::T
     area::A
     cumdis::CD
     area_mode::AG
+
+    area_grad::Utils.JaggedMatrix{A}
+    cumdis_grad::Utils.JaggedMatrix{CD}
+    area_mode_grad::Utils.JaggedMatrix{AG}
     function SeqResultData{T,A,CD,AG}() where {T,A,CD,AG}
-        return new(zero(T), A(), CD(), AG())
+        return new(zero(T), A(), CD(), AG(),
+                   Utils.JaggedMatrix{A}(), Utils.JaggedMatrix{CD}(),
+                   Utils.JaggedMatrix{AG}())
     end
 end
 
@@ -78,6 +82,7 @@ struct SeqComputeBuffer{T}
     end
 end
 
+# TODO gradients
 function compute_sequence!(
     result::SeqResultData{T,A,CD,AG},
     segments::AbstractVector{SD},
