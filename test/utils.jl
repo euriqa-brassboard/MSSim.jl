@@ -103,13 +103,10 @@ function test_diffs(_f; threshold=1e-15)
         s, c = sincos(x)
         return _f(x, s, c)
     end
-    xs = range(0, 3, 300001)[2:end]
+    xs = range(-3, 3, 300001)
     for x in xs
         @test f(x) ≈ f(big(x)) atol=threshold rtol=0
         @test(ForwardDiff.derivative(f, x) ≈ ForwardDiff.derivative(f, big(x)),
-              atol=threshold * 8, rtol=0)
-        @test f(-x) ≈ f(big(-x)) atol=threshold rtol=0
-        @test(ForwardDiff.derivative(f, -x) ≈ ForwardDiff.derivative(f, big(-x)),
               atol=threshold * 8, rtol=0)
     end
 end

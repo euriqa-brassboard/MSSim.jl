@@ -371,14 +371,10 @@ end
     res_odd, threshold, e, taylor =
         _plan_trig_ratio(T, odd, div, plain_poly, sin_poly, cos_poly)
     if T === BigFloat
-        v0 = res_odd ? big(0.0) : big(taylor[1])
-        return quote
-            if x == 0
-                return $v0
-            else
-                return $e
-            end
-        end
+        # Still use the taylor expansion expression
+        # to support a few orders of automatic differentiation
+        # but use the normal expression for everywhere other than 0
+        threshold = 0
     end
     poly_expr = _gen_poly_trig_ratio(T, res_odd, taylor)
     return quote
