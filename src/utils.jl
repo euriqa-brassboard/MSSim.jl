@@ -57,22 +57,26 @@ end
 fastabs(x::Number) = abs(x)
 fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
 
-_sin_taylor_coeff(n) = [(-1)^k // factorial(big(k) * 2 + 1) for k in 0:(n - 1)]
-_cos_taylor_coeff(n) = [(-1)^k // factorial(big(k) * 2) for k in 0:(n - 1)]
+module TR
 
-struct _Term
+# First n Taylor coefficients for sin and cos
+sin_taylor_coeffs(n) = [(-1)^k // factorial(big(k) * 2 + 1) for k in 0:(n - 1)]
+cos_taylor_coeffs(n) = [(-1)^k // factorial(big(k) * 2) for k in 0:(n - 1)]
+
+struct Term
     has_sin::Bool
     has_cos::Bool
     order::Int
     coeff::Real
 end
 
-struct _Exp
-    left::Union{_Exp,_Term}
-    right::Union{_Exp,_Term}
+struct Exp
+    left::Union{Exp,Term}
+    right::Union{Exp,Term}
 end
 
-function _mul_exp(@nospecialize(e1), @nospecialize(e2))
+# Multiply julia expressions
+function mul_expr(@nospecialize(e1), @nospecialize(e2))
     if e1 == 1
         return e2
     elseif e2 == 1
@@ -86,7 +90,8 @@ function _mul_exp(@nospecialize(e1), @nospecialize(e2))
     end
 end
 
-function _xpower_sym(power)
+# Symbol for power of x
+function xpower_sym(power)
     if power == 1
         return :x
     else
@@ -94,103 +99,80 @@ function _xpower_sym(power)
     end
 end
 
-function __convert_exp(@nospecialize(exp), T, powers)
-    if isa(exp, _Exp)
-        t1, e1 = __convert_exp(exp.left, T, powers)
-        t2, e2 = __convert_exp(exp.right, T, powers)
-        t = _Term(t1.has_sin && t2.has_sin,
-                  t1.has_cos && t2.has_cos,
-                  min(t1.order, t2.order), 1)
-
-        if t1.has_sin && !t.has_sin
-            e1 = _mul_exp(e1, :s)
-        end
-        if t1.has_cos && !t.has_cos
-            e1 = _mul_exp(e1, :c)
-        end
-        xorder1 = t1.order - t.order
-        if xorder1 > 1
-            push!(powers, xorder1)
-            e1 = _mul_exp(e1, _xpower_sym(xorder1))
-        elseif xorder1 == 1
-            e1 = _mul_exp(e1, :x)
-        end
-        if t1.coeff != 1
-            e1 = _mul_exp(e1, T(t1.coeff))
-        end
-
-        if t2.has_sin && !t.has_sin
-            e2 = _mul_exp(e2, :s)
-        end
-        if t2.has_cos && !t.has_cos
-            e2 = _mul_exp(e2, :c)
-        end
-        xorder2 = t2.order - t.order
-        if xorder2 > 1
-            push!(powers, xorder2)
-            e2 = _mul_exp(e2, _xpower_sym(xorder2))
-        elseif xorder2 == 1
-            e2 = _mul_exp(e2, :x)
-        end
-        if t2.coeff != 1
-            e2 = _mul_exp(e2, T(t2.coeff))
-        end
-
-        return t, :($e1 + $e2)
+# Convert a Term to a julia expression
+function gen_term(base, T, has_sin, has_cos, xorder, coeff, powers)
+    e = base
+    if has_sin
+        e = mul_expr(e, :s)
     end
-    return exp::_Term, 1
-end
-
-function _convert_exp(@nospecialize(exp), T, powers)
-    t, e = __convert_exp(exp, T, powers)
-    if t.has_sin
-        e = _mul_exp(e, :s)
+    if has_cos
+        e = mul_expr(e, :c)
     end
-    if t.has_cos
-        e = _mul_exp(e, :c)
+    if xorder > 1
+        push!(powers, xorder)
+        e = mul_expr(e, xpower_sym(xorder))
+    elseif xorder == 1
+        e = mul_expr(e, :x)
     end
-    if t.order > 1
-        push!(powers, t.order)
-        e = _mul_exp(e, _xpower_sym(t.order))
-    elseif t.order == 1
-        e = _mul_exp(e, :x)
-    end
-    if t.coeff != 1
-        e = _mul_exp(e, T(t.coeff))
+    if coeff != 1
+        e = mul_expr(e, T(coeff))
     end
     return e
 end
 
-function _compute_power(power, powers, computed, exp)
+# Convert a Exp to a julia expression
+function _gen_exp(@nospecialize(exp), T, powers)
+    if isa(exp, Exp)
+        t1, e1 = _gen_exp(exp.left, T, powers)
+        t2, e2 = _gen_exp(exp.right, T, powers)
+        t = Term(t1.has_sin && t2.has_sin,
+                 t1.has_cos && t2.has_cos,
+                 min(t1.order, t2.order), 1)
+        e1 = gen_term(e1, T, t1.has_sin && !t.has_sin, t1.has_cos && !t.has_cos,
+                      t1.order - t.order, t1.coeff, powers)
+        e2 = gen_term(e2, T, t2.has_sin && !t.has_sin, t2.has_cos && !t.has_cos,
+                      t2.order - t.order, t2.coeff, powers)
+        return t, :($e1 + $e2)
+    end
+    return exp::Term, 1
+end
+
+function gen_exp(@nospecialize(exp), T, powers)
+    t, e = _gen_exp(exp, T, powers)
+    return gen_term(e, T, t.has_sin, t.has_cos, t.order, t.coeff, powers)
+end
+
+# Make sure the x powers required are all computed
+function compute_xpower(power, powers, computed, exp)
     if power in computed
         return
     end
     p1 = power ÷ 2
     p2 = power - p1
-    _compute_power(p1, powers, computed, exp)
+    compute_xpower(p1, powers, computed, exp)
     if p2 != p1
-        _compute_power(p2, powers, computed, exp)
+        compute_xpower(p2, powers, computed, exp)
     end
-    p1sym = _xpower_sym(p1)
-    p2sym = _xpower_sym(p2)
-    push!(exp.args, :($(_xpower_sym(power)) = $p1sym * $p2sym))
+    p1sym = xpower_sym(p1)
+    p2sym = xpower_sym(p2)
+    push!(exp.args, :($(xpower_sym(power)) = $p1sym * $p2sym))
     push!(computed, power)
     delete!(powers, power)
     return
 end
 
-function _compute_powers(powers)
+function compute_xpowers(powers)
     max_power = maximum(powers)
     exp = quote end
     pwr = 2
     computed = Set([1])
     while !isempty(powers)
-        _compute_power(pop!(powers), powers, computed, exp)
+        compute_xpower(pop!(powers), powers, computed, exp)
     end
     return exp
 end
 
-function _num_terms(T, x, odd)
+function estimate_num_terms(T, x, odd)
     if T === BigFloat
         # We only use this to provide support for automatic differentiation
         return 11
@@ -205,7 +187,7 @@ function _num_terms(T, x, odd)
     return nterms
 end
 
-function _get_full_terms(v, order_idx, base)
+function get_full_taylor(v, order_idx, base)
     terms = base .* v
     if order_idx == 1
         return terms
@@ -220,7 +202,7 @@ function _get_full_terms(v, order_idx, base)
     return terms
 end
 
-function _pop_leading_terms(all_terms)
+function pop_leading_taylor(all_terms)
     if length(all_terms) == 1
         term = all_terms[1].second
         if popfirst!(term) != 0
@@ -228,7 +210,7 @@ function _pop_leading_terms(all_terms)
         end
         return all_terms
     end
-    new_terms = Pair{Union{_Exp,_Term},Vector{Real}}[]
+    new_terms = Pair{Union{Exp,Term},Vector{Real}}[]
     non_zero_terms = Pair{Real,Int}[]
     for (i, (term, taylor)) in enumerate(all_terms)
         v0 = popfirst!(taylor)
@@ -248,7 +230,7 @@ function _pop_leading_terms(all_terms)
                 if v * cur_value <= 0
                     cur_value += v
                     te, ta = all_terms[term_idx]
-                    term = _Exp(term, te)
+                    term = Exp(term, te)
                     taylor = taylor .+ ta
                     found = true
                     popat!(non_zero_terms, i)
@@ -267,17 +249,17 @@ function _pop_leading_terms(all_terms)
     return new_terms
 end
 
-function _merge_terms(all_terms)
+function merge_terms(all_terms)
     if length(all_terms) == 1
         return all_terms[1]
     end
     mid = length(all_terms) ÷ 2
-    left = _merge_terms(@view all_terms[1:mid])
-    right = _merge_terms(@view all_terms[mid + 1:end])
-    return Pair(_Exp(left.first, right.first), left.second .+ right.second)
+    left = merge_terms(@view all_terms[1:mid])
+    right = merge_terms(@view all_terms[mid + 1:end])
+    return Pair(Exp(left.first, right.first), left.second .+ right.second)
 end
 
-function _plan_trig_ratio(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
+function plan(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
     # * odd_num == true:
     #   plain_poly: x + x^3 ... lowest order: x
     #   sin_poly: 1 + x^2 ... lowest order: x
@@ -292,28 +274,28 @@ function _plan_trig_ratio(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
         count(!=(0), cos_poly))
     # A very rough estimate on the error (for Float64)
     threshold = nterms^(1 / div_pow)
-    res_terms = _num_terms(T, threshold, res_odd)
+    res_terms = estimate_num_terms(T, threshold, res_odd)
     # We'll expand to up to `2 * res_terms - 1`-th order in the final result
     # (`res_terms` terms in total)
     # This is the number of terms we need to compute in the numerator
     # including the lowest terms
     max_terms = (div_pow + 2 * res_terms - 1 - odd_num) ÷ 2 + 1
-    sin_taylor = _sin_taylor_coeff(max_terms)
-    cos_taylor = _cos_taylor_coeff(max_terms)
+    sin_taylor = sin_taylor_coeffs(max_terms)
+    cos_taylor = cos_taylor_coeffs(max_terms)
     plain_taylor = [Int(i == 1) for i in 1:max_terms]
 
-    all_terms = Pair{Union{_Exp,_Term},Vector{Real}}[]
+    all_terms = Pair{Union{Exp,Term},Vector{Real}}[]
     for (i, v) in enumerate(sin_poly)
         if v == 0
             continue
         end
         if odd_num
             push!(all_terms,
-                  _Term(true, false, i * 2 - 2, v)=>_get_full_terms(v, i, sin_taylor))
+                  Term(true, false, i * 2 - 2, v)=>get_full_taylor(v, i, sin_taylor))
         else
             push!(all_terms,
-                  _Term(true, false, i * 2 - 1, v)=>_get_full_terms(v, i + 1,
-                                                                    sin_taylor))
+                  Term(true, false, i * 2 - 1, v)=>get_full_taylor(v, i + 1,
+                                                                   sin_taylor))
         end
     end
     for (i, v) in enumerate(cos_poly)
@@ -321,23 +303,23 @@ function _plan_trig_ratio(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
             continue
         end
         order = odd_num ? i * 2 - 1 : i * 2 - 2
-        push!(all_terms, _Term(false, true, order, v)=>_get_full_terms(v, i,
-                                                                       cos_taylor))
+        push!(all_terms, Term(false, true, order, v)=>get_full_taylor(v, i,
+                                                                      cos_taylor))
     end
     for (i, v) in enumerate(plain_poly)
         if v == 0
             continue
         end
         order = odd_num ? i * 2 - 1 : i * 2 - 2
-        push!(all_terms, _Term(false, false, order, v)=>_get_full_terms(v, i,
-                                                                        plain_taylor))
+        push!(all_terms, Term(false, false, order, v)=>get_full_taylor(v, i,
+                                                                       plain_taylor))
     end
     for i in 1:((div_pow + 1 - odd_num) ÷ 2)
-        all_terms = _pop_leading_terms(all_terms)
+        all_terms = pop_leading_taylor(all_terms)
     end
-    term, taylor = _merge_terms(all_terms)
+    term, taylor = merge_terms(all_terms)
     powers = Set{Int}()
-    e = _convert_exp(term, T, powers)
+    e = gen_exp(term, T, powers)
     if div_pow > 1
         e = :($e / $(Symbol("x$div_pow")))
         push!(powers, div_pow)
@@ -345,7 +327,7 @@ function _plan_trig_ratio(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
         e = :($e / x)
     end
     if !isempty(powers)
-        e = :($(_compute_powers(powers)); $e)
+        e = :($(compute_xpowers(powers)); $e)
     end
     for i in length(taylor):-1:1
         order = res_odd ? (i * 2 - 1) : (i * 2 - 2)
@@ -357,12 +339,13 @@ function _plan_trig_ratio(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
     return res_odd, threshold, e, taylor
 end
 
-function _gen_poly_trig_ratio(T, odd, taylor)
+function gen_poly_expr(T, odd, taylor)
     poly_expr = :(evalpoly(x * x, ($(T.(taylor)...),)))
     if odd
         poly_expr = :(x * $poly_expr)
     end
     return poly_expr
+end
 end
 
 struct TrigRatio{odd,div,plain_poly,sin_poly,cos_poly} <: Function
@@ -372,15 +355,15 @@ end
     x::T, s, c) where {T,odd,div,plain_poly,sin_poly,cos_poly}
 
     T = float(T)
-    res_odd, threshold, e, taylor =
-        _plan_trig_ratio(T, odd, div, plain_poly, sin_poly, cos_poly)
+    res_odd, threshold, e, taylor = TR.plan(T, odd, div, plain_poly,
+                                            sin_poly, cos_poly)
     if T === BigFloat
         # Still use the taylor expansion expression
         # to support a few orders of automatic differentiation
         # but use the normal expression for everywhere other than 0
         threshold = 0
     end
-    poly_expr = _gen_poly_trig_ratio(T, res_odd, taylor)
+    poly_expr = TR.gen_poly_expr(T, res_odd, taylor)
     return quote
         @inline if fastabs(x) > $(T(threshold))
             return $e
