@@ -190,11 +190,15 @@ function _compute_powers(powers)
     return exp
 end
 
-function _num_terms(x, odd)
+function _num_terms(T, x, odd)
+    if T === BigFloat
+        # We only use this to provide support for automatic differentiation
+        return 11
+    end
     nterms = 1
     # Approximate the accuracy of the taylor expansion with x^n/n!
     accuracy = odd ? x : 1.0
-    while accuracy > 1e-15
+    while accuracy > 2 * eps(T)
         accuracy *= x^2 / (2 * nterms + odd - 1) / (2 * nterms + odd)
         nterms += 1
     end
@@ -288,7 +292,7 @@ function _plan_trig_ratio(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
         count(!=(0), cos_poly))
     # A very rough estimate on the error (for Float64)
     threshold = nterms^(1 / div_pow)
-    res_terms = _num_terms(threshold, res_odd)
+    res_terms = _num_terms(T, threshold, res_odd)
     # We'll expand to up to `2 * res_terms - 1`-th order in the final result
     # (`res_terms` terms in total)
     # This is the number of terms we need to compute in the numerator
