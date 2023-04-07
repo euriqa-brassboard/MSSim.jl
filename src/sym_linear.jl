@@ -107,7 +107,7 @@ end
     C1 = Utils.cos_f1(d, s, c)
     S1 = Utils.sin_f1(d, s, c)
     S3 = Utils.sin_f3(d, s, c)
-    return (muladd(Ω′, τ, Ω) * muladd(o′, S1, o * C1),
+    return (muladd(Ω′, τ, Ω) * muladd(o * d, C1, o′ * S1),
             τ * muladd(2, o, o′) * S1,
             τ^2 * muladd(2 * o′, S3, o * S1))
 end
