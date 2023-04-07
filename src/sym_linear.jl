@@ -219,6 +219,27 @@ function enclosed_area_δ(τ, Ω, Ω′, φ, δ)
     return τ * enclosed_area_δ_kernel(o, o′, d, s, c)
 end
 
+function enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = sincos(d)
+
+    τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    return (τΩs[1], τΩs[2], τΩs[3], zero(φ),
+            τ * enclosed_area_δ_kernel(o, o′, d, s, c))
+end
+
+function enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = sincos(d)
+
+    τΩsδ = enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    return (τΩsδ[1], τΩsδ[2], τΩsδ[3], zero(φ), τΩsδ[4])
+end
+
 # The values we may care about in each segments
 # * Displacement (dis)
 # * Gradient of displacement w.r.t. detuning (disδ)

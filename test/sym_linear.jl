@@ -108,12 +108,47 @@ end
     for (τ, Ω, Ω′, φ, δ) in all_params
         Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)
         v_num = PN.enclosed_area(0, τ, Ωf, θf)
-        v_sym = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, ForwardDiff.Dual(δ, (1.0,)))
-        vd_sym = SL.SegInt.enclosed_area_δ(τ, Ω, Ω′, φ, δ)
+        v_sym = SL.SegInt.enclosed_area(ForwardDiff.Dual(τ, (1.0, 0.0, 0.0, 0.0, 0.0)),
+                                        ForwardDiff.Dual(Ω, (0.0, 1.0, 0.0, 0.0, 0.0)),
+                                        ForwardDiff.Dual(Ω′, (0.0, 0.0, 1.0, 0.0, 0.0)),
+                                        ForwardDiff.Dual(φ, (0.0, 0.0, 0.0, 1.0, 0.0)),
+                                        ForwardDiff.Dual(δ, (0.0, 0.0, 0.0, 0.0, 1.0)))
         v_sym_v = get_value(v_sym)
-        v_sym_d = get_partial(v_sym, 1)
-        @test v_num ≈ v_sym_v atol = 1e-10 rtol = 1e-10
-        @test v_sym_d ≈ vd_sym atol = 1e-12 rtol = 1e-12
+        v_sym_τ = get_partial(v_sym, 1)
+        v_sym_Ω = get_partial(v_sym, 2)
+        v_sym_Ω′ = get_partial(v_sym, 3)
+        v_sym_φ = get_partial(v_sym, 4)
+        v_sym_δ = get_partial(v_sym, 5)
+        vgrad_sym = SL.SegInt.enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
+
+        vδ_sym = SL.SegInt.enclosed_area_δ(
+            ForwardDiff.Dual(τ, (1.0, 0.0, 0.0, 0.0, 0.0)),
+            ForwardDiff.Dual(Ω, (0.0, 1.0, 0.0, 0.0, 0.0)),
+            ForwardDiff.Dual(Ω′, (0.0, 0.0, 1.0, 0.0, 0.0)),
+            ForwardDiff.Dual(φ, (0.0, 0.0, 0.0, 1.0, 0.0)),
+            ForwardDiff.Dual(δ, (0.0, 0.0, 0.0, 0.0, 1.0)))
+        vδ_sym_v = get_value(vδ_sym)
+        vδ_sym_τ = get_partial(vδ_sym, 1)
+        vδ_sym_Ω = get_partial(vδ_sym, 2)
+        vδ_sym_Ω′ = get_partial(vδ_sym, 3)
+        vδ_sym_φ = get_partial(vδ_sym, 4)
+        vδ_sym_δ = get_partial(vδ_sym, 5)
+        vδgrad_sym = SL.SegInt.enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
+
+        @test v_num ≈ v_sym_v atol = 2e-11 rtol = 1e-11
+        @test v_sym_τ ≈ vgrad_sym[1] atol = 1e-12 rtol = 1e-12
+        @test v_sym_Ω ≈ vgrad_sym[2] atol = 1e-12 rtol = 1e-12
+        @test v_sym_Ω′ ≈ vgrad_sym[3] atol = 1e-12 rtol = 1e-12
+        @test v_sym_φ == vgrad_sym[4] == 0
+        @test v_sym_δ ≈ vgrad_sym[5] atol = 1e-12 rtol = 1e-12
+
+        @test v_sym_δ ≈ vδ_sym_v atol = 1e-12 rtol = 1e-12
+        @test vδ_sym_τ ≈ vδgrad_sym[1] atol = 2e-11 rtol = 1e-11
+        @test vδ_sym_Ω ≈ vδgrad_sym[2] atol = 1e-12 rtol = 1e-12
+        @test vδ_sym_Ω′ ≈ vδgrad_sym[3] atol = 1e-12 rtol = 1e-12
+        @test vδ_sym_φ == vδgrad_sym[4] == 0
+        @test vδ_sym_δ ≈ vδgrad_sym[5] atol = 1e-12 rtol = 1e-12
+
         vc_num = PN.enclosed_area_complex(0, τ, Ωf, θf)
         vc_sym = SL.SegInt.enclosed_area_complex(τ, Ω, Ω′, φ, δ)
         @test vc_num ≈ vc_sym atol = 1e-10 rtol = 1e-10
