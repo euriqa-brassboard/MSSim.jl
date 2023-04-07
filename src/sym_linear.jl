@@ -10,6 +10,7 @@ import ...Utils
 import ...SegSeq
 
 using ForwardDiff
+using StaticArrays
 
 # Integral for each segments
 @inline function displacement_kernel(o, o′, d, s, c)
@@ -280,10 +281,49 @@ end
             area_mode = AG(phase0_τ * displacement_δ_kernel(o, o′, d, s, c),
                            τ * enclosed_area_δ_kernel(o, o′, d, s, c))
         end
-        if include_grad
-            error("Not yet supported.")
+        res = SegSeq.SegData{T,A,CD,AG}(τ, area, cumdis, area_mode)
+        if !include_grad
+            return res, nothing, nothing, nothing
         end
-        return SegSeq.SegData{T,A,CD,AG}(τ, area, cumdis, area_mode)
+        if SegSeq.is_dummy(AG)
+            disδ = phase0_τ * displacement_δ_kernel(o, o′, d, s, c)
+            areaδ = τ * enclosed_area_δ_kernel(o, o′, d, s, c)
+        else
+            disδ = area_mode.disδ
+            areaδ = area_mode.areaδ
+        end
+        dis_τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+        area_τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+        area_grad = SA[A(phase0 * dis_τΩs[1], area_τΩs[1]),
+                       A(phase0 * dis_τΩs[2], area_τΩs[2]),
+                       A(phase0 * dis_τΩs[3], area_τΩs[3]),
+                       A(Utils.mulim(area.dis), zero(T)),
+                       A(disδ, areaδ)]
+        if SegSeq.is_dummy(CD)
+            cumdis_grad = SA[CD(nothing), CD(nothing), CD(nothing),
+                             CD(nothing), CD(nothing)]
+        else
+            cumdis_τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+            cumdis_grad = SA[CD(phase0 * cumdis_τΩsδ[1]),
+                             CD(phase0 * cumdis_τΩsδ[2]),
+                             CD(phase0 * cumdis_τΩsδ[3]),
+                             CD(Utils.mulim(cumdis.cumdis)),
+                             CD(phase0 * cumdis_τΩsδ[4])]
+        end
+        if SegSeq.is_dummy(AG)
+            area_mode_grad = SA[AG(nothing, nothing), AG(nothing, nothing),
+                                AG(nothing, nothing), AG(nothing, nothing),
+                                AG(nothing, nothing)]
+        else
+            disδ_τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+            areaδ_τΩsδ = enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+            area_mode_grad = SA[AG(phase0 * disδ_τΩsδ[1], areaδ_τΩsδ[1]),
+                                AG(phase0 * disδ_τΩsδ[2], areaδ_τΩsδ[2]),
+                                AG(phase0 * disδ_τΩsδ[3], areaδ_τΩsδ[3]),
+                                AG(Utils.mulim(area_mode.disδ), zero(T)),
+                                AG(phase0 * disδ_τΩsδ[4], areaδ_τΩsδ[4])]
+        end
+        return res, area_grad, cumdis_grad, area_mode_grad
     end
 end
 

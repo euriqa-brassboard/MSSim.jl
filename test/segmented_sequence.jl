@@ -30,7 +30,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
     result = SS.SeqResultData{T,A,CD,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
-        d = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
+        d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
         SS.compute_sequence!(result, [d], buffer)
         @test result.τ == τ
         @test result.area.dis == d.area.dis
@@ -45,8 +45,8 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
             result′ = SS.SeqResultData{T,A,CD′,AG′}()
-            d′ = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
-                                           Val(need_area_mode), Val(false))
+            d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
+                                            Val(need_area_mode), Val(false))
             SS.compute_sequence!(result′, [d′], buffer)
             @test result′.τ == τ
             @test result′.area.dis == d.area.dis
@@ -73,9 +73,9 @@ end
     result = SS.SeqResultData{T,A,CD,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
-        d = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
-        nd = SL.SegInt.compute_values(τ, Ω + Ω′ * τ, -Ω′, φ + δ * τ + π, -δ,
-                                      Val(true), Val(true), Val(false))
+        d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
+        nd, = SL.SegInt.compute_values(τ, Ω + Ω′ * τ, -Ω′, φ + δ * τ + π, -δ,
+                                       Val(true), Val(true), Val(false))
         @test nd.τ == d.τ
         @test nd.area.dis ≈ -d.area.dis
         @test nd.area.area ≈ -d.area.area
@@ -106,8 +106,8 @@ end
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
             result′ = SS.SeqResultData{T,A,CD′,AG′}()
-            d′ = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
-                                           Val(need_area_mode), Val(false))
+            d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
+                                            Val(need_area_mode), Val(false))
             SS.compute_sequence!(result′, [d′, d′], buffer)
             @test result′.τ == 2 * τ
             @test result′.area.dis ≈ 2 * d.area.dis atol=1e-8
@@ -124,8 +124,8 @@ end
         end
 
         for τ′ in τs
-            d0 = SL.SegInt.compute_values(τ′, 0.0, 0.0, 0.0, 0.0,
-                                          Val(true), Val(true), Val(false))
+            d0, = SL.SegInt.compute_values(τ′, 0.0, 0.0, 0.0, 0.0,
+                                           Val(true), Val(true), Val(false))
             SS.compute_sequence!(result, [d0, d], buffer)
             @test result.τ ≈ τ + τ′
             @test result.area.dis == d.area.dis
@@ -191,14 +191,14 @@ end
     l4 = p4 - p3
 
     for (τ, Ω, φ) in Iterators.product(τs, Ωs, φs)
-        d1 = SL.SegInt.compute_values(τ, Ω * abs(l1), 0, φ + angle(l1), 0,
-                                      Val(true), Val(true), Val(false))
-        d2 = SL.SegInt.compute_values(τ, Ω * abs(l2), 0, φ + angle(l2), 0,
-                                      Val(true), Val(true), Val(false))
-        d3 = SL.SegInt.compute_values(τ, Ω * abs(l3), 0, φ + angle(l3), 0,
-                                      Val(true), Val(true), Val(false))
-        d4 = SL.SegInt.compute_values(τ, Ω * abs(l4), 0, φ + angle(l4), 0,
-                                      Val(true), Val(true), Val(false))
+        d1, = SL.SegInt.compute_values(τ, Ω * abs(l1), 0, φ + angle(l1), 0,
+                                       Val(true), Val(true), Val(false))
+        d2, = SL.SegInt.compute_values(τ, Ω * abs(l2), 0, φ + angle(l2), 0,
+                                       Val(true), Val(true), Val(false))
+        d3, = SL.SegInt.compute_values(τ, Ω * abs(l3), 0, φ + angle(l3), 0,
+                                       Val(true), Val(true), Val(false))
+        d4, = SL.SegInt.compute_values(τ, Ω * abs(l4), 0, φ + angle(l4), 0,
+                                       Val(true), Val(true), Val(false))
 
         SS.compute_sequence!(result, [d1, d2, d3, d4], buffer)
         @test result.τ == 4 * τ
@@ -249,7 +249,7 @@ end
 
 function get_seg_data(params::AbstractVector{SegParam{T}}) where T
     return [SL.SegInt.compute_values(param.τ, param.Ω, param.Ω′, param.φ, param.δ,
-                                     Val(true), Val(true), Val(false))
+                                     Val(true), Val(true), Val(false))[1]
             for param in params]
 end
 

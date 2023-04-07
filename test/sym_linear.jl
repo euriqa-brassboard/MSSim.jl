@@ -169,14 +169,21 @@ end
     for (τ, Ω, Ω′, φ, δ) in all_params
         v_dis = SL.SegInt.displacement(τ, Ω, Ω′, φ, δ)
         v_disδ = SL.SegInt.displacement_δ(τ, Ω, Ω′, φ, δ)
+        v_dis_grad = SL.SegInt.displacement_gradients(τ, Ω, Ω′, φ, δ)
+        v_disδ_grad = SL.SegInt.displacement_δ_gradients(τ, Ω, Ω′, φ, δ)
         v_cumdis = SL.SegInt.cumulative_displacement(τ, Ω, Ω′, φ, δ)
+        v_cumdis_grad = SL.SegInt.cumulative_displacement_gradients(τ, Ω, Ω′, φ, δ)
         v_area = SL.SegInt.enclosed_area(τ, Ω, Ω′, φ, δ)
         v_areaδ = SL.SegInt.enclosed_area_δ(τ, Ω, Ω′, φ, δ)
+        v_area_grad = SL.SegInt.enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
+        v_areaδ_grad = SL.SegInt.enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
 
-        for (include_cumdis, include_area_mode) in Iterators.product((false, true),
-                                                                     (false, true))
-            d = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
-                                         Val(include_area_mode), Val(false))
+        for (include_cumdis, include_area_mode, include_grad) in
+            Iterators.product((false, true), (false, true), (false, true))
+
+            d, area_grad, cumdis_grad, area_mode_grad =
+                SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
+                                         Val(include_area_mode), Val(include_grad))
             @test d.area.dis ≈ v_dis
             @test d.area.area ≈ v_area
             if include_cumdis
@@ -185,6 +192,46 @@ end
             if include_area_mode
                 @test d.area_mode.disδ ≈ v_disδ
                 @test d.area_mode.areaδ ≈ v_areaδ
+            end
+            if include_grad
+                @test length(area_grad) == 5
+                @test area_grad[1].dis ≈ v_dis_grad[1]
+                @test area_grad[2].dis ≈ v_dis_grad[2]
+                @test area_grad[3].dis ≈ v_dis_grad[3]
+                @test area_grad[4].dis ≈ v_dis_grad[4]
+                @test area_grad[5].dis ≈ v_dis_grad[5]
+                @test area_grad[1].area ≈ v_area_grad[1]
+                @test area_grad[2].area ≈ v_area_grad[2]
+                @test area_grad[3].area ≈ v_area_grad[3]
+                @test area_grad[4].area ≈ v_area_grad[4]
+                @test area_grad[5].area ≈ v_area_grad[5]
+
+                @test length(cumdis_grad) == 5
+                if include_cumdis
+                    @test cumdis_grad[1].cumdis ≈ v_cumdis_grad[1]
+                    @test cumdis_grad[2].cumdis ≈ v_cumdis_grad[2]
+                    @test cumdis_grad[3].cumdis ≈ v_cumdis_grad[3]
+                    @test cumdis_grad[4].cumdis ≈ v_cumdis_grad[4]
+                    @test cumdis_grad[5].cumdis ≈ v_cumdis_grad[5]
+                end
+
+                @test length(area_mode_grad) == 5
+                if include_area_mode
+                    @test area_mode_grad[1].disδ ≈ v_disδ_grad[1]
+                    @test area_mode_grad[2].disδ ≈ v_disδ_grad[2]
+                    @test area_mode_grad[3].disδ ≈ v_disδ_grad[3]
+                    @test area_mode_grad[4].disδ ≈ v_disδ_grad[4]
+                    @test area_mode_grad[5].disδ ≈ v_disδ_grad[5]
+                    @test area_mode_grad[1].areaδ ≈ v_areaδ_grad[1]
+                    @test area_mode_grad[2].areaδ ≈ v_areaδ_grad[2]
+                    @test area_mode_grad[3].areaδ ≈ v_areaδ_grad[3]
+                    @test area_mode_grad[4].areaδ ≈ v_areaδ_grad[4]
+                    @test area_mode_grad[5].areaδ ≈ v_areaδ_grad[5]
+                end
+            else
+                @test area_grad === nothing
+                @test cumdis_grad === nothing
+                @test area_mode_grad === nothing
             end
         end
     end
