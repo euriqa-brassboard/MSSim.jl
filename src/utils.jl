@@ -397,8 +397,17 @@ const sin_f2 = TrigRatio{true,3,(-1,),(2,),(-1,)}()
 # (1 + x^2/2 - x * sin(x) - cos(x)) / x^4
 const cos_f3 = TrigRatio{false,4,(1,1//2),(-1,),(-1,)}()
 
+# (-6 + 4 * x * sin(x) + (6 - x^2) * cos(x)) / x^4
+const cos_f3_2 = TrigRatio{false,4,(-6,),(4,),(6,-1)}()
+
 # (1/3 * x^3 - sin(x) + x * cos(x)) / x^4
 const sin_f3 = TrigRatio{true,4,(0,1//3),(-1,),(1,)}()
+
+# (-2 * x + (6 - x^2) * sin(x) - 4 * x * cos(x)) / x^4
+const sin_f3_2 = TrigRatio{true,4,(-2,),(6,-1),(-4,)}()
+
+# ((-6 + 3x^2) * sin(x) + (6 * x - x^3) * cos(x)) / x^4
+const sin_f3_3 = TrigRatio{true,4,(),(-6,3),(6,-1)}()
 
 # (-1/3 * x^3 + (4 - x^2) * sin(x) - 4 * x * cos(x)) / x^5
 const sin_f4 = TrigRatio{true,5,(0,-1//3),(4,-1),(-4,)}()
