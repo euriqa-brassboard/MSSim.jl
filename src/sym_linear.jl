@@ -70,7 +70,7 @@ end
     C3_2 = Utils.cos_f3_2(d, s, c)
     S_C1 = Utils.sin_c1(d, s, c)
     S_C2 = Utils.sin_c2(d, s, c)
-    return (complex(muladd(o + o′, S_C1, o′ * C1), muladd(o, C1, o′ * S_C2)),
+    return (complex(muladd(o + o′, S_C1, -(o′ * C1)), muladd(o * d, C1, o′ * S_C2)),
             τ^2 * complex(C1, S1), τ * τ^2 * complex(S2, C2),
             τ^2 * complex(-muladd(o, C2, o′ * S3_2), muladd(o, S2, o′ * C3_2)))
 end
