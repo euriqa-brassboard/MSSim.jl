@@ -90,6 +90,20 @@ function mul_expr(@nospecialize(e1), @nospecialize(e2))
     end
 end
 
+function add_expr(@nospecialize(e1), @nospecialize(e2))
+    if e1 == 0
+        return e2
+    elseif e2 == 0
+        return e1
+    elseif Meta.isexpr(e1, :call) && length(e1.args) == 3 && e1.args[1] === :*
+        return :(muladd($(e1.args[2]), $(e1.args[3]), $e2))
+    elseif Meta.isexpr(e2, :call) && length(e2.args) == 3 && e2.args[1] === :*
+        return :(muladd($(e2.args[2]), $(e2.args[3]), $e1))
+    else
+        return :($e1 + $e2)
+    end
+end
+
 # Symbol for power of x
 function xpower_sym(power)
     if power == 1
@@ -132,7 +146,7 @@ function _gen_exp(@nospecialize(exp), T, powers)
                       t1.order - t.order, t1.coeff, powers)
         e2 = gen_term(e2, T, t2.has_sin && !t.has_sin, t2.has_cos && !t.has_cos,
                       t2.order - t.order, t2.coeff, powers)
-        return t, :($e1 + $e2)
+        return t, add_expr(e1, e2)
     end
     return exp::Term, 1
 end
