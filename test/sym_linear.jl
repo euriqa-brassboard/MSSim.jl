@@ -81,8 +81,26 @@ end
     for (τ, Ω, Ω′, φ, δ) in all_params
         Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)
         v_num = PN.cumulative_displacement(0, τ, Ωf, θf)
-        v_sym = SL.SegInt.cumulative_displacement(τ, Ω, Ω′, φ, δ)
-        @test v_num ≈ v_sym atol = 1e-12 rtol = 1e-12
+        v_sym = SL.SegInt.cumulative_displacement(
+            ForwardDiff.Dual(τ, (1.0, 0.0, 0.0, 0.0, 0.0)),
+            ForwardDiff.Dual(Ω, (0.0, 1.0, 0.0, 0.0, 0.0)),
+            ForwardDiff.Dual(Ω′, (0.0, 0.0, 1.0, 0.0, 0.0)),
+            ForwardDiff.Dual(φ, (0.0, 0.0, 0.0, 1.0, 0.0)),
+            ForwardDiff.Dual(δ, (0.0, 0.0, 0.0, 0.0, 1.0)))
+        v_sym_v = get_value(v_sym)
+        v_sym_τ = get_partial(v_sym, 1)
+        v_sym_Ω = get_partial(v_sym, 2)
+        v_sym_Ω′ = get_partial(v_sym, 3)
+        v_sym_φ = get_partial(v_sym, 4)
+        v_sym_δ = get_partial(v_sym, 5)
+        vgrad_sym = SL.SegInt.cumulative_displacement_gradients(τ, Ω, Ω′, φ, δ)
+
+        @test v_num ≈ v_sym_v atol = 1e-12 rtol = 1e-12
+        @test v_sym_τ ≈ vgrad_sym[1] atol = 1e-12 rtol = 1e-12
+        @test v_sym_Ω ≈ vgrad_sym[2] atol = 1e-12 rtol = 1e-12
+        @test v_sym_Ω′ ≈ vgrad_sym[3] atol = 1e-12 rtol = 1e-12
+        @test v_sym_φ ≈ vgrad_sym[4] atol = 1e-12 rtol = 1e-12
+        @test v_sym_δ ≈ vgrad_sym[5] atol = 1e-11 rtol = 1e-11
     end
 end
 
