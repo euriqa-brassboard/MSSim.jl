@@ -375,24 +375,34 @@ end
 
 # sin(x) / x
 const sin_c1 = TrigRatio{true,1,(),(1,),()}()
+
 # (sin(x) - x * cos(x)) / x^2
 const sin_c2 = TrigRatio{true,2,(),(1,),(-1,)}()
+
 # ((x^2 - 2) * sin(x) + 2 * x * cos(x)) / x^3
 const sin_c3 = TrigRatio{true,3,(),(-2,1),(2,)}()
+
 # (1 - cos(x)) / x^2
 const cos_f1 = TrigRatio{false,2,(1,),(),(-1,)}()
+
 # (x - sin(x)) / x^2
 const sin_f1 = TrigRatio{true,2,(1,),(-1,),()}()
+
 # (2 - 2 * cos(x) - x * sin(x)) / x^3
 const cos_f2 = TrigRatio{false,3,(2,),(-1,),(-2,)}()
+
 # (2 * sin(x) - x * cos(x) - x) / x^3
 const sin_f2 = TrigRatio{true,3,(-1,),(2,),(-1,)}()
+
 # (x^2/2 + 1 - cos(x) - x * sin(x)) / x^4
 const cos_f3 = TrigRatio{false,4,(1,1//2),(-1,),(-1,)}()
+
 # (x^3/3 - sin(x) + x * cos(x)) / x^4
 const sin_f3 = TrigRatio{true,4,(0,1//3),(-1,),(1,)}()
+
 # (-x^3/3 + (4 - x^2) * sin(x) - 4 * x * cos(x)) / x^5
 const sin_f4 = TrigRatio{true,5,(0,-1//3),(4,-1),(-4,)}()
+
 # (-2/3 x^3 + (20 - 7x^2) * sin(x) + (x^2 - 20) * x * cos(x)) / x^6
 const sin_f5 = TrigRatio{true,6,(0,-2//3),(20,-7),(-20,1)}()
 
