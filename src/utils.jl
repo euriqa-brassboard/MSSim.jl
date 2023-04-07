@@ -399,8 +399,8 @@ const sin_c3 = TrigRatio{true,3,(),(-2,1),(2,)}()
 # (1 - cos(x)) / x^2
 const cos_f1 = TrigRatio{false,2,(1,),(),(-1,)}()
 
-# (x - sin(x)) / x^2
-const sin_f1 = TrigRatio{true,2,(1,),(-1,),()}()
+# (x - sin(x)) / x^3
+const sin_f1 = TrigRatio{true,3,(1,),(-1,),()}()
 
 # (2 - x * sin(x) - 2 * cos(x)) / x^3
 const cos_f2 = TrigRatio{false,3,(2,),(-1,),(-2,)}()

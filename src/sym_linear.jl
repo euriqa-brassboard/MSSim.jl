@@ -58,7 +58,7 @@ end
     S1 = Utils.sin_f1(d, s, c)
     C2 = Utils.cos_f2(d, s, c)
     S2 = Utils.sin_f2(d, s, c)
-    return complex(muladd(o, C1, o′ * S2), muladd(o, S1, o′ * C2))
+    return complex(muladd(o, C1, o′ * S2), muladd(o, S1 * d, o′ * C2))
 end
 
 @inline function cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
@@ -71,7 +71,7 @@ end
     S_C1 = Utils.sin_c1(d, s, c)
     S_C2 = Utils.sin_c2(d, s, c)
     return (complex(muladd(o + o′, S_C1, -(o′ * C1)), muladd(o * d, C1, o′ * S_C2)),
-            τ^2 * complex(C1, S1), τ * τ^2 * complex(S2, C2),
+            τ^2 * complex(C1, S1 * d), τ * τ^2 * complex(S2, C2),
             τ^2 * complex(-muladd(o, C2, o′ * S3_2), muladd(o, S2, o′ * C3_2)))
 end
 
@@ -83,7 +83,7 @@ end
     S1 = Utils.sin_f1(d, s, c)
     C3 = Utils.cos_f3(d, s, c)
     S3 = Utils.sin_f3(d, s, c)
-    return complex(muladd(a1, C1, a2 * C3), muladd(a1, S1, a2 * S3))
+    return complex(muladd(a1, C1, a2 * C3), muladd(a1, S1 * d, a2 * S3))
 end
 
 # Twice the enclosed area
@@ -92,7 +92,7 @@ end
     a2 = o′^2
     S1 = Utils.sin_f1(d, s, c)
     S3 = Utils.sin_f3(d, s, c)
-    return muladd(a1, S1, a2 * S3)
+    return muladd(a1, S1 * d, a2 * S3)
 end
 
 @inline function enclosed_area_δ_kernel(o, o′, d, s, c)
@@ -107,9 +107,9 @@ end
     C1 = Utils.cos_f1(d, s, c)
     S1 = Utils.sin_f1(d, s, c)
     S3 = Utils.sin_f3(d, s, c)
-    return (muladd(Ω′, τ, Ω) * muladd(o * d, C1, o′ * S1),
-            τ * muladd(2, o, o′) * S1,
-            τ^2 * muladd(2 * o′, S3, o * S1))
+    return (muladd(Ω′, τ, Ω) * d * muladd(o, C1, o′ * S1),
+            τ * muladd(2, o, o′) * (S1 * d),
+            τ^2 * muladd(2 * o′, S3, o * (S1 * d)))
 end
 
 @inline function enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
