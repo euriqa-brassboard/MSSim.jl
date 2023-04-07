@@ -379,6 +379,8 @@ end
     end
     poly_expr = TR.gen_poly_expr(T, res_odd, taylor)
     return quote
+        # To inline this function. The second inline means inline into this function
+        @inline
         @inline if fastabs(x) > $(T(threshold))
             return $e
         else
