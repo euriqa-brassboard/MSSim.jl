@@ -81,10 +81,10 @@ function mul_expr(@nospecialize(e1), @nospecialize(e2))
         return e2
     elseif e2 == 1
         return e1
-    elseif e1 == -1
-        return :(-$e2)
-    elseif e2 == -1
-        return :(-$e1)
+    elseif isa(e1, Number) && isinteger(e1)
+        return :($(Int(e1)) * $e2)
+    elseif isa(e2, Number) && isinteger(e2)
+        return :($(Int(e2)) * $e1)
     else
         return :($e1 * $e2)
     end
