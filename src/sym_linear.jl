@@ -33,7 +33,7 @@ end
     C1 = Utils.cos_f1(d, s, c)
     S_C1 = Utils.sin_c1(d, s, c)
     S_C2 = Utils.sin_c2(d, s, c)
-    return (complex(muladd(Ω′, τ, Ω) * c, muladd(-Ω′, τ, Ω) * s),
+    return (complex(muladd(Ω′, τ, Ω) * c, muladd(Ω′, τ, Ω) * s),
             τ * complex(S_C1, d * C1),
             τ^2 * complex(S_C1 - C1, S_C2))
 end
