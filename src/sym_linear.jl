@@ -145,6 +145,32 @@ function displacement_δ(τ, Ω, Ω′, φ, δ)
     return phase0 * τ * displacement_δ_kernel(o, o′, d, s, c)
 end
 
+function displacement_gradients(τ, Ω, Ω′, φ, δ)
+    phase0 = cis(φ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = sincos(d)
+
+    τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    return (phase0 * τΩs[1], phase0 * τΩs[2], phase0 * τΩs[3],
+            Utils.mulim(phase0 * displacement_kernel(o, o′, d, s, c)),
+            phase0 * τ * displacement_δ_kernel(o, o′, d, s, c))
+end
+
+function displacement_δ_gradients(τ, Ω, Ω′, φ, δ)
+    phase0 = cis(φ)
+    d = δ * τ
+    o = Ω * τ
+    o′ = Ω′ * τ^2
+    s, c = sincos(d)
+
+    τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    return (phase0 * τΩsδ[1], phase0 * τΩsδ[2], phase0 * τΩsδ[3],
+            Utils.mulim(phase0 * τ * displacement_δ_kernel(o, o′, d, s, c)),
+            phase0 * τΩsδ[4])
+end
+
 function cumulative_displacement(τ, Ω, Ω′, φ, δ)
     phase0 = cis(φ)
     d = δ * τ
