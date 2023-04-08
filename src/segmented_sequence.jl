@@ -43,6 +43,14 @@ is_cumdis_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
 is_area_mode_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
     is_dummy(AG)
 
+struct SegGrad{A,CD,AG}
+    area::A
+    cumdis::CD
+    area_mode::AG
+end
+const _SGS{A,CD,AG} = AbstractVector{SegGrad{A,CD,AG}}
+const _SGV{A,CD,AG} = AbstractVector{SGS} where SGS <: _SGS{A,CD,AG}
+
 mutable struct SeqResultData{T,A,CD,AG}
     τ::T
     area::A
@@ -86,20 +94,18 @@ end
 function compute_sequence!(
     result::SeqResultData{T,A,CD,AG},
     segments::AbstractVector{SD},
-    buffer::SeqComputeBuffer{T}) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
+    buffer::SeqComputeBuffer{T},
+    seg_grads::Union{_SGV{A,CD,AG},Nothing}=nothing) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
 
     nseg = length(segments)
     need_cumdis = !is_cumdis_dummy(SD)
     need_area_mode = !is_area_mode_dummy(SD)
-    if need_area_mode
-        resize!(buffer.dis_backward, nseg)
-    else
-        resize!(buffer.dis_backward, 0)
-    end
-    resize!(buffer.τ_backward, 0)
+    need_grads = seg_grads !== nothing
+    resize!(buffer.dis_backward, need_area_mode || need_grads ? nseg : 0)
+    resize!(buffer.τ_backward, need_grads && need_cumdis ? nseg : 0)
     resize!(buffer.τ_forward, 0)
     resize!(buffer.disφ_backward, 0)
-    if need_area_mode
+    if need_area_mode || need_grads
         p_dis = complex(zero(T))
         for i in nseg:-1:1
             seg = segments[i]
@@ -107,6 +113,10 @@ function compute_sequence!(
             p_dis += seg.area.dis
         end
     end
+
+    empty!(result.area_grad)
+    empty!(result.cumdis_grad)
+    empty!(result.area_mode_grad)
 
     p_τ = zero(T)
     p_dis = complex(zero(T))
