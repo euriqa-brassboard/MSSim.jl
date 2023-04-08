@@ -3,6 +3,7 @@
 module SegSeq
 
 using MSSim
+const U = MSSim.Utils
 const PN = MSSim.PureNumeric
 const SL = MSSim.SymLinear
 const SS = MSSim.SegSeq
@@ -248,9 +249,18 @@ function get_Ω_θ_func(params::AbstractVector{SegParam{T}}) where T
 end
 
 function get_seg_data(params::AbstractVector{SegParam{T}}) where T
-    return [SL.SegInt.compute_values(param.τ, param.Ω, param.Ω′, param.φ, param.δ,
-                                     Val(true), Val(true), Val(false))[1]
-            for param in params]
+    CT = Complex{T}
+    A = SS.AreaData{T}
+    CD = SS.CumDisData{T,CT}
+    AG = SS.AreaModeData{T,CT}
+    grads = U.JaggedMatrix{SS.SegGrad{A,CD,AG}}()
+    function compute_values(param)
+        res, grad = SL.SegInt.compute_values(param.τ, param.Ω, param.Ω′, param.φ,
+                                             param.δ, Val(true), Val(true), Val(true))
+        push!(grads, grad)
+        return res
+    end
+    return [compute_values(param) for param in params], grads
 end
 
 @testset "Random sequence" begin
@@ -269,7 +279,7 @@ end
         params = [rand(all_params_array) for i in 1:nseg]
         total_time = sum(param.τ for param in params)
         Ωf, θf = get_Ω_θ_func(params)
-        seg_data = get_seg_data(params)
+        seg_data, seg_grad = get_seg_data(params)
         SS.compute_sequence!(result, seg_data, buffer)
         dis = PN.displacement(0, total_time, Ωf, θf, rtol=1e-8, atol=1e-8)
         cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
