@@ -181,9 +181,9 @@ end
         for (include_cumdis, include_area_mode, include_grad) in
             Iterators.product((false, true), (false, true), (false, true))
 
-            d, area_grad, cumdis_grad, area_mode_grad =
-                SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
-                                         Val(include_area_mode), Val(include_grad))
+            d, grad = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
+                                               Val(include_area_mode),
+                                               Val(include_grad))
             @test d.area.dis ≈ v_dis
             @test d.area.area ≈ v_area
             if include_cumdis
@@ -194,44 +194,41 @@ end
                 @test d.area_mode.areaδ ≈ v_areaδ
             end
             if include_grad
-                @test length(area_grad) == 5
-                @test area_grad[1].dis ≈ v_dis_grad[1]
-                @test area_grad[2].dis ≈ v_dis_grad[2]
-                @test area_grad[3].dis ≈ v_dis_grad[3]
-                @test area_grad[4].dis ≈ v_dis_grad[4]
-                @test area_grad[5].dis ≈ v_dis_grad[5]
-                @test area_grad[1].area ≈ v_area_grad[1]
-                @test area_grad[2].area ≈ v_area_grad[2]
-                @test area_grad[3].area ≈ v_area_grad[3]
-                @test area_grad[4].area ≈ v_area_grad[4]
-                @test area_grad[5].area ≈ v_area_grad[5]
+                @test length(grad) == 5
 
-                @test length(cumdis_grad) == 5
+                @test grad[1].area.dis ≈ v_dis_grad[1]
+                @test grad[2].area.dis ≈ v_dis_grad[2]
+                @test grad[3].area.dis ≈ v_dis_grad[3]
+                @test grad[4].area.dis ≈ v_dis_grad[4]
+                @test grad[5].area.dis ≈ v_dis_grad[5]
+                @test grad[1].area.area ≈ v_area_grad[1]
+                @test grad[2].area.area ≈ v_area_grad[2]
+                @test grad[3].area.area ≈ v_area_grad[3]
+                @test grad[4].area.area ≈ v_area_grad[4]
+                @test grad[5].area.area ≈ v_area_grad[5]
+
                 if include_cumdis
-                    @test cumdis_grad[1].cumdis ≈ v_cumdis_grad[1]
-                    @test cumdis_grad[2].cumdis ≈ v_cumdis_grad[2]
-                    @test cumdis_grad[3].cumdis ≈ v_cumdis_grad[3]
-                    @test cumdis_grad[4].cumdis ≈ v_cumdis_grad[4]
-                    @test cumdis_grad[5].cumdis ≈ v_cumdis_grad[5]
+                    @test grad[1].cumdis.cumdis ≈ v_cumdis_grad[1]
+                    @test grad[2].cumdis.cumdis ≈ v_cumdis_grad[2]
+                    @test grad[3].cumdis.cumdis ≈ v_cumdis_grad[3]
+                    @test grad[4].cumdis.cumdis ≈ v_cumdis_grad[4]
+                    @test grad[5].cumdis.cumdis ≈ v_cumdis_grad[5]
                 end
 
-                @test length(area_mode_grad) == 5
                 if include_area_mode
-                    @test area_mode_grad[1].disδ ≈ v_disδ_grad[1]
-                    @test area_mode_grad[2].disδ ≈ v_disδ_grad[2]
-                    @test area_mode_grad[3].disδ ≈ v_disδ_grad[3]
-                    @test area_mode_grad[4].disδ ≈ v_disδ_grad[4]
-                    @test area_mode_grad[5].disδ ≈ v_disδ_grad[5]
-                    @test area_mode_grad[1].areaδ ≈ v_areaδ_grad[1]
-                    @test area_mode_grad[2].areaδ ≈ v_areaδ_grad[2]
-                    @test area_mode_grad[3].areaδ ≈ v_areaδ_grad[3]
-                    @test area_mode_grad[4].areaδ ≈ v_areaδ_grad[4]
-                    @test area_mode_grad[5].areaδ ≈ v_areaδ_grad[5]
+                    @test grad[1].area_mode.disδ ≈ v_disδ_grad[1]
+                    @test grad[2].area_mode.disδ ≈ v_disδ_grad[2]
+                    @test grad[3].area_mode.disδ ≈ v_disδ_grad[3]
+                    @test grad[4].area_mode.disδ ≈ v_disδ_grad[4]
+                    @test grad[5].area_mode.disδ ≈ v_disδ_grad[5]
+                    @test grad[1].area_mode.areaδ ≈ v_areaδ_grad[1]
+                    @test grad[2].area_mode.areaδ ≈ v_areaδ_grad[2]
+                    @test grad[3].area_mode.areaδ ≈ v_areaδ_grad[3]
+                    @test grad[4].area_mode.areaδ ≈ v_areaδ_grad[4]
+                    @test grad[5].area_mode.areaδ ≈ v_areaδ_grad[5]
                 end
             else
-                @test area_grad === nothing
-                @test cumdis_grad === nothing
-                @test area_mode_grad === nothing
+                @test grad === nothing
             end
         end
     end
