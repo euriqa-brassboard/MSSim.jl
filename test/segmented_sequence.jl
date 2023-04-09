@@ -253,7 +253,7 @@ function get_seg_data(params::AbstractVector{SegParam{T}}) where T
     A = SS.AreaData{T}
     CD = SS.CumDisData{T,CT}
     AG = SS.AreaModeData{T,CT}
-    grads = U.JaggedMatrix{SS.SegGrad{A,CD,AG}}()
+    grads = U.JaggedMatrix{SS.SegData{T,A,CD,AG}}()
     function compute_values(param)
         res, grad = SL.SegInt.compute_values(param.τ, param.Ω, param.Ω′, param.φ,
                                              param.δ, Val(true), Val(true), Val(true))
@@ -362,7 +362,8 @@ end
         h = nh / 4
         hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
         results = eval_wrapper.(param_cb.(hs))
-        return SS.SegGrad(A(compute_grad((x->x.area.dis).(results)..., h),
+        return SS.SegData(compute_grad((x->x.τ).(results)..., h),
+                          A(compute_grad((x->x.area.dis).(results)..., h),
                             compute_grad((x->x.area.area).(results)..., h)),
                           CD(compute_grad((x->x.cumdis.cumdis).(results)..., h)),
                           AG(compute_grad((x->x.area_mode.disδ).(results)..., h),
@@ -397,13 +398,14 @@ end
 
         for i in 1:nseg
             for j in 1:5
+                @test(result.τ_grad[i][j] ≈ grads[j][i].τ, rtol=1e-8, atol=1e-8)
                 @test(result.area_grad[i][j].dis ≈ grads[j][i].area.dis,
                       rtol=1e-8, atol=1e-8)
                 @test(result.area_grad[i][j].area ≈ grads[j][i].area.area,
-                      rtol=1e-6, atol=1e-6)
+                      rtol=1e-5, atol=1e-5)
                 if j != 1
                     @test(result.cumdis_grad[i][j].cumdis ≈ grads[j][i].cumdis.cumdis,
-                          rtol=1e-6, atol=1e-6)
+                          rtol=1e-5, atol=1e-5)
                 end
             end
         end

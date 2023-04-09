@@ -323,12 +323,12 @@ end
                                 AG(Utils.mulim(area_mode.disδ), zero(T)),
                                 AG(phase0 * disδ_τΩsδ[4], areaδ_τΩsδ[4])]
         end
-        SG = SegSeq.SegGrad{A,CD,AG}
-        grads = SA[SG(area_grad[1], cumdis_grad[1], area_mode_grad[1]),
-                   SG(area_grad[2], cumdis_grad[2], area_mode_grad[2]),
-                   SG(area_grad[3], cumdis_grad[3], area_mode_grad[3]),
-                   SG(area_grad[4], cumdis_grad[4], area_mode_grad[4]),
-                   SG(area_grad[5], cumdis_grad[5], area_mode_grad[5])]
+        SD = SegSeq.SegData{T,A,CD,AG}
+        grads = SA[SD(1, area_grad[1], cumdis_grad[1], area_mode_grad[1]),
+                   SD(0, area_grad[2], cumdis_grad[2], area_mode_grad[2]),
+                   SD(0, area_grad[3], cumdis_grad[3], area_mode_grad[3]),
+                   SD(0, area_grad[4], cumdis_grad[4], area_mode_grad[4]),
+                   SD(0, area_grad[5], cumdis_grad[5], area_mode_grad[5])]
         return res, grads
     end
 end

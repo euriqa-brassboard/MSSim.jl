@@ -43,13 +43,8 @@ is_cumdis_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
 is_area_mode_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
     is_dummy(AG)
 
-struct SegGrad{A,CD,AG}
-    area::A
-    cumdis::CD
-    area_mode::AG
-end
-const _SGS{A,CD,AG} = AbstractVector{SegGrad{A,CD,AG}}
-const _SGV{A,CD,AG} = AbstractVector{SGS} where SGS <: _SGS{A,CD,AG}
+const _SGS{T,A,CD,AG} = AbstractVector{SegData{T,A,CD,AG}}
+const _SGV{T,A,CD,AG} = AbstractVector{SGS} where SGS <: _SGS{T,A,CD,AG}
 
 mutable struct SeqResultData{T,A,CD,AG}
     τ::T
@@ -57,13 +52,14 @@ mutable struct SeqResultData{T,A,CD,AG}
     cumdis::CD
     area_mode::AG
 
+    τ_grad::Utils.JaggedMatrix{T}
     area_grad::Utils.JaggedMatrix{A}
     cumdis_grad::Utils.JaggedMatrix{CD}
     area_mode_grad::Utils.JaggedMatrix{AG}
     function SeqResultData{T,A,CD,AG}() where {T,A,CD,AG}
         return new(zero(T), A(), CD(), AG(),
-                   Utils.JaggedMatrix{A}(), Utils.JaggedMatrix{CD}(),
-                   Utils.JaggedMatrix{AG}())
+                   Utils.JaggedMatrix{T}(), Utils.JaggedMatrix{A}(),
+                   Utils.JaggedMatrix{CD}(), Utils.JaggedMatrix{AG}())
     end
 end
 
@@ -95,7 +91,7 @@ function compute_sequence!(
     result::SeqResultData{T,A,CD,AG},
     segments::AbstractVector{SD},
     buffer::SeqComputeBuffer{T},
-    seg_grads::Union{_SGV{A,CD,AG},Nothing}=nothing) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
+    seg_grads::Union{_SGV{T,A,CD,AG},Nothing}=nothing) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
 
     nseg = length(segments)
     need_cumdis = !is_cumdis_dummy(SD)
@@ -129,10 +125,12 @@ function compute_sequence!(
 
     if need_grads
         @assert length(seg_grads) == nseg
+        resize!(result.τ_grad, seg_grads)
         resize!(result.area_grad, seg_grads)
         resize!(result.cumdis_grad, seg_grads)
         resize!(result.area_mode_grad, seg_grads)
     else
+        empty!(result.τ_grad)
         empty!(result.area_grad)
         empty!(result.cumdis_grad)
         empty!(result.area_mode_grad)
@@ -167,6 +165,8 @@ function compute_sequence!(
         end
         @inline if need_grads
             seg_grad = seg_grads[i]
+
+            τ_grad = result.τ_grad[i]
             area_grad = result.area_grad[i]
             cumdis_grad = result.cumdis_grad[i]
             area_mode_grad = result.area_mode_grad[i]
@@ -176,6 +176,8 @@ function compute_sequence!(
             τ_b = buffer.τ_backward[i]
 
             for j in 1:nvar
+                τ_v = seg_grad[j].τ
+                τ_grad[j] = τ_v
                 dis_v = seg_grad[j].area.dis
                 area_v = (imag(conj(p_dis) * dis_v) + imag(dis_b * conj(dis_v))
                           + seg_grad[j].area.area)
