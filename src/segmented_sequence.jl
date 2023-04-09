@@ -173,12 +173,25 @@ function compute_sequence!(
             nvar = length(seg_grad)
 
             dis_b = buffer.dis_backward[i]
+            τ_b = buffer.τ_backward[i]
 
             for j in 1:nvar
-                dis_v = area_grad[j].dis
+                dis_v = seg_grad[j].area.dis
                 area_v = (imag(conj(p_dis) * dis_v) + imag(dis_b * conj(dis_v))
-                          + area_grad[j].area)
-                a_v = A(dis_v, area_v)
+                          + seg_grad[j].area.area)
+                area_grad[j] = A(dis_v, area_v)
+                if need_cumdis
+                    cumdis_v = τ_b * dis_v + seg_grad[j].cumdis.cumdis
+                    cumdis_grad[j] = CD(cumdis_v)
+                else
+                    cumdis_grad[j] = CD(nothing)
+                end
+                if need_area_mode
+                    # TODO
+                    area_mode_grad[j] = AG(0, 0)
+                else
+                    area_mode_grad[j] = AG(nothing, nothing)
+                end
             end
         end
 
