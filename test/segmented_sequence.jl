@@ -381,19 +381,32 @@ end
 
         grad_δ = eval_grad(add_δ_offset_callback(params), nhδ)
 
-        grads_τ = [eval_grad(add_single_offset_callback(params, i, :τ), nhτ)
-                    for i in 1:nseg]
-        grads_Ω = [eval_grad(add_single_offset_callback(params, i, :Ω), nhΩ)
-                    for i in 1:nseg]
-        grads_Ω′ = [eval_grad(add_single_offset_callback(params, i, :Ω′), nhΩ′)
-                      for i in 1:nseg]
-        grads_δ = [eval_grad(add_single_offset_callback(params, i, :δ), nhδ)
-                    for i in 1:nseg]
-        grads_φ = [eval_grad(add_single_offset_callback(params, i, :φ), nhφ)
-                    for i in 1:nseg]
+        grads = [[eval_grad(add_single_offset_callback(params, i, :τ), nhτ)
+                  for i in 1:nseg],
+                 [eval_grad(add_single_offset_callback(params, i, :Ω), nhΩ)
+                  for i in 1:nseg],
+                 [eval_grad(add_single_offset_callback(params, i, :Ω′), nhΩ′)
+                  for i in 1:nseg],
+                 [eval_grad(add_single_offset_callback(params, i, :φ), nhφ)
+                  for i in 1:nseg],
+                 [eval_grad(add_single_offset_callback(params, i, :δ), nhδ)
+                  for i in 1:nseg]]
 
         @test result.area_mode.disδ ≈ grad_δ.area.dis rtol=1e-8 atol=1e-8
         @test result.area_mode.areaδ ≈ grad_δ.area.area rtol=1e-8 atol=1e-8
+
+        for i in 1:nseg
+            for j in 1:5
+                @test(result.area_grad[i][j].dis ≈ grads[j][i].area.dis,
+                      rtol=1e-8, atol=1e-8)
+                @test(result.area_grad[i][j].area ≈ grads[j][i].area.area,
+                      rtol=1e-6, atol=1e-6)
+                if j != 1
+                    @test(result.cumdis_grad[i][j].cumdis ≈ grads[j][i].cumdis.cumdis,
+                          rtol=1e-6, atol=1e-6)
+                end
+            end
+        end
     end
     for i in 1:100
         test_nseg(1)
