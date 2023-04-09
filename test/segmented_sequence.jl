@@ -279,7 +279,7 @@ end
         params = [rand(all_params_array) for i in 1:nseg]
         total_time = sum(param.τ for param in params)
         Ωf, θf = get_Ω_θ_func(params)
-        seg_data, seg_grad = get_seg_data(params)
+        seg_data, seg_grads = get_seg_data(params)
         SS.compute_sequence!(result, seg_data, buffer)
         dis = PN.displacement(0, total_time, Ωf, θf, rtol=1e-8, atol=1e-8)
         cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
@@ -294,6 +294,95 @@ end
         test_nseg(1)
         test_nseg(2)
         test_nseg(5)
+    end
+end
+
+function add_δ_offset(params, δ)
+    return [SegParam(param.τ, param.Ω, param.Ω′, param.φ, param.δ + δ)
+            for param in params]
+end
+add_δ_offset_callback(params) = δ->add_δ_offset(params, δ)
+
+function add_single_offset(params, idx; offsets...)
+    function offseted_param(i)
+        param = params[i]
+        if i != idx
+            return param
+        end
+        τ = :τ in keys(offsets) ? param.τ + values(offsets).τ : param.τ
+        Ω = :Ω in keys(offsets) ? param.Ω + values(offsets).Ω : param.Ω
+        Ω′ = :Ω′ in keys(offsets) ? param.Ω′ + values(offsets).Ω′ : param.Ω′
+        φ = :φ in keys(offsets) ? param.φ + values(offsets).φ : param.φ
+        δ = :δ in keys(offsets) ? param.δ + values(offsets).δ : param.δ
+        return SegParam(τ, Ω, Ω′, φ, δ)
+    end
+    return [offseted_param(i) for i in 1:length(params)]
+end
+add_single_offset_callback(params, idx, name) =
+    δ->add_single_offset(params, idx; name=>δ)
+
+max_δ(params) = maximum(abs(param.δ) for param in params)
+max_τ(params) = maximum(abs(param.τ) for param in params)
+
+function compute_grad(v₋₄, v₋₃, v₋₂, v₋₁, v₁, v₂, v₃, v₄, h)
+    return (-(v₄ - v₋₄) / 280 + 4 * (v₃ - v₋₃) / 105
+            - (v₂ - v₋₂) / 5 + 4 * (v₁ - v₋₁) / 5) / h
+end
+
+@testset "Random sequence gradients" begin
+    T = Float64
+    CT = Complex{T}
+    A = SS.AreaData{T}
+    CD = SS.CumDisData{T,CT}
+    AG = SS.AreaModeData{T,CT}
+
+    buffer = SS.SeqComputeBuffer{T}()
+    result = SS.SeqResultData{T,A,CD,AG}()
+
+    all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
+
+    function eval_params(result, params, include_grad=true)
+        seg_data, seg_grads = get_seg_data(params)
+        SS.compute_sequence!(result, seg_data, buffer,
+                             include_grad ? seg_grads : nothing)
+        @test result.τ ≈ sum(param.τ for param in params)
+        return
+    end
+
+    result′ = SS.SeqResultData{T,A,CD,AG}()
+    function eval_grad(param_cb, nh)
+        function eval_wrapper(params)
+            eval_params(result′, params, false)
+            return SS.SegData(result′.τ, result′.area,
+                              result′.cumdis, result′.area_mode)
+        end
+        h = nh / 4
+        hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
+        results = eval_wrapper.(param_cb.(hs))
+        return SS.SegGrad(A(compute_grad((x->x.area.dis).(results)..., h),
+                            compute_grad((x->x.area.area).(results)..., h)),
+                          CD(compute_grad((x->x.cumdis.cumdis).(results)..., h)),
+                          AG(compute_grad((x->x.area_mode.disδ).(results)..., h),
+                             compute_grad((x->x.area_mode.areaδ).(results)..., h)))
+    end
+
+    function test_nseg(nseg)
+        params = [rand(all_params_array) for i in 1:nseg]
+        eval_params(result, params)
+
+        nhτ = 0.005 / max(max_δ(params), 1.0)
+        nhΩ = 0.005
+        nhΩ′ = 0.005
+        nhδ = 0.005 / max(max_τ(params), 1.0)
+        nhφ = 0.005
+
+        grad_δ = eval_grad(add_δ_offset_callback(params), nhδ)
+
+        @test result.area_mode.disδ ≈ grad_δ.area.dis rtol=1e-10 atol=1e-10
+        @test result.area_mode.areaδ ≈ grad_δ.area.area rtol=1e-10 atol=1e-10
+    end
+    for i in 1:100
+        test_nseg(1)
     end
 end
 
