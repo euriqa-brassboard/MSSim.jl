@@ -90,6 +90,12 @@ const U = MSSim.Utils
     empty!(m2)
     @test length(m2) == 0
     @test size(m2) == (0,)
+
+    resize!(m2, m)
+    @test length(m2) == 2
+    @test size(m2) == (2,)
+    @test size(m2[1]) == (1,)
+    @test size(m2[2]) == (5,)
 end
 
 @testset "mulim" begin

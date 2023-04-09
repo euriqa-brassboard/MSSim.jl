@@ -26,6 +26,13 @@ Base.similar(m::JaggedMatrix{T}) where T = _similar(m, T)
 Base.similar(m::JaggedMatrix, ::Type{AT}) where AT <: AbstractVector{T} where T =
     _similar(m, T)
 
+function Base.resize!(dst::JaggedMatrix, src::JaggedMatrix)
+    resize!(dst.values, length(src.values))
+    resize!(dst.idx_ranges, length(src.idx_ranges))
+    dst.idx_ranges .= src.idx_ranges
+    return dst
+end
+
 function Base.push!(m::JaggedMatrix{T}, ary::AbstractArray) where T
     last_idx = length(m.values)
     neles = length(ary)
