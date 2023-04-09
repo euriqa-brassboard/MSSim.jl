@@ -403,10 +403,8 @@ end
                       rtol=1e-8, atol=1e-8)
                 @test(result.area_grad[i][j].area ≈ grads[j][i].area.area,
                       rtol=1e-5, atol=1e-5)
-                if j != 1
-                    @test(result.cumdis_grad[i][j].cumdis ≈ grads[j][i].cumdis.cumdis,
-                          rtol=1e-5, atol=1e-5)
-                end
+                @test(result.cumdis_grad[i][j].cumdis ≈ grads[j][i].cumdis.cumdis,
+                      rtol=1e-5, atol=1e-5)
             end
         end
     end

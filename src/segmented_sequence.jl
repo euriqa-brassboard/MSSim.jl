@@ -183,7 +183,7 @@ function compute_sequence!(
                           + seg_grad[j].area.area)
                 area_grad[j] = A(dis_v, area_v)
                 if need_cumdis
-                    cumdis_v = τ_b * dis_v + seg_grad[j].cumdis.cumdis
+                    cumdis_v = τ_v * p_dis + τ_b * dis_v + seg_grad[j].cumdis.cumdis
                     cumdis_grad[j] = CD(cumdis_v)
                 else
                     cumdis_grad[j] = CD(nothing)
