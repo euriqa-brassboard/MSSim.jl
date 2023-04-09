@@ -405,6 +405,8 @@ end
                       rtol=1e-5, atol=1e-5)
                 @test(result.cumdis_grad[i][j].cumdis ≈ grads[j][i].cumdis.cumdis,
                       rtol=1e-5, atol=1e-5)
+                @test(result.area_mode_grad[i][j].disδ ≈ grads[j][i].area_mode.disδ,
+                      rtol=1e-5, atol=1e-5)
             end
         end
     end
