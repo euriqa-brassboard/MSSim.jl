@@ -127,9 +127,16 @@ function compute_sequence!(
         end
     end
 
-    empty!(result.area_grad)
-    empty!(result.cumdis_grad)
-    empty!(result.area_mode_grad)
+    if need_grads
+        @assert length(seg_grads) == nseg
+        resize!(result.area_grad, seg_grads)
+        resize!(result.cumdis_grad, seg_grads)
+        resize!(result.area_mode_grad, seg_grads)
+    else
+        empty!(result.area_grad)
+        empty!(result.cumdis_grad)
+        empty!(result.area_mode_grad)
+    end
 
     p_τ = zero(T)
     p_dis = complex(zero(T))
@@ -157,6 +164,22 @@ function compute_sequence!(
             np_real_disδ += real_disδ
             np_areaδ += (imag(conj(p_dis) * real_disδ) +
                 imag(buffer.dis_backward[i] * conj(real_disδ)) + seg.area_mode.areaδ)
+        end
+        @inline if need_grads
+            seg_grad = seg_grads[i]
+            area_grad = result.area_grad[i]
+            cumdis_grad = result.cumdis_grad[i]
+            area_mode_grad = result.area_mode_grad[i]
+            nvar = length(seg_grad)
+
+            dis_b = buffer.dis_backward[i]
+
+            for j in 1:nvar
+                dis_v = area_grad[j].dis
+                area_v = (imag(conj(p_dis) * dis_v) + imag(dis_b * conj(dis_v))
+                          + area_grad[j].area)
+                a_v = A(dis_v, area_v)
+            end
         end
 
         p_τ = np_τ
