@@ -101,15 +101,28 @@ function compute_sequence!(
     need_cumdis = !is_cumdis_dummy(SD)
     need_area_mode = !is_area_mode_dummy(SD)
     need_grads = seg_grads !== nothing
-    resize!(buffer.dis_backward, need_area_mode || need_grads ? nseg : 0)
+    resize!(buffer.dis_backward, need_grads || need_area_mode ? nseg : 0)
     resize!(buffer.τ_backward, need_grads && need_cumdis ? nseg : 0)
-    resize!(buffer.τ_forward, 0)
-    resize!(buffer.disφ_backward, 0)
-    if need_area_mode || need_grads
+    resize!(buffer.τ_forward, need_grads && need_area_mode ? nseg : 0)
+    resize!(buffer.disφ_backward, need_grads && need_area_mode ? nseg : 0)
+    if need_grads && need_area_mode
+        p_τ = zero(T)
+        for i in 1:nseg
+            seg = segments[i]
+            buffer.τ_forward[i] = p_τ
+            p_τ += seg.τ
+        end
+    end
+    if need_grads || need_area_mode
+        p_τ = zero(T)
         p_dis = complex(zero(T))
         for i in nseg:-1:1
             seg = segments[i]
+            if need_grads && need_cumdis
+                buffer.τ_backward[i] = p_τ
+            end
             buffer.dis_backward[i] = p_dis
+            p_τ += seg.τ
             p_dis += seg.area.dis
         end
     end
