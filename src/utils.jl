@@ -33,6 +33,20 @@ function Base.resize!(dst::JaggedMatrix, src::JaggedMatrix)
     return dst
 end
 
+function Base.resize!(dst::JaggedMatrix, src::AbstractVector)
+    empty!(dst)
+    resize!(dst.idx_ranges, length(src))
+    last_idx = 0
+    for (i, ary) in enumerate(src)
+        neles = length(ary)
+        new_last_idx = last_idx + neles
+        dst.idx_ranges[i] = (last_idx + 1):new_last_idx
+        last_idx = new_last_idx
+    end
+    resize!(dst.values, last_idx)
+    return dst
+end
+
 function Base.push!(m::JaggedMatrix{T}, ary::AbstractArray) where T
     last_idx = length(m.values)
     neles = length(ary)

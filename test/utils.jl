@@ -96,6 +96,14 @@ const U = MSSim.Utils
     @test size(m2) == (2,)
     @test size(m2[1]) == (1,)
     @test size(m2[2]) == (5,)
+
+    resize!(m2, [[1, 2, 3], [2], [3, 4, 5, 6], Int[]])
+    @test length(m2) == 4
+    @test size(m2) == (4,)
+    @test size(m2[1]) == (3,)
+    @test size(m2[2]) == (1,)
+    @test size(m2[3]) == (4,)
+    @test size(m2[4]) == (0,)
 end
 
 @testset "mulim" begin
