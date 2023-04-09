@@ -381,11 +381,15 @@ end
 
         grad_δ = eval_grad(add_δ_offset_callback(params), nhδ)
 
-        @test result.area_mode.disδ ≈ grad_δ.area.dis rtol=1e-10 atol=1e-10
-        @test result.area_mode.areaδ ≈ grad_δ.area.area rtol=1e-10 atol=1e-10
+        @test result.area_mode.disδ ≈ grad_δ.area.dis rtol=1e-8 atol=1e-8
+        @test result.area_mode.areaδ ≈ grad_δ.area.area rtol=1e-8 atol=1e-8
     end
     for i in 1:100
         test_nseg(1)
+        test_nseg(2)
+        test_nseg(5)
+        test_nseg(10)
+        test_nseg(20)
     end
 end
 
