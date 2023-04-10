@@ -87,7 +87,6 @@ struct SeqComputeBuffer{T}
     end
 end
 
-# TODO gradients
 function compute_sequence!(
     result::SeqResultData{T,A,CD,AG},
     segments::AbstractVector{SD},
