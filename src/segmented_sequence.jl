@@ -74,9 +74,10 @@ struct SeqComputeBuffer{T}
     # Used to compute:
     # * Gradient of cumulative displacement w.r.t. parameters
     τ_backward::Vector{T}
-    # Partial sum of the first n (0 to N-1) time step lengths.
+    # Gradient of displacement w.r.t. detuning including the effect of the
+    # phase accumulation in the previous segments due to detuning change.
     # Used to compute: disφ_backward
-    τ_forward::Vector{T}
+    disφ::Vector{Complex{T}}
     # Partial sum of the last n (0 to N-1) gradient of displacement w.r.t. detuning.
     # Used to compute:
     # * Gradient of area w.r.t. parameters and detuning
@@ -99,25 +100,30 @@ function compute_sequence!(
     need_grads = seg_grads !== nothing
     resize!(buffer.dis_backward, need_grads || need_area_mode ? nseg : 0)
     resize!(buffer.τ_backward, need_grads && need_cumdis ? nseg : 0)
-    resize!(buffer.τ_forward, need_grads && need_area_mode ? nseg : 0)
+    resize!(buffer.disφ, need_area_mode ? nseg : 0)
     resize!(buffer.disφ_backward, need_grads && need_area_mode ? nseg : 0)
-    if need_grads && need_area_mode
+    if need_area_mode
         p_τ = zero(T)
         for i in 1:nseg
             seg = segments[i]
-            buffer.τ_forward[i] = p_τ
+            buffer.disφ[i] = seg.area_mode.disδ + Utils.mulim(seg.area.dis * p_τ)
             p_τ += seg.τ
         end
     end
     if need_grads || need_area_mode
         p_τ = zero(T)
         p_dis = complex(zero(T))
+        p_real_disδ = complex(zero(T))
         for i in nseg:-1:1
             seg = segments[i]
             if need_grads && need_cumdis
                 buffer.τ_backward[i] = p_τ
             end
             buffer.dis_backward[i] = p_dis
+            if need_grads && need_area_mode
+                buffer.disφ_backward[i] = p_real_disδ
+                p_real_disδ += buffer.disφ[i]
+            end
             p_τ += seg.τ
             p_dis += seg.area.dis
         end
@@ -158,7 +164,7 @@ function compute_sequence!(
             np_cumdis += p_dis * seg.τ + seg.cumdis.cumdis
         end
         if need_area_mode
-            real_disδ = seg.area_mode.disδ + Utils.mulim(seg.area.dis * p_τ)
+            real_disδ = buffer.disφ[i]
             np_real_disδ += real_disδ
             np_areaδ += (imag(conj(p_dis) * real_disδ) +
                 imag(buffer.dis_backward[i] * conj(real_disδ)) + seg.area_mode.areaδ)
@@ -173,7 +179,8 @@ function compute_sequence!(
             nvar = length(seg_grad)
 
             dis_b = buffer.dis_backward[i]
-            τ_b = buffer.τ_backward[i]
+            disφ_b = need_area_mode ? buffer.disφ_backward[i] : complex(zero(T))
+            τ_b = need_cumdis ? buffer.τ_backward[i] : zero(T)
 
             for j in 1:nvar
                 sg = seg_grad[j]
@@ -196,8 +203,12 @@ function compute_sequence!(
                 if need_area_mode
                     disδ_v = (sg.area_mode.disδ +
                         Utils.mulim(dis_v * p_τ + dis_b * τ_v))
-                    # TODO
-                    area_mode_grad[j] = AG(disδ_v, 0)
+                    areaδ_v = (sg.area_mode.areaδ +
+                        imag(conj(p_dis) * disδ_v) +
+                        imag(conj(dis_v) * disφ_b) +
+                        imag(dis_b * conj(disδ_v)) +
+                        imag(dis_v * conj(p_real_disδ)))
+                    area_mode_grad[j] = AG(disδ_v, areaδ_v)
                 else
                     area_mode_grad[j] = AG(nothing, nothing)
                 end
