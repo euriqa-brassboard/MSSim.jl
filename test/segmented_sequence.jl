@@ -28,7 +28,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SeqResultData{T,A,CD,AG}()
+    result = SS.SingleModeResult{T,A,CD,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
         d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
@@ -45,7 +45,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
             CD′ = need_cumdis ? CD : SS.DummyCumDisData
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
-            result′ = SS.SeqResultData{T,A,CD′,AG′}()
+            result′ = SS.SingleModeResult{T,A,CD′,AG′}()
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
             SS.compute_sequence!(result′, [d′], buffer)
@@ -71,7 +71,7 @@ end
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SeqResultData{T,A,CD,AG}()
+    result = SS.SingleModeResult{T,A,CD,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
         d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
@@ -106,7 +106,7 @@ end
             CD′ = need_cumdis ? CD : SS.DummyCumDisData
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
-            result′ = SS.SeqResultData{T,A,CD′,AG′}()
+            result′ = SS.SingleModeResult{T,A,CD′,AG′}()
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
             SS.compute_sequence!(result′, [d′, d′], buffer)
@@ -178,7 +178,7 @@ end
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SeqResultData{T,A,CD,AG}()
+    result = SS.SingleModeResult{T,A,CD,AG}()
 
     p0 = 0
     p1 = 1 + 1im
@@ -271,7 +271,7 @@ end
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SeqResultData{T,A,CD,AG}()
+    result = SS.SingleModeResult{T,A,CD,AG}()
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
@@ -340,7 +340,7 @@ end
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SeqResultData{T,A,CD,AG}()
+    result = SS.SingleModeResult{T,A,CD,AG}()
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
@@ -352,7 +352,7 @@ end
         return
     end
 
-    result′ = SS.SeqResultData{T,A,CD,AG}()
+    result′ = SS.SingleModeResult{T,A,CD,AG}()
     function eval_grad(param_cb, nh)
         function eval_wrapper(params)
             eval_params(result′, params, false)

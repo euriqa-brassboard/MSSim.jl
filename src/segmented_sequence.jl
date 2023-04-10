@@ -46,7 +46,7 @@ is_area_mode_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
 const _SGS{T,A,CD,AG} = AbstractVector{SegData{T,A,CD,AG}}
 const _SGV{T,A,CD,AG} = AbstractVector{SGS} where SGS <: _SGS{T,A,CD,AG}
 
-mutable struct SeqResultData{T,A,CD,AG}
+mutable struct SingleModeResult{T,A,CD,AG}
     τ::T
     area::A
     cumdis::CD
@@ -56,7 +56,7 @@ mutable struct SeqResultData{T,A,CD,AG}
     area_grad::Utils.JaggedMatrix{A}
     cumdis_grad::Utils.JaggedMatrix{CD}
     area_mode_grad::Utils.JaggedMatrix{AG}
-    function SeqResultData{T,A,CD,AG}() where {T,A,CD,AG}
+    function SingleModeResult{T,A,CD,AG}() where {T,A,CD,AG}
         return new(zero(T), A(), CD(), AG(),
                    Utils.JaggedMatrix{T}(), Utils.JaggedMatrix{A}(),
                    Utils.JaggedMatrix{CD}(), Utils.JaggedMatrix{AG}())
@@ -88,7 +88,7 @@ struct SeqComputeBuffer{T}
 end
 
 function compute_sequence!(
-    result::SeqResultData{T,A,CD,AG},
+    result::SingleModeResult{T,A,CD,AG},
     segments::AbstractVector{SD},
     buffer::SeqComputeBuffer{T},
     seg_grads::Union{_SGV{T,A,CD,AG},Nothing}=nothing) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
