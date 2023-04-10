@@ -83,7 +83,7 @@ struct SeqComputeBuffer{T}
     # * Gradient of area w.r.t. parameters and detuning
     disφ_backward::Vector{Complex{T}}
     function SeqComputeBuffer{T}() where T
-        return new(Complex{T}[], T[], T[], Complex{T}[])
+        return new(Complex{T}[], T[], Complex{T}[], Complex{T}[])
     end
 end
 
@@ -201,12 +201,18 @@ function compute_sequence!(
                 end
 
                 if need_area_mode
-                    disδ_v = (sg.area_mode.disδ +
-                        Utils.mulim(dis_v * p_τ + dis_b * τ_v))
+                    disδ_v0 = sg.area_mode.disδ + Utils.mulim(dis_v * p_τ)
+                    disδ_v = disδ_v0 + Utils.mulim(dis_b * τ_v)
+                    # Note that the expression below isn't simply the derivative
+                    # of the areaδ. This is because disδ depends on the sum of τ's
+                    # so areaδ actually contains a thrird summation
+                    # that breaks the change-of-summation-order trick that we've
+                    # used for all other expressions.
                     areaδ_v = (sg.area_mode.areaδ +
                         imag(conj(p_dis) * disδ_v) +
                         imag(conj(dis_v) * disφ_b) +
-                        imag(dis_b * conj(disδ_v)) +
+                        τ_v * real(conj(dis_b) * seg.area.dis) +
+                        imag(dis_b * conj(disδ_v0)) +
                         imag(dis_v * conj(p_real_disδ)))
                     area_mode_grad[j] = AG(disδ_v, areaδ_v)
                 else

@@ -263,39 +263,39 @@ function get_seg_data(params::AbstractVector{SegParam{T}}) where T
     return [compute_values(param) for param in params], grads
 end
 
-# @testset "Random sequence" begin
-#     T = Float64
-#     CT = Complex{T}
-#     A = SS.AreaData{T}
-#     CD = SS.CumDisData{T,CT}
-#     AG = SS.AreaModeData{T,CT}
+@testset "Random sequence" begin
+    T = Float64
+    CT = Complex{T}
+    A = SS.AreaData{T}
+    CD = SS.CumDisData{T,CT}
+    AG = SS.AreaModeData{T,CT}
 
-#     buffer = SS.SeqComputeBuffer{T}()
-#     result = SS.SeqResultData{T,A,CD,AG}()
+    buffer = SS.SeqComputeBuffer{T}()
+    result = SS.SeqResultData{T,A,CD,AG}()
 
-#     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
+    all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
-#     function test_nseg(nseg)
-#         params = [rand(all_params_array) for i in 1:nseg]
-#         total_time = sum(param.τ for param in params)
-#         Ωf, θf = get_Ω_θ_func(params)
-#         seg_data, seg_grads = get_seg_data(params)
-#         SS.compute_sequence!(result, seg_data, buffer)
-#         dis = PN.displacement(0, total_time, Ωf, θf, rtol=1e-8, atol=1e-8)
-#         cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
-#                                              rtol=1e-8, atol=1e-8)
-#         area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=5e-6, atol=5e-6)
-#         @test result.τ ≈ total_time
-#         @test result.area.dis ≈ dis rtol=1e-3 atol=1e-3
-#         @test result.area.area ≈ area rtol=3e-2 atol=3e-2
-#         @test result.cumdis.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
-#     end
-#     for i in 1:100
-#         test_nseg(1)
-#         test_nseg(2)
-#         test_nseg(5)
-#     end
-# end
+    function test_nseg(nseg)
+        params = [rand(all_params_array) for i in 1:nseg]
+        total_time = sum(param.τ for param in params)
+        Ωf, θf = get_Ω_θ_func(params)
+        seg_data, seg_grads = get_seg_data(params)
+        SS.compute_sequence!(result, seg_data, buffer)
+        dis = PN.displacement(0, total_time, Ωf, θf, rtol=1e-8, atol=1e-8)
+        cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
+                                             rtol=1e-8, atol=1e-8)
+        area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=5e-6, atol=5e-6)
+        @test result.τ ≈ total_time
+        @test result.area.dis ≈ dis rtol=1e-3 atol=1e-3
+        @test result.area.area ≈ area rtol=3e-2 atol=3e-2
+        @test result.cumdis.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
+    end
+    for i in 1:100
+        test_nseg(1)
+        test_nseg(2)
+        test_nseg(5)
+    end
+end
 
 function add_δ_offset(params, δ)
     times = accumulate(+, param.τ for param in params)
@@ -407,10 +407,12 @@ end
                       rtol=1e-5, atol=1e-5)
                 @test(result.area_mode_grad[i][j].disδ ≈ grads[j][i].area_mode.disδ,
                       rtol=1e-5, atol=1e-5)
+                @test(result.area_mode_grad[i][j].areaδ ≈ grads[j][i].area_mode.areaδ,
+                      rtol=1e-4, atol=1e-4)
             end
         end
     end
-    for i in 1:100
+    for i in 1:1000
         test_nseg(1)
         test_nseg(2)
         test_nseg(5)
