@@ -87,7 +87,7 @@ struct SeqComputeBuffer{T}
     end
 end
 
-function compute_sequence!(
+function compute_single_mode!(
     result::SingleModeResult{T,A,CD,AG},
     segments::AbstractVector{SD},
     buffer::SeqComputeBuffer{T},

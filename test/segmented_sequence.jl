@@ -32,7 +32,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
 
     for (τ, Ω, Ω′, φ, δ) in all_params
         d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
-        SS.compute_sequence!(result, [d], buffer)
+        SS.compute_single_mode!(result, [d], buffer)
         @test result.τ == τ
         @test result.area.dis == d.area.dis
         @test result.area.area == d.area.area
@@ -48,7 +48,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
             result′ = SS.SingleModeResult{T,A,CD′,AG′}()
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
-            SS.compute_sequence!(result′, [d′], buffer)
+            SS.compute_single_mode!(result′, [d′], buffer)
             @test result′.τ == τ
             @test result′.area.dis == d.area.dis
             @test result′.area.area == d.area.area
@@ -83,7 +83,7 @@ end
         @test nd.cumdis.cumdis ≈ d.cumdis.cumdis - d.area.dis * τ
         @test nd.area_mode.disδ ≈ d.area_mode.disδ - im * τ * d.area.dis
         @test nd.area_mode.areaδ ≈ d.area_mode.areaδ
-        SS.compute_sequence!(result, [d, nd], buffer)
+        SS.compute_single_mode!(result, [d, nd], buffer)
         @test result.τ ≈ 2 * τ
         @test result.area.dis ≈ 0 atol=1e-8
         @test result.area.area ≈ 0 atol=1e-8
@@ -93,7 +93,7 @@ end
             (2 * imag(d.area_mode.disδ * conj(d.area.dis))
              - 2 * τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ)
 
-        SS.compute_sequence!(result, [d, d], buffer)
+        SS.compute_single_mode!(result, [d, d], buffer)
         @test result.τ ≈ 2 * τ
         @test result.area.dis ≈ 2 * d.area.dis atol=1e-8
         @test result.area.area ≈ 2 * d.area.area atol=1e-8
@@ -109,7 +109,7 @@ end
             result′ = SS.SingleModeResult{T,A,CD′,AG′}()
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
-            SS.compute_sequence!(result′, [d′, d′], buffer)
+            SS.compute_single_mode!(result′, [d′, d′], buffer)
             @test result′.τ == 2 * τ
             @test result′.area.dis ≈ 2 * d.area.dis atol=1e-8
             @test result′.area.area ≈ 2 * d.area.area atol=1e-8
@@ -127,7 +127,7 @@ end
         for τ′ in τs
             d0, = SL.SegInt.compute_values(τ′, 0.0, 0.0, 0.0, 0.0,
                                            Val(true), Val(true), Val(false))
-            SS.compute_sequence!(result, [d0, d], buffer)
+            SS.compute_single_mode!(result, [d0, d], buffer)
             @test result.τ ≈ τ + τ′
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
@@ -135,7 +135,7 @@ end
             @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result, [d, d0], buffer)
+            SS.compute_single_mode!(result, [d, d0], buffer)
             @test result.τ ≈ τ + τ′
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
@@ -143,7 +143,7 @@ end
             @test result.area_mode.disδ == d.area_mode.disδ
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result, [d0, d0, d], buffer)
+            SS.compute_single_mode!(result, [d0, d0, d], buffer)
             @test result.τ ≈ τ + τ′ * 2
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
@@ -151,7 +151,7 @@ end
             @test result.area_mode.disδ ≈ d.area_mode.disδ + 2 * im * τ′ * d.area.dis
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result, [d0, d, d0], buffer)
+            SS.compute_single_mode!(result, [d0, d, d0], buffer)
             @test result.τ ≈ τ + τ′ * 2
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
@@ -159,7 +159,7 @@ end
             @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
-            SS.compute_sequence!(result, [d, d0, d0], buffer)
+            SS.compute_single_mode!(result, [d, d0, d0], buffer)
             @test result.τ ≈ τ + τ′ * 2
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
@@ -201,7 +201,7 @@ end
         d4, = SL.SegInt.compute_values(τ, Ω * abs(l4), 0, φ + angle(l4), 0,
                                        Val(true), Val(true), Val(false))
 
-        SS.compute_sequence!(result, [d1, d2, d3, d4], buffer)
+        SS.compute_single_mode!(result, [d1, d2, d3, d4], buffer)
         @test result.τ == 4 * τ
         @test result.area.dis ≈ 0 atol=1e-10
         @test result.area.area ≈ -(Ω * τ)^2 * 4
@@ -280,7 +280,7 @@ end
         total_time = sum(param.τ for param in params)
         Ωf, θf = get_Ω_θ_func(params)
         seg_data, seg_grads = get_seg_data(params)
-        SS.compute_sequence!(result, seg_data, buffer)
+        SS.compute_single_mode!(result, seg_data, buffer)
         dis = PN.displacement(0, total_time, Ωf, θf, rtol=1e-8, atol=1e-8)
         cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
                                              rtol=1e-8, atol=1e-8)
@@ -346,8 +346,8 @@ end
 
     function eval_params(result, params, include_grad=true)
         seg_data, seg_grads = get_seg_data(params)
-        SS.compute_sequence!(result, seg_data, buffer,
-                             include_grad ? seg_grads : nothing)
+        SS.compute_single_mode!(result, seg_data, buffer,
+                                include_grad ? seg_grads : nothing)
         @test result.τ ≈ sum(param.τ for param in params)
         return
     end
