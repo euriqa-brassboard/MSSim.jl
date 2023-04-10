@@ -239,4 +239,151 @@ function compute_single_mode!(
     return
 end
 
+mutable struct MultiModeResult{T,VCD,VDD,AD}
+    τ::T
+    dis::Vector{Complex{T}}
+    area::T
+    cumdis::VCD # Vector
+    disδ::VDD # Vector
+    areaδ::AD
+
+    τ_grad::Utils.JaggedMatrix{T}
+    dis_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
+    area_grad::Utils.JaggedMatrix{T}
+    cumdis_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
+    disδ_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
+    areaδ_grad::Utils.JaggedMatrix{T}
+
+    function MultiModeResult{T}(::Val{include_cumdis},
+                                ::Val{include_area_mode}) where {T,include_cumdis,
+                                                                 include_area_mode}
+        VCD = include_cumdis ? Vector{Complex{T}} : Nothing
+        VDD = include_area_mode ? Vector{Complex{T}} : Nothing
+        AD = include_area_mode ? T : Nothing
+
+        return new{T,VCD,VDD,AD}(zero(T), Complex{T}[], zero(T),
+                                 VCD(), VDD(), include_area_mode ? zero(T) : nothing,
+                                 Utils.JaggedMatrix{T}(),
+                                 Utils.JaggedMatrix{Complex{T}}[],
+                                 Utils.JaggedMatrix{T}(),
+                                 Utils.JaggedMatrix{Complex{T}}[],
+                                 Utils.JaggedMatrix{Complex{T}}[],
+                                 Utils.JaggedMatrix{T}())
+    end
+end
+
+function _init_grads_vector(grads::Vector{Utils.JaggedMatrix{T}}, nmodes) where T
+    resize!(grads, nmodes)
+    for i in 1:nmodes
+        if isassigned(grads, i)
+            empty!(grads[i])
+        else
+            grads[i] = Utils.JaggedMatrix{T}
+        end
+    end
+    return
+end
+
+function compute_multi_mode!(
+    result::MultiModeResult{T,VCD,VDD,AD}, ::Val{include_grad},
+    nmodes, mode_callback, buffer::SeqComputeBuffer{T}) where {T,VCD,VDD,AD,include_grad}
+
+    include_cumdis = VCD !== Nothing
+    include_area_mode = AD !== Nothing
+
+    result.τ = zero(T)
+    resize!(result.dis, nmodes)
+    result.dis .= complex(zero(T))
+    result.area = zero(T)
+    if include_cumdis
+        resize!(result.cumdis, nmodes)
+        result.cumdis .= complex(zero(T))
+    end
+    if include_area_mode
+        resize!(result.disδ, nmodes)
+        result.disδ .= complex(zero(T))
+        result.areaδ = zero(T)
+    end
+
+    empty!(result.τ_grad)
+    empty!(result.area_grad)
+    empty!(result.areaδ_grad)
+    if include_grad
+        _init_grads_vector(result.dis_grad, nmodes)
+        if include_cumdis
+            _init_grads_vector(result.cumdis_grad, nmodes)
+        end
+        if include_area_mode
+            _init_grads_vector(result.disδ_grad, nmodes)
+        end
+    else
+        empty!(result.dis_grad)
+        empty!(result.cumdis_grad)
+        empty!(result.disδ_grad)
+    end
+
+    CT = Complex{T}
+    A = SegSeq.AreaData{T}
+    CD = include_cumdis ? CumDisData{T,CT} : DummyCumDisData
+    AG = include_area_mode ? AreaModeData{T,CT} : DummyAreaModeData
+
+    single_result = SingleModeResult{T,A,CD,AG}()
+
+    for i in 1:nmodes
+        segs, seg_grads = mode_callback(i)
+        compute_single_mode!(single_result, segs, buffer, seg_grads)
+        if i == 1
+            result.τ = single_result.τ
+        end
+        result.dis[i] = single_result.area.dis
+        result.area += single_result.area.area
+        if include_cumdis
+            result.cumdis[i] = single_result.cumdis.cumdis
+        end
+        if include_area_mode
+            result.disδ[i] = single_result.area_mode.disδ
+            result.areaδ += single_result.area_mode.areaδ
+        end
+        if include_grad
+            if i == 1
+                resize!(result.τ_grad, single_result.τ_grad)
+                result.τ_grad.values .= single_result.τ_grad.values
+
+                resize!(result.area_grad, single_result.area_grad)
+                result.area_grad.values .=
+                    getfield.(single_result.area_grad.values, :area)
+                if include_area_mode
+                    resize!(result.areaδ_grad, single_result.area_mode_grad)
+                    result.areaδ_grad.values .=
+                        getfield.(single_result.area_mode_grad.values, :areaδ)
+                end
+            else
+                result.area_grad.values .+=
+                    getfield.(single_result.area_grad.values, :area)
+                if include_area_mode
+                    result.areaδ_grad.values .+=
+                        getfield.(single_result.area_mode_grad.values, :areaδ)
+                end
+            end
+            dis_grad = result.dis_grad[i]
+            resize!(dis_grad, single_result.area_grad)
+            dis_grad.values .= getfield.(single_result.area_grad.values, :dis)
+            if include_cumdis
+                cumdis_grad = result.cumdis_grad[i]
+                resize!(cumdis_grad, single_result.cumdis_grad)
+                cumdis_grad.values .=
+                    getfield.(single_result.cumdis_grad.values, :cumdis)
+            end
+            if include_area_mode
+                disδ_grad = result.disδ_grad[i]
+                resize!(disδ_grad, single_result.area_mode_grad)
+                disδ_grad.values .=
+                    getfield.(single_result.area_mode_grad.values, :disδ)
+            end
+        end
+    end
+
+    return
+end
+
 end
