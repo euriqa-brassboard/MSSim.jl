@@ -9,7 +9,6 @@ module SegInt
 import ...Utils
 import ...SegSeq
 
-using ForwardDiff
 using StaticArrays
 
 # Integral for each segments
@@ -331,25 +330,6 @@ end
                    SD(0, area_grad[5], cumdis_grad[5], area_mode_grad[5])]
         return res, grads
     end
-end
-
-function compute_all_gradients(τ, Ω, Ω′, φ, δ)
-    sφ, cφ = @inline sincos(φ)
-    d = ForwardDiff.Dual(δ * τ, (δ, 0.0, 0.0, 0.0, τ))
-    sd, cd = @inline sincos(δ * τ)
-    s = ForwardDiff.Dual(sd, (cd * δ, 0.0, 0.0, 0.0, cd * τ))
-    c = ForwardDiff.Dual(cd, (-sd * δ, 0.0, 0.0, 0.0, -sd * τ))
-    o = ForwardDiff.Dual(Ω * τ, (Ω, τ, 0.0, 0.0, 0.0))
-    o′ = ForwardDiff.Dual(Ω′ * τ^2, (2 * Ω′ * τ, 0.0, τ^2, 0.0, 0.0))
-    phase0 = complex(ForwardDiff.Dual(cφ, (0.0, 0.0, 0.0, -sφ, 0.0)),
-                     ForwardDiff.Dual(sφ, (0.0, 0.0, 0.0, cφ, 0.0)))
-    # phase0_τ = phase0 * ForwardDiff.Dual(τ, (1, 0, 0, 0, 0))
-    phase0_τ = complex(ForwardDiff.Dual(cφ * τ, (cφ, 0.0, 0.0, -(sφ * τ), 0.0)),
-                        ForwardDiff.Dual(sφ * τ, (sφ, 0.0, 0.0, cφ * τ, 0.0)))
-
-    return @inline (phase0 * displacement_kernel(o, o′, d, s, c),
-                    phase0_τ * cumulative_displacement_kernel(o, o′, d, s, c),
-                    enclosed_area_kernel(o, o′, d, s, c))
 end
 
 end
