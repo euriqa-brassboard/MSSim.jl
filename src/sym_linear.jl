@@ -334,4 +334,98 @@ end
 
 end
 
+import ..Utils
+import ..SegSeq
+
+struct Pulse{T}
+    τ::T
+    Ω::T
+    Ω′::T
+    dφ::T
+    ω::T
+end
+
+struct Mode{T}
+    bavg::T
+    ω::T
+end
+
+mutable struct System{T,A,CD,AG,MR,need_grad}
+    const pulses::Vector{Pulse{T}}
+    const modes::Vector{Mode{T}}
+
+    cur_mod::Int
+    const seg_buf::Vector{SegSeq.SegData{T,A,CD,AG}}
+    const seg_grad_buf::Utils.JaggedMatrix{SegSeq.SegData{T,A,CD,AG}}
+    const buffer::SegSeq.SeqComputeBuffer{T}
+    const result::MR
+
+    function System{T}(modes::AbstractVector,
+                       ::Val{need_cumdis}, ::Val{need_area_mode},
+                       ::Val{need_grad}) where {T,need_cumdis,need_area_mode,need_grad}
+
+        CT = Complex{T}
+        A = SegSeq.AreaData{T}
+        CD = need_cumdis ? SegSeq.CumDisData{T,CT} : SegSeq.DummyCumDisData
+        AG = need_area_mode ? SegSeq.AreaModeData{T,CT} : SegSeq.DummyAreaModeData
+        SD = SegSeq.SegData{T,A,CD,AG}
+
+        pulses = Pulse{T}[]
+        seg_buf = SD[]
+        seg_grad_buf = Utils.JaggedMatrix{SD}()
+        buffer = SegSeq.SeqComputeBuffer{T}()
+        result = MultiModeResult{T}(Val(need_cumdis), Val(need_area_mode))
+        return new{T,A,CD,AG,typeof(result),need_grad}(pulses, modes, 0, seg_buf,
+                                                       seg_grad_buf, buffer, result)
+    end
+    function System{T}(::Val{need_cumdis}, ::Val{need_area_mode},
+                       ::Val{need_grad}) where {T,need_cumdis,need_area_mode,need_grad}
+        return System{T}(Mode{T}[], Val(need_cumdis),
+                         Val(need_area_mode), Val(need_grad))
+    end
+end
+
+function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
+                        mode_idx) where {T,A,CD,AG,MR,need_grad}
+    if mode_idx == sys.cur_mod
+        return
+    end
+    need_cumdis = !SegSeq.is_dummy(CD)
+    need_area_mode = !SegSeq.is_dummy(AG)
+
+    nseg = length(sys.pulses)
+    resize!(sys.seg_buf, nseg)
+    empty!(sys.seg_grad_buf)
+
+    mode = sys.modes[mode_idx]
+    φ = zero(T)
+    for i in 1:nseg
+        pulse = sys.pulses[i]
+        φ += pulse.dφ
+        δ = pulse.ω - mode.ω
+        seg, grad = SL.SegInt.compute_values(pulse.τ, mode.bavg * pulse.Ω,
+                                             mode.bavg * pulse.Ω′, φ, δ,
+                                             Val(need_cumdis), Val(need_area_mode),
+                                             Val(need_grad))
+        sys.seg_buf[i] = seg
+        push!(sys.seg_grad_buf, grad)
+        φ += pulse.τ * δ
+    end
+end
+
+function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_grad}
+    function callback(mode_idx)
+        _fill_seg_buf!(sys, mode_idx)
+        if need_grad
+            return sys.seg_buf, sys.seg_grad_buf
+        else
+            return sys.seg_buf, nothing
+        end
+    end
+    compute_multi_mode!(sys.result, Val(need_grad), length(sys.modes),
+                        callback, sys.buffer)
+    return
+end
+
+
 end

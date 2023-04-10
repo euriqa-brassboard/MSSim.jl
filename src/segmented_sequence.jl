@@ -323,7 +323,7 @@ function compute_multi_mode!(
     end
 
     CT = Complex{T}
-    A = SegSeq.AreaData{T}
+    A = AreaData{T}
     CD = include_cumdis ? CumDisData{T,CT} : DummyCumDisData
     AG = include_area_mode ? AreaModeData{T,CT} : DummyAreaModeData
 
