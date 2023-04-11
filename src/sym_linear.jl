@@ -339,7 +339,7 @@ import ..SegSeq
 
 struct Pulse{T}
     τ::T
-    Ω::T
+    dΩ::T
     Ω′::T
     dφ::T
     ω::T
@@ -399,17 +399,20 @@ function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
 
     mode = sys.modes[mode_idx]
     φ = zero(T)
+    Ω = zero(T)
     for i in 1:nseg
         pulse = sys.pulses[i]
+        Ω += pulse.dΩ
         φ += pulse.dφ
         δ = pulse.ω - mode.ω
-        seg, grad = SL.SegInt.compute_values(pulse.τ, mode.bavg * pulse.Ω,
+        seg, grad = SL.SegInt.compute_values(pulse.τ, mode.bavg * Ω,
                                              mode.bavg * pulse.Ω′, φ, δ,
                                              Val(need_cumdis), Val(need_area_mode),
                                              Val(need_grad))
         sys.seg_buf[i] = seg
         push!(sys.seg_grad_buf, grad)
         φ += pulse.τ * δ
+        Ω += pulse.τ * pulse.Ω′
     end
 end
 
