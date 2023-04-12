@@ -387,7 +387,7 @@ mutable struct System{T,A,CD,AG,MR,need_grad}
     end
 end
 
-function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
+@inline function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
                         mode_idx) where {T,A,CD,AG,MR,need_grad}
     if mode_idx == sys.cur_mod
         return
@@ -402,7 +402,7 @@ function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
     mode = sys.modes[mode_idx]
     φ = zero(T)
     Ω = zero(T)
-    for i in 1:nseg
+    @inline for i in 1:nseg
         pulse = sys.pulses[i]
         Ω += pulse.dΩ
         φ += pulse.dφ
@@ -428,7 +428,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
     result = sys.result
     single_result = sys.single_result
 
-    for mode_idx in 1:nmodes
+    @inline for mode_idx in 1:nmodes
         _fill_seg_buf!(sys, mode_idx)
         mode = sys.modes[mode_idx]
         compute_single_mode!(single_result, sys.segs, sys.buffer,
