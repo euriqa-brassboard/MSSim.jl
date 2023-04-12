@@ -245,30 +245,30 @@ mutable struct MultiModeResult{T,VCD,VDD,AD}
     area::T
     cumdis::VCD # Vector
     disδ::VDD # Vector
-    areaδ::AD
+    areaδ::VAD
 
     τ_grad::Utils.JaggedMatrix{T}
     dis_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
     area_grad::Utils.JaggedMatrix{T}
     cumdis_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
     disδ_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
-    areaδ_grad::Utils.JaggedMatrix{T}
+    areaδ_grad::Vector{Utils.JaggedMatrix{T}}
 
     function MultiModeResult{T}(::Val{include_cumdis},
                                 ::Val{include_area_mode}) where {T,include_cumdis,
                                                                  include_area_mode}
         VCD = include_cumdis ? Vector{Complex{T}} : Nothing
         VDD = include_area_mode ? Vector{Complex{T}} : Nothing
-        AD = include_area_mode ? T : Nothing
+        VAD = include_area_mode ? Vector{T} : Nothing
 
-        return new{T,VCD,VDD,AD}(zero(T), Complex{T}[], zero(T),
-                                 VCD(), VDD(), include_area_mode ? zero(T) : nothing,
-                                 Utils.JaggedMatrix{T}(),
-                                 Utils.JaggedMatrix{Complex{T}}[],
-                                 Utils.JaggedMatrix{T}(),
-                                 Utils.JaggedMatrix{Complex{T}}[],
-                                 Utils.JaggedMatrix{Complex{T}}[],
-                                 Utils.JaggedMatrix{T}())
+        return new{T,VCD,VDD,VAD}(zero(T), Complex{T}[], zero(T),
+                                  VCD(), VDD(), VAD(),
+                                  Utils.JaggedMatrix{T}(),
+                                  Utils.JaggedMatrix{Complex{T}}[],
+                                  Utils.JaggedMatrix{T}(),
+                                  Utils.JaggedMatrix{Complex{T}}[],
+                                  Utils.JaggedMatrix{Complex{T}}[],
+                                  Utils.JaggedMatrix{T}[])
     end
 end
 
@@ -300,12 +300,12 @@ function init_multi_mode_result!(result::MultiModeResult{T,VCD,VDD,AD},
     if include_area_mode
         resize!(result.disδ, nmodes)
         result.disδ .= complex(zero(T))
-        result.areaδ = zero(T)
+        resize!(result.areaδ, nmodes)
+        result.areaδ .= zero(T)
     end
 
     empty!(result.τ_grad)
     empty!(result.area_grad)
-    empty!(result.areaδ_grad)
     if include_grad
         _init_grads_vector(result.dis_grad, nmodes)
         if include_cumdis
@@ -313,11 +313,13 @@ function init_multi_mode_result!(result::MultiModeResult{T,VCD,VDD,AD},
         end
         if include_area_mode
             _init_grads_vector(result.disδ_grad, nmodes)
+            _init_grads_vector(result.areaδ_grad, nmodes)
         end
     else
         empty!(result.dis_grad)
         empty!(result.cumdis_grad)
         empty!(result.disδ_grad)
+        empty!(result.areaδ_grad)
     end
 end
 

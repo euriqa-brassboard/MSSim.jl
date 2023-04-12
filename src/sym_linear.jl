@@ -447,7 +447,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
         end
         if include_area_mode
             result.disδ[mode_idx] = dis_scale * single_result.area_mode.disδ
-            result.areaδ += area_scale * single_result.area_mode.areaδ
+            result.areaδ[mode_idx] = area_scale * single_result.area_mode.areaδ
         end
         if include_grad
             if mode_idx == 1
@@ -470,6 +470,8 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
             if include_area_mode
                 disδ_grad = result.disδ_grad[mode_idx]
                 resize!(disδ_grad, single_result.area_mode_grad)
+                areaδ_grad = result.areaδ_grad[mode_idx]
+                resize!(areaδ_grad, single_result.area_mode_grad)
             end
 
             dis_dΩ = complex(zero(T))
@@ -552,7 +554,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
 
                 if include_area_mode
                     res_disδ_sgrad = disδ_grad[seg_idx]
-                    res_areaδ_sgrad = result.areaδ_grad[seg_idx]
+                    res_areaδ_sgrad = areaδ_grad[seg_idx]
                     area_mode_sgrad = single_result.area_mode_grad[seg_idx]
 
                     # displacement
@@ -576,19 +578,19 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
 
                     # area
                     # τ
-                    res_areaδ_sgrad[1] += area_scale * (area_mode_sgrad[1].areaδ +
+                    res_areaδ_sgrad[1] = area_scale * (area_mode_sgrad[1].areaδ +
                         areaδ_dΩ * pulse.Ω′ + areaδ_dφ * δ)
                     # Ω
                     new_areaδ_dΩ = area_mode_sgrad[2].areaδ + areaδ_dΩ
-                    res_areaδ_sgrad[2] += area_scale * new_areaδ_dΩ
+                    res_areaδ_sgrad[2] = area_scale * new_areaδ_dΩ
                     # Ω′
-                    res_areaδ_sgrad[3] += area_scale * (area_mode_sgrad[3].areaδ +
+                    res_areaδ_sgrad[3] = area_scale * (area_mode_sgrad[3].areaδ +
                         areaδ_dΩ * pulse.τ)
                     # φ
                     new_areaδ_dφ = area_mode_sgrad[4].areaδ + areaδ_dφ
-                    res_areaδ_sgrad[4] += area_scale * new_areaδ_dφ
+                    res_areaδ_sgrad[4] = area_scale * new_areaδ_dφ
                     # ω
-                    res_areaδ_sgrad[5] += area_scale * (area_mode_sgrad[5].areaδ +
+                    res_areaδ_sgrad[5] = area_scale * (area_mode_sgrad[5].areaδ +
                         areaδ_dφ * pulse.τ)
                     areaδ_dΩ = new_areaδ_dΩ
                     areaδ_dφ = new_areaδ_dφ
