@@ -284,10 +284,8 @@ function _init_grads_vector(grads::Vector{Utils.JaggedMatrix{T}}, nmodes) where 
     return
 end
 
-function compute_multi_mode!(
-    result::MultiModeResult{T,VCD,VDD,AD}, ::Val{include_grad},
-    nmodes, mode_callback, buffer::SeqComputeBuffer{T}) where {T,VCD,VDD,AD,include_grad}
-
+function init_multi_mode_result!(result::MultiModeResult{T,VCD,VDD,AD},
+                                 nmodes) where {T,VCD,VDD,AD}
     include_cumdis = VCD !== Nothing
     include_area_mode = AD !== Nothing
 
@@ -321,6 +319,16 @@ function compute_multi_mode!(
         empty!(result.cumdis_grad)
         empty!(result.disδ_grad)
     end
+end
+
+function compute_multi_mode!(
+    result::MultiModeResult{T,VCD,VDD,AD}, ::Val{include_grad},
+    nmodes, mode_callback, buffer::SeqComputeBuffer{T}) where {T,VCD,VDD,AD,include_grad}
+
+    include_cumdis = VCD !== Nothing
+    include_area_mode = AD !== Nothing
+
+    init_multi_mode_result!(result, nmodes)
 
     CT = Complex{T}
     A = AreaData{T}
