@@ -178,22 +178,22 @@ end
         v_area_grad = SL.SegInt.enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
         v_areaδ_grad = SL.SegInt.enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
 
-        for (include_cumdis, include_area_mode, include_grad) in
+        for (need_cumdis, need_area_mode, need_grad) in
             Iterators.product((false, true), (false, true), (false, true))
 
-            d, grad = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(include_cumdis),
-                                               Val(include_area_mode),
-                                               Val(include_grad))
+            d, grad = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
+                                               Val(need_area_mode),
+                                               Val(need_grad))
             @test d.area.dis ≈ v_dis
             @test d.area.area ≈ v_area
-            if include_cumdis
+            if need_cumdis
                 @test d.cumdis.cumdis ≈ v_cumdis
             end
-            if include_area_mode
+            if need_area_mode
                 @test d.area_mode.disδ ≈ v_disδ
                 @test d.area_mode.areaδ ≈ v_areaδ
             end
-            if include_grad
+            if need_grad
                 @test length(grad) == 5
 
                 @test grad[1].area.dis ≈ v_dis_grad[1]
@@ -207,7 +207,7 @@ end
                 @test grad[4].area.area ≈ v_area_grad[4]
                 @test grad[5].area.area ≈ v_area_grad[5]
 
-                if include_cumdis
+                if need_cumdis
                     @test grad[1].cumdis.cumdis ≈ v_cumdis_grad[1]
                     @test grad[2].cumdis.cumdis ≈ v_cumdis_grad[2]
                     @test grad[3].cumdis.cumdis ≈ v_cumdis_grad[3]
@@ -215,7 +215,7 @@ end
                     @test grad[5].cumdis.cumdis ≈ v_cumdis_grad[5]
                 end
 
-                if include_area_mode
+                if need_area_mode
                     @test grad[1].area_mode.disδ ≈ v_disδ_grad[1]
                     @test grad[2].area_mode.disδ ≈ v_disδ_grad[2]
                     @test grad[3].area_mode.disδ ≈ v_disδ_grad[3]

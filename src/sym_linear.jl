@@ -248,15 +248,15 @@ end
 # * Gradient of enclosed area w.r.t. detuning (areaδ)
 # As well as the gradient of everything above w.r.t. each of the input parameters
 
-@inline function (compute_values(τ::_T, Ω, Ω′, φ, δ, ::Val{include_cumdis},
-                                 ::Val{include_area_mode}, ::Val{include_grad})
-                  where {_T,include_cumdis,include_area_mode,include_grad})
+@inline function (compute_values(τ::_T, Ω, Ω′, φ, δ, ::Val{need_cumdis},
+                                 ::Val{need_area_mode}, ::Val{need_grad})
+                  where {_T,need_cumdis,need_area_mode,need_grad})
 
     T = float(_T)
     CT = Complex{T}
     A = SegSeq.AreaData{T}
-    CD = include_cumdis ? SegSeq.CumDisData{T,CT} : SegSeq.DummyCumDisData
-    AG = include_area_mode ? SegSeq.AreaModeData{T,CT} : SegSeq.DummyAreaModeData
+    CD = need_cumdis ? SegSeq.CumDisData{T,CT} : SegSeq.DummyCumDisData
+    AG = need_area_mode ? SegSeq.AreaModeData{T,CT} : SegSeq.DummyAreaModeData
 
     @inline begin
         d = δ * τ
@@ -281,7 +281,7 @@ end
                            τ * enclosed_area_δ_kernel(o, o′, d, s, c))
         end
         res = SegSeq.SegData{T,A,CD,AG}(τ, area, cumdis, area_mode)
-        if !include_grad
+        if !need_grad
             return res, nothing
         end
         if SegSeq.is_dummy(AG)

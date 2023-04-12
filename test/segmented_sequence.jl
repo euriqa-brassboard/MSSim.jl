@@ -344,10 +344,10 @@ end
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
-    function eval_params(result, params, include_grad=true)
+    function eval_params(result, params, need_grad=true)
         seg_data, seg_grads = get_seg_data(params)
         SS.compute_single_mode!(result, seg_data, buffer,
-                                include_grad ? seg_grads : nothing)
+                                need_grad ? seg_grads : nothing)
         @test result.τ ≈ sum(param.τ for param in params)
         return
     end
