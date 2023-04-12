@@ -376,9 +376,11 @@ mutable struct System{T,A,CD,AG,MR,need_grad}
         seg_buf = SD[]
         seg_grad_buf = Utils.JaggedMatrix{SD}()
         buffer = SegSeq.SeqComputeBuffer{T}()
-        result = MultiModeResult{T}(Val(need_cumdis), Val(need_area_mode))
+        single_result = SegSeq.SingleModeResult{T,A,CD,AG}()
+        result = SegSeq.MultiModeResult{T}(Val(need_cumdis), Val(need_area_mode))
         return new{T,A,CD,AG,typeof(result),need_grad}(pulses, modes, 0, seg_buf,
-                                                       seg_grad_buf, buffer, result)
+                                                       seg_grad_buf, buffer,
+                                                       single_result, result)
     end
     function System{T}(::Val{need_cumdis}, ::Val{need_area_mode},
                        ::Val{need_grad}) where {T,need_cumdis,need_area_mode,need_grad}
@@ -407,9 +409,9 @@ end
         Ω += pulse.dΩ
         φ += pulse.dφ
         δ = pulse.ω - mode.ω
-        seg, grad = SL.SegInt.compute_values(pulse.τ, Ω, pulse.Ω′, φ, δ,
-                                             Val(need_cumdis), Val(need_area_mode),
-                                             Val(need_grad))
+        seg, grad = SegInt.compute_values(pulse.τ, Ω, pulse.Ω′, φ, δ,
+                                          Val(need_cumdis), Val(need_area_mode),
+                                          Val(need_grad))
         sys.seg_buf[i] = seg
         push!(sys.seg_grad_buf, grad)
         φ += pulse.τ * δ
@@ -431,7 +433,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
     @inline for mode_idx in 1:nmodes
         _fill_seg_buf!(sys, mode_idx)
         mode = sys.modes[mode_idx]
-        compute_single_mode!(single_result, sys.segs, sys.buffer,
+        compute_single_mode!(single_result, sys.seg_buf, sys.buffer,
                              need_grad ? sys.seg_grad_buf : nothing)
 
         dis_scale = mode.dis_scale
@@ -442,32 +444,32 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
         end
         result.dis[mode_idx] = dis_scale * single_result.area.dis
         result.area += area_scale * single_result.area.area
-        if include_cumdis
+        if need_cumdis
             result.cumdis[mode_idx] = dis_scale * single_result.cumdis.cumdis
         end
-        if include_area_mode
+        if need_area_mode
             result.disδ[mode_idx] = dis_scale * single_result.area_mode.disδ
             result.areaδ[mode_idx] = area_scale * single_result.area_mode.areaδ
         end
-        if include_grad
+        if need_grad
             if mode_idx == 1
                 resize!(result.τ_grad, single_result.τ_grad)
                 result.τ_grad.values .= single_result.τ_grad.values
 
                 resize!(result.area_grad, single_result.area_grad)
                 result.area_grad.values .= 0
-                if include_area_mode
+                if need_area_mode
                     resize!(result.areaδ_grad, single_result.area_mode_grad)
                     result.areaδ_grad.values .= 0
                 end
             end
             dis_grad = result.dis_grad[mode_idx]
             resize!(dis_grad, single_result.area_grad)
-            if include_cumdis
+            if need_cumdis
                 cumdis_grad = result.cumdis_grad[mode_idx]
                 resize!(cumdis_grad, single_result.cumdis_grad)
             end
-            if include_area_mode
+            if need_area_mode
                 disδ_grad = result.disδ_grad[mode_idx]
                 resize!(disδ_grad, single_result.area_mode_grad)
                 areaδ_grad = result.areaδ_grad[mode_idx]
@@ -530,7 +532,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
                 area_dΩ = new_area_dΩ
                 area_dφ = new_area_dφ
 
-                if include_cumdis
+                if need_cumdis
                     res_cumdis_sgrad = cumdis_grad[seg_idx]
                     cumdis_sgrad = single_result.cumdis_grad[seg_idx]
                     # τ
@@ -552,7 +554,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
                     cumdis_dφ = new_cumdis_dφ
                 end
 
-                if include_area_mode
+                if need_area_mode
                     res_disδ_sgrad = disδ_grad[seg_idx]
                     res_areaδ_sgrad = areaδ_grad[seg_idx]
                     area_mode_sgrad = single_result.area_mode_grad[seg_idx]

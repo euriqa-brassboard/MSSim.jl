@@ -239,7 +239,7 @@ function compute_single_mode!(
     return
 end
 
-mutable struct MultiModeResult{T,VCD,VDD,AD}
+mutable struct MultiModeResult{T,VCD,VDD,VAD}
     τ::T
     dis::Vector{Complex{T}}
     area::T
