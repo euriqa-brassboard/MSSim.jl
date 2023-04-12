@@ -425,7 +425,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
     need_cumdis = !SegSeq.is_dummy(CD)
     need_area_mode = !SegSeq.is_dummy(AG)
 
-    SegSeq.init_multi_mode_result!(sys.result, nmodes)
+    SegSeq.init_multi_mode_result!(sys.result, nmodes, Val(need_grad))
 
     result = sys.result
     single_result = sys.single_result
@@ -433,8 +433,8 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
     @inline for mode_idx in 1:nmodes
         _fill_seg_buf!(sys, mode_idx)
         mode = sys.modes[mode_idx]
-        compute_single_mode!(single_result, sys.seg_buf, sys.buffer,
-                             need_grad ? sys.seg_grad_buf : nothing)
+        SegSeq.compute_single_mode!(single_result, sys.seg_buf, sys.buffer,
+                                    need_grad ? sys.seg_grad_buf : nothing)
 
         dis_scale = mode.dis_scale
         area_scale = mode.area_scale
@@ -458,10 +458,6 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
 
                 resize!(result.area_grad, single_result.area_grad)
                 result.area_grad.values .= 0
-                if need_area_mode
-                    resize!(result.areaδ_grad, single_result.area_mode_grad)
-                    result.areaδ_grad.values .= 0
-                end
             end
             dis_grad = result.dis_grad[mode_idx]
             resize!(dis_grad, single_result.area_grad)

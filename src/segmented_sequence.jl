@@ -278,14 +278,16 @@ function _init_grads_vector(grads::Vector{Utils.JaggedMatrix{T}}, nmodes) where 
         if isassigned(grads, i)
             empty!(grads[i])
         else
-            grads[i] = Utils.JaggedMatrix{T}
+            grads[i] = Utils.JaggedMatrix{T}()
         end
     end
     return
 end
 
-function init_multi_mode_result!(result::MultiModeResult{T,VCD,VDD,AD},
-                                 nmodes) where {T,VCD,VDD,AD}
+function (init_multi_mode_result!(result::MultiModeResult{T,VCD,VDD,AD},
+                                  nmodes, ::Val{include_grad})
+          where {T,VCD,VDD,AD,include_grad})
+
     include_cumdis = VCD !== Nothing
     include_area_mode = AD !== Nothing
 
