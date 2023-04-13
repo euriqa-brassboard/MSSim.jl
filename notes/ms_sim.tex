@@ -283,22 +283,6 @@ For the purpose of optimization, the quantities we care about are.
   \eqar{
     \alpha_k(T)=&\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}\ud t
   }
-\item Gradient of closure w.r.t. mode frequencies
-  \eqar{
-    \pdiff{\alpha_k(T)}{\omega_k}=&\int_0^T\frac{\partial}{\partial\omega_k}\Omega(t)\ue^{\ui\theta_k(t)}\ud t\\
-    =&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}\frac{\partial\theta_k(t)}{\partial\omega_k}\ud t\\
-    =&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}t\ud t
-  }
-  When closure is assumed, this can be re-written as,
-  \eqar{
-    \pdiff{\alpha_k(T)}{\omega_k}=&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}t\ud t\\
-    =&\ui\left.t\int_0^t\Omega(t')\ue^{\ui\theta_k(t')}\ud t'\right|_0^T-\ui\int_0^T\ud t\int_0^t\Omega(t')\ue^{\ui\theta_k(t')}\ud t'\\
-    =&-\ui\int_0^T\ud t\int_0^t\Omega(t')\ue^{\ui\theta_k(t')}\ud t'
-  }
-  which is proportional to average displacement.
-  Moreover, if the pulse is symmetric, zeroing this value will also automatically
-  zero the final displacement thus remove the need to optimize
-  two values at the same time.
 \item Enclosed area
   \eqar{
     \mathcal{A}_k=&\mathrm{Im}\paren{\int_0^T\!\!\ud t\int_0^t\!\!\ud t'
@@ -306,14 +290,29 @@ For the purpose of optimization, the quantities we care about are.
     =&\mathrm{Im}\paren{\int_0^T\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_0^t\!\!\ud t'
       \ \Omega(t')\ue^{-\ui\theta_k(t')}}
   }
-\item Gradient of enclosed area w.r.t. mode frequencies
-  \eqar{
-    \pdiff{\mathcal{A}_k}{\omega_k}
-    =&\mathrm{Re}\paren{\int_0^T\!\!\ud t\ t\Omega(t)\ue^{\ui\theta_k(t)}\int_0^t\!\!\ud t'
-      \ \Omega(t')\ue^{-\ui\theta_k(t')}-\int_0^T\!\!\ud t\ \Omega(t)\ue^{\ui\theta_k(t)}\int_0^t\!\!\ud t'
-      \ t'\Omega(t')\ue^{-\ui\theta_k(t')}}
-  }
 \end{enumerate}
+And the gradient of these w.r.t. to the mode frequencies and pulse control parameters.\\
+
+One special case of these gradients is the gradient of displacement
+w.r.t. mode frequencies,
+\eqar{
+  \pdiff{\alpha_k(T)}{\omega_k}=&\int_0^T\frac{\partial}{\partial\omega_k}\Omega(t)\ue^{\ui\theta_k(t)}\ud t\\
+  =&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}\frac{\partial\theta_k(t)}{\partial\omega_k}\ud t\\
+  =&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}t\ud t
+}
+When closure is assumed, this can be re-written as,
+\eqar{
+  \pdiff{\alpha_k(T)}{\omega_k}=&\ui\int_0^T\Omega(t)\ue^{\ui\theta_k(t)}t\ud t\\
+  =&\ui\left.t\int_0^t\Omega(t')\ue^{\ui\theta_k(t')}\ud t'\right|_0^T-\ui\int_0^T\ud t\int_0^t\Omega(t')\ue^{\ui\theta_k(t')}\ud t'\\
+  =&-\ui\int_0^T\ud t\int_0^t\Omega(t')\ue^{\ui\theta_k(t')}\ud t'
+}
+which is proportional to average displacement.
+Moreover, if the pulse is symmetric, zeroing this value will also automatically
+zero the final displacement thus remove the need to optimize
+two values at the same time.
+
+For all other derivatives, (including the derivative of the average displacement
+w.r.t. pulse parameters) we'll compute directly on the result of the integral.
 
 \section{Segmented pulse}
 When parameterizing the pulse shape used to drive MS gate,
@@ -325,9 +324,8 @@ a large number of free parameters by only dealing with one segment
 (and therefore few parameters) at a time.\\
 
 More specifically, during the optimization process,
-we care not only about the values listed above (closure, area,
-and their gradient w.r.t. mode frequency)
-but also their gradient w.r.t. the pulse shape parameters.
+we care about the gradient of the values listed above (closure, area, etc.)
+w.r.t. the pulse shape parameters.
 By dealing with the effect of each segment properly,
 we can compute all the gradient within $\mathcal{O}(N_p + N_s)$
 instead of $\mathcal{O}(N_pN_s)$, where $N_p$ is the number of parameters
@@ -341,7 +339,9 @@ and is independent of the functional form in any other segments.\\
 The enclosed area, and the average displacement, is more complicated however,
 since they involve a double integral so the gradient of the integral
 within the segment is not the same as the effect on the final value.
-The change is still linear but does require a conversion factor
+(Actually the average displacment could be calculated as a single integeral
+by flipping the order of the two integrals or undo the integral by part
+done above.) The change is still linear but does require a conversion factor
 caused by the later segments.\\
 
 To calculate this, let's first consider a generic double integral
@@ -389,18 +389,16 @@ linear frequency ramp isn't currently supported).
 Under these assumptions, the most generic nontrivial form of $A$ and $B$
 we need to deal with is
 \eqar{
-  &(a_0t^2 + b_0t + c_0)\ue^{\ui \paren{\omega t + \varphi_0}}
+  &(a_0t + b_0)\ue^{\ui \paren{\omega t + \varphi_0}}
 }
 Combining $A_i$, $B_i$ and $C_i$, we actually care about the integral
 $\displaystyle F_n(\omega, t)\equiv\int t^n\ue^{\ui\omega t}\ud t$
-up to $n=4$ order (see below) (the phase factor $\varphi_0$ is ignored
+up to $n=2$ order (see below) (the phase factor $\varphi_0$ is ignored
 since it's just a global multiplicity factor). From symbolic evaluation we have,
 \eqar{
   F_0(\omega, t)=&\frac{-\ui}{\omega}\ue^{\ui\omega t}\\
   F_1(\omega, t)=&\frac{-\ui\omega t + 1}{\omega^2}\ue^{\ui\omega t}\\
-  F_2(\omega, t)=&\frac{-\ui\omega^2t^2+2\omega t+2\ui}{\omega^3}\ue^{\ui\omega t}\\
-  F_3(\omega, t)=&\frac{-\ui\omega^3t^3+3\omega^2t^2+6\ui\omega t-6}{\omega^4}\ue^{\ui\omega t}\\
-  F_4(\omega, t)=&\frac{-\ui\omega^4t^4+4\omega^3t^3+12\ui\omega t-24\omega t-24\ui}{\omega^5}\ue^{\ui\omega t}
+  F_2(\omega, t)=&\frac{-\ui\omega^2t^2+2\omega t+2\ui}{\omega^3}\ue^{\ui\omega t}
 }
 We also have
 \eqar{
