@@ -973,4 +973,191 @@ Area gradient w.r.t. mode frequency,
   }
 }
 
+\subsection{Segment summation}
+Here we list the explicit expressions for calculating the final values we care about
+by summation of the segment values we've calculated above.\\
+
+All of the expressions below can be computed in $O(N_s)$ time by pre-computing
+the partial sums that appears in the nested summation expressions.\\
+
+A few partial sums that are used frequently below,
+\eqar{
+  A_k^n=&\sum_{n'=0}^{n-1}\!\!\alpha_k^{n'}\\
+  T_n=&\sum_{n'=0}^{n-1}\!\!\tau_{n'}
+}
+
+We also make frequent use of the following identity below
+\eqar{
+  \sum_{n=0}^{N_s-1}\sum_{n'=0}^{n'-1}=\sum_{n'=0}^{N_s-1}\sum_{n=n'+1}^{N_s-1}
+}
+
+Total displacement
+\eqar{
+  \alpha_k=&A_k^{N_s-1}
+}
+
+Total area,
+\eqar{
+  \mathrm{Im}(\gamma_k)=&\sum_{n=0}^{N_s-1}\!\!\paren{\mathrm{Im}\paren{\alpha_k^n{A_k^n}^*}+\mathrm{Im}(\gamma_k^n)}
+}
+
+Average (actually cumulative) displacement,
+\eqar{
+  \bar\alpha_k=&\sum_{n=0}^{N_s-1}\!\!\paren{\tau_n A_k^n+\bar\alpha_k^n}
+}
+
+Note that changing the mode frequency will change the initial phase for
+all the segments by an amount proportional to the start time of the segment.
+We need to take into this account when calculating the gradients
+w.r.t. mode frequencies.\\
+
+Gradient of total displacement w.r.t. mode frequency,
+\eqar{
+  \pdiff{\alpha_k}{\delta_k}=&\sum_{n=0}^{N_s-1}\!\!\paren{
+    \pdiff{\alpha_k^n}{\delta_k^n}
+    +\ui T_n\alpha_k^n
+  }
+}
+
+Gradient of total area w.r.t. mode frequency,
+\eqar{
+  \pdiff{\mathrm{Im}(\gamma_k)}{\delta_k}=&\sum_{n=0}^{N_s-1}\!\!\mathrm{Im}\paren{
+    \paren{\pdiff{\alpha_k^n}{\delta_k^n}+\ui T_n\alpha_k^n}
+    \sum_{n'=0}^{n-1}\!\!{\alpha_k^{n'}}^*
+    +\paren{\pdiff{{\alpha_k^n}^*}{\delta_k^n}-\ui T_n{\alpha_k^n}^*}\sum_{n'=n+1}^{N_s-1}\!\!\!\!\alpha_k^{n'}
+    +\pdiff{\gamma_k^n}{\delta_k^n}}
+}
+
+Now the gradients w.r.t. pulse parameter.
+Let $x_n$ be a pulse parameter that is only directly affecting the $n$-th segment.
+We have the expressions to compute the gradients of different quantities
+w.r.t. this pulse parameter.\\
+
+Total displacement
+\eqar{
+  \pdiff{\alpha_k}{x_n}=&\pdiff{\alpha_k^n}{x_n}
+}
+
+Total area,
+\eqar{
+  \pdiff{\mathrm{Im}(\gamma_k)}{x_n}=&
+  \mathrm{Im}\paren{\pdiff{\alpha_k^n}{x_n}{A_k^n}^*
+    +\pdiff{{\alpha_k^n}^*}{x_n}\sum_{n'=n+1}^{N_s-1}\!\!\!\!\alpha_k^{n'}
+    +\pdiff{\gamma_k^n}{x_n}
+  }
+}
+
+Cumulative displacement,
+\eqar{
+  \bar\alpha_k=&
+  \pdiff{\tau_n}{x_n}A_k^n
+  +\pdiff{\alpha_k^n}{x_n}\!\!\sum_{n'=n+1}^{N_s-1}\!\!\!\!\tau_{n'}
+  +\pdiff{\bar\alpha_k^n}{x_n}
+}
+
+Gradient of total displacement w.r.t. mode frequency,
+\eqar{
+  \frac{\partial^2\alpha_k}{\partial\delta_k\partial x_n}=&
+  \frac{\partial^2\alpha_k^n}{\partial\delta_k^n\partial x_n}
+  +\ui T_n\pdiff{\alpha_k^n}{x_n}
+  +\ui\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\!\!\alpha_k^{n'}\pdiff{\tau_n}{x_n}
+}
+
+Gradient of total area w.r.t. mode frequency,
+\eqar{
+  \frac{\partial^2\mathrm{Im}(\gamma_k)}{\partial\delta_k\partial x_n}=&
+  \sum_{n'=0}^{N_s-1}\!\!\mathrm{Im}\lparen{
+    \paren{
+      \frac{\partial^2\alpha_k^{n'}}{\partial\delta_k^{n'}\partial x_n}
+      +\ui \pdiff{T_{n'}}{x_n}\alpha_k^{n'}
+      +\ui T_{n'}\pdiff{\alpha_k^{n'}}{x_n}}
+    \sum_{n''=0}^{n'-1}\!\!{\alpha_k^{n''}}^*
+    +\paren{
+      \pdiff{\alpha_k^{n'}}{\delta_k^{n'}}+\ui T_{n'}\alpha_k^{n'}}
+    \sum_{n''=0}^{n'-1}\!\!\pdiff{{\alpha_k^{n''}}^*}{x_n}
+  }\\
+  &
+  +\paren{
+    \frac{\partial^2{\alpha_k^{n'}}^*}{\partial\delta_k^{n'}\partial x_n}
+    -\ui\pdiff{T_{n'}}{x_n}{\alpha_k^{n'}}^*
+    -\ui T_{n'}\pdiff{{\alpha_k^{n'}}^*}{x_n}
+  }\!\!\!\!\sum_{n''=n'+1}^{N_s-1}\!\!\!\!\alpha_k^{n''}
+  \\
+  &\rparen{
+    +\paren{\pdiff{{\alpha_k^{n'}}^*}{\delta_k^{n'}}-\ui T_{n'}{\alpha_k^{n'}}^*}\!\!\!\!\sum_{n''=n+1}^{N_s-1}\!\!\!\!\pdiff{\alpha_k^{n''}}{x_n}
+    +\frac{\partial^2\gamma_k^{n'}}{\partial\delta_k^{n'}\partial x_n}}\\
+  =&
+  \mathrm{Im}\lparen{
+    \paren{
+      \frac{\partial^2\alpha_k^{n}}{\partial\delta_k^{n}\partial x_n}
+      +\ui T_{n}\pdiff{\alpha_k^{n}}{x_n}}
+    \sum_{n'=0}^{n-1}\!\!{\alpha_k^{n'}}^*\!\!
+    +\ui\pdiff{\tau_{n}}{x_n}\!\!\sum_{n'=n+1}^{N_s-1}\!\!\alpha_k^{n'}
+    \!\!\sum_{n''=0}^{n'-1}\!\!{\alpha_k^{n''}}^*
+  }\\
+  &
+  +\paren{
+    \frac{\partial^2{\alpha_k^n}^*}{\partial\delta_k^n\partial x_n}
+    -\ui T_n\pdiff{{\alpha_k^n}^*}{x_n}
+  }\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\!\!\alpha_k^{n'}
+  -\ui\pdiff{\tau_n}{x_n}\!\!\sum_{n'=n+1}^{N_s-1}\!\!{\alpha_k^{n'}}^*
+  \!\!\!\!\sum_{n''=n'+1}^{N_s-1}\!\!\!\!\alpha_k^{n''}
+  \\
+  &\rparen{
+    +\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\paren{
+      \pdiff{\alpha_k^{n'}}{\delta_k^{n'}}+\ui T_{n'}\alpha_k^{n'}}
+    \pdiff{{\alpha_k^{n}}^*}{x_n}
+    +\sum_{n'=0}^{n-1}\!\!\paren{\pdiff{{\alpha_k^{n'}}^*}{\delta_k^{n'}}-\ui T_{n'}{\alpha_k^{n'}}^*}\pdiff{\alpha_k^{n}}{x_n}
+    +\frac{\partial^2\gamma_k^n}{\partial\delta_k^n\partial x_n}}
+}
+The coefficient on $\ui\dfrac{\partial\tau_n}{\partial x_n}$
+\eqar{
+  &\sum_{n'=n+1}^{N_s-1}\!\!\alpha_k^{n'}\!\!\sum_{n''=0}^{n'-1}\!\!{\alpha_k^{n''}}^*
+  -\sum_{n'=n+1}^{N_s-1}\!\!{\alpha_k^{n'}}^*\!\!\!\!\sum_{n''=n'+1}^{N_s-1}\!\!\!\!\alpha_k^{n''}\\
+  =&\sum_{n'=n+1}^{N_s-1}\sum_{n''=0}^{n'-1}\!\!\alpha_k^{n'}{\alpha_k^{n''}}^*
+  -\!\!\sum_{n''=n+1}^{N_s-1}\sum_{n'=n+1}^{n''-1}\!\!\!\!{\alpha_k^{n'}}^*\alpha_k^{n''}\\
+  =&\sum_{n'=n+1}^{N_s-1}\paren{\sum_{n''=0}^{n'-1}\!\!\alpha_k^{n'}{\alpha_k^{n''}}^*
+    -\!\!\sum_{n''=n+1}^{n'-1}\!\!\!\!\alpha_k^{n'}{\alpha_k^{n''}}^*}\\
+  =&\paren{\sum_{n'=n+1}^{N_s-1}\!\!\alpha_k^{n'}}\paren{\sum_{n''=0}^{n}\!\!{\alpha_k^{n''}}^*}
+}
+\eqar{
+  \frac{\partial^2\mathrm{Im}(\gamma_k)}{\partial\delta_k\partial x_n}=&
+  \mathrm{Im}\lparen{
+    \paren{
+      \frac{\partial^2\alpha_k^{n}}{\partial\delta_k^{n}\partial x_n}
+      +\ui T_{n}\pdiff{\alpha_k^{n}}{x_n}}
+    \sum_{n'=0}^{n-1}\!\!{\alpha_k^{n'}}^*\!\!
+    +\ui\pdiff{\tau_{n}}{x_n}\paren{\sum_{n'=n+1}^{N_s-1}\!\!\alpha_k^{n'}}\paren{\sum_{n''=0}^{n}\!\!{\alpha_k^{n''}}^*}
+  }\\
+  &
+  +\paren{
+    \frac{\partial^2{\alpha_k^n}^*}{\partial\delta_k^n\partial x_n}
+    -\ui T_n\pdiff{{\alpha_k^n}^*}{x_n}
+  }\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\!\!\alpha_k^{n'}
+  \\
+  &\rparen{
+    +\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\paren{
+      \pdiff{\alpha_k^{n'}}{\delta_k^{n'}}+\ui T_{n'}\alpha_k^{n'}}
+    \pdiff{{\alpha_k^{n}}^*}{x_n}
+    +\sum_{n'=0}^{n-1}\!\!\paren{\pdiff{{\alpha_k^{n'}}^*}{\delta_k^{n'}}-\ui T_{n'}{\alpha_k^{n'}}^*}\pdiff{\alpha_k^{n}}{x_n}
+    +\frac{\partial^2\gamma_k^n}{\partial\delta_k^n\partial x_n}}\\
+  =&
+  \mathrm{Im}\lparen{
+    \frac{\partial^2\alpha_k}{\partial\delta_k\partial x_n}
+    \sum_{n'=0}^{n-1}\!\!{\alpha_k^{n'}}^*\!\!
+    +\ui\pdiff{\tau_{n}}{x_n}{\alpha_k^n}^*\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\!\!\alpha_k^{n'}
+    +\paren{
+      \frac{\partial^2{\alpha_k^n}^*}{\partial\delta_k^n\partial x_n}
+      -\ui T_n\pdiff{{\alpha_k^n}^*}{x_n}
+    }
+  }\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\!\!\alpha_k^{n'}
+  \\
+  &\rparen{
+    +\!\!\!\!\sum_{n'=n+1}^{N_s-1}\!\!\paren{
+      \pdiff{\alpha_k^{n'}}{\delta_k^{n'}}+\ui T_{n'}\alpha_k^{n'}}
+    \pdiff{{\alpha_k^{n}}^*}{x_n}
+    +\sum_{n'=0}^{n-1}\!\!\paren{\pdiff{{\alpha_k^{n'}}^*}{\delta_k^{n'}}-\ui T_{n'}{\alpha_k^{n'}}^*}\pdiff{\alpha_k^{n}}{x_n}
+    +\frac{\partial^2\gamma_k^n}{\partial\delta_k^n\partial x_n}}
+}
+
 \end{document}
