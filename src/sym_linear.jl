@@ -11,120 +11,106 @@ import ...SegSeq
 
 using StaticArrays
 
+function _trig_field_name(name)
+    m = match(r"^sin_c([_0-9]*)$", name)
+    if m !== nothing
+        return Symbol("S_C$(m[1])")
+    end
+    m = match(r"^cos_c([_0-9]*)$", name)
+    if m !== nothing
+        return Symbol("C_C$(m[1])")
+    end
+    m = match(r"^sin_f([_0-9]*)$", name)
+    if m !== nothing
+        return Symbol("S$(m[1])")
+    end
+    m = match(r"^cos_f([_0-9]*)$", name)
+    if m !== nothing
+        return Symbol("C$(m[1])")
+    end
+end
+
+macro gen_trig_ratios(d, s, c, names...)
+    expr = :(())
+    for (name::Symbol) in names
+        field_name = _trig_field_name(String(name))
+        if field_name === nothing
+            error("Unknown function name $name")
+        end
+        push!(expr.args, :($field_name = Utils.$name($(esc(d)), $(esc(s)), $(esc(c)))))
+    end
+    return expr
+end
+
 # Integral for each segments
-@inline function displacement_kernel(o, o′, d, s, c)
-    S_C1 = Utils.sin_c1(d, s, c)
-    S_C2 = Utils.sin_c2(d, s, c)
-    C1 = Utils.cos_f1(d, s, c)
-    return complex(muladd(o + o′, S_C1, -o′ * C1),
-                   muladd(o * d, C1, o′ * S_C2))
+@inline function displacement_kernel(o, o′, d, s, c, V)
+    return complex(muladd(o + o′, V.S_C1, -o′ * V.C1),
+                   muladd(o * d, V.C1, o′ * V.S_C2))
 end
 
-@inline function displacement_δ_kernel(o, o′, d, s, c)
-    C1 = Utils.cos_f1(d, s, c)
-    C2 = Utils.cos_f2(d, s, c)
-    S_C2 = Utils.sin_c2(d, s, c)
-    S_C3 = Utils.sin_c3(d, s, c)
-    return complex(muladd(o + o′, -S_C2, o′ * C2),
-                   muladd(o, muladd(-d, C2, C1), o′ * S_C3))
+@inline function displacement_δ_kernel(o, o′, d, s, c, V)
+    return complex(muladd(o + o′, -V.S_C2, o′ * V.C2),
+                   muladd(o, muladd(-d, V.C2, V.C1), o′ * V.S_C3))
 end
 
-@inline function displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
-    C1 = Utils.cos_f1(d, s, c)
-    S_C1 = Utils.sin_c1(d, s, c)
-    S_C2 = Utils.sin_c2(d, s, c)
+@inline function displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (complex(muladd(Ω′, τ, Ω) * c, muladd(Ω′, τ, Ω) * s),
-            τ * complex(S_C1, d * C1),
-            τ^2 * complex(S_C1 - C1, S_C2))
+            τ * complex(V.S_C1, d * V.C1),
+            τ^2 * complex(V.S_C1 - V.C1, V.S_C2))
 end
 
-@inline function displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
-    C1 = Utils.cos_f1(d, s, c)
-    C2 = Utils.cos_f2(d, s, c)
-    C3_2 = Utils.cos_f3_2(d, s, c)
-    S3_3 = Utils.sin_f3_3(d, s, c)
-    S_C2 = Utils.sin_c2(d, s, c)
-    S_C3 = Utils.sin_c3(d, s, c)
-
+@inline function displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return ((o + o′) * complex(-s, c),
-            τ^2 * complex(-S_C2, muladd(d, -C2, C1)),
-            τ^2 * τ * complex(C2 - S_C2, S_C3),
-            τ^2 * complex(muladd(o + o′, -S_C3, o′ * C3_2),
-                           -muladd(o′, S3_3, o * muladd(d, C3_2, 2 * C2))))
+            τ^2 * complex(-V.S_C2, muladd(d, -V.C2, V.C1)),
+            τ^2 * τ * complex(V.C2 - V.S_C2, V.S_C3),
+            τ^2 * complex(muladd(o + o′, -V.S_C3, o′ * V.C3_2),
+                           -muladd(o′, V.S3_3, o * muladd(d, V.C3_2, 2 * V.C2))))
 end
 
-@inline function cumulative_displacement_kernel(o, o′, d, s, c)
-    C1 = Utils.cos_f1(d, s, c)
-    S1 = Utils.sin_f1(d, s, c)
-    C2 = Utils.cos_f2(d, s, c)
-    S2 = Utils.sin_f2(d, s, c)
-    return complex(muladd(o, C1, o′ * S2), muladd(o, S1 * d, o′ * C2))
+@inline function cumulative_displacement_kernel(o, o′, d, s, c, V)
+    return complex(muladd(o, V.C1, o′ * V.S2), muladd(o, V.S1 * d, o′ * V.C2))
 end
 
-@inline function cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
-    C1 = Utils.cos_f1(d, s, c)
-    S1 = Utils.sin_f1(d, s, c)
-    C2 = Utils.cos_f2(d, s, c)
-    S2 = Utils.sin_f2(d, s, c)
-    S3_2 = Utils.sin_f3_2(d, s, c)
-    C3_2 = Utils.cos_f3_2(d, s, c)
-    S_C1 = Utils.sin_c1(d, s, c)
-    S_C2 = Utils.sin_c2(d, s, c)
-    return (complex(muladd(o + o′, S_C1, -(o′ * C1)), muladd(o * d, C1, o′ * S_C2)),
-            τ^2 * complex(C1, S1 * d), τ * τ^2 * complex(S2, C2),
-            τ^2 * complex(-muladd(o, C2, o′ * S3_2), muladd(o, S2, o′ * C3_2)))
+@inline function cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
+    return (complex(muladd(o + o′, V.S_C1, -(o′ * V.C1)),
+                    muladd(o * d, V.C1, o′ * V.S_C2)),
+            τ^2 * complex(V.C1, V.S1 * d), τ * τ^2 * complex(V.S2, V.C2),
+            τ^2 * complex(-muladd(o, V.C2, o′ * V.S3_2),
+                           muladd(o, V.S2, o′ * V.C3_2)))
 end
 
 # Twice the enclosed area
-@inline function enclosed_area_complex_kernel(o, o′, d, s, c)
+@inline function enclosed_area_complex_kernel(o, o′, d, s, c, V)
     a1 = o * (o + o′)
     a2 = o′^2
-    C1 = Utils.cos_f1(d, s, c)
-    S1 = Utils.sin_f1(d, s, c)
-    C3 = Utils.cos_f3(d, s, c)
-    S3 = Utils.sin_f3(d, s, c)
-    return complex(muladd(a1, C1, a2 * C3), muladd(a1, S1 * d, a2 * S3))
+    return complex(muladd(a1, V.C1, a2 * V.C3), muladd(a1, V.S1 * d, a2 * V.S3))
 end
 
 # Twice the enclosed area
-@inline function enclosed_area_kernel(o, o′, d, s, c)
+@inline function enclosed_area_kernel(o, o′, d, s, c, V)
     a1 = o * (o + o′)
     a2 = o′^2
-    S1 = Utils.sin_f1(d, s, c)
-    S3 = Utils.sin_f3(d, s, c)
-    return muladd(a1, S1 * d, a2 * S3)
+    return muladd(a1, V.S1 * d, a2 * V.S3)
 end
 
-@inline function enclosed_area_δ_kernel(o, o′, d, s, c)
+@inline function enclosed_area_δ_kernel(o, o′, d, s, c, V)
     a1 = o * (o + o′)
     a2 = o′^2
-    S2 = Utils.sin_f2(d, s, c)
-    S4 = Utils.sin_f4(d, s, c)
-    return muladd(a1, S2, a2 * S4)
+    return muladd(a1, V.S2, a2 * V.S4)
 end
 
-@inline function enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
-    C1 = Utils.cos_f1(d, s, c)
-    S1 = Utils.sin_f1(d, s, c)
-    S3 = Utils.sin_f3(d, s, c)
-    return (muladd(Ω′, τ, Ω) * d * muladd(o, C1, o′ * S1),
-            τ * muladd(2, o, o′) * (S1 * d),
-            τ^2 * muladd(2 * o′, S3, o * (S1 * d)))
+@inline function enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
+    return (muladd(Ω′, τ, Ω) * d * muladd(o, V.C1, o′ * V.S1),
+            τ * muladd(2, o, o′) * (V.S1 * d),
+            τ^2 * muladd(2 * o′, V.S3, o * (V.S1 * d)))
 end
 
-@inline function enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
-    C1 = Utils.cos_f1(d, s, c)
-    S1 = Utils.sin_f1(d, s, c)
-    S2 = Utils.sin_f2(d, s, c)
-    S3_2 = Utils.sin_f3_2(d, s, c)
-    S4 = Utils.sin_f4(d, s, c)
-    S5 = Utils.sin_f5(d, s, c)
-    S_C1 = Utils.sin_c1(d, s, c)
-
-    return (muladd(muladd(muladd(-2, S1, S_C1), o′, o * (S_C1 - C1)), o, o′^2 * S2),
-            τ^2 * muladd(2, o, o′) * S2,
-            τ^2 * τ * muladd(2 * o′, S4, o * S2),
-            τ^2 * muladd(o * (o + o′), -S3_2, -o′^2 * S5))
+@inline function enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
+    return (muladd(muladd(muladd(-2, V.S1, V.S_C1), o′, o * (V.S_C1 - V.C1)),
+                   o, o′^2 * V.S2),
+            τ^2 * muladd(2, o, o′) * V.S2,
+            τ^2 * τ * muladd(2 * o′, V.S4, o * V.S2),
+            τ^2 * muladd(o * (o + o′), -V.S3_2, -o′^2 * V.S5))
 end
 
 function displacement(τ, Ω, Ω′, φ, δ)
@@ -133,7 +119,8 @@ function displacement(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
-    return phase0 * displacement_kernel(o, o′, d, s, c)
+    V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, cos_f1)
+    return phase0 * displacement_kernel(o, o′, d, s, c, V)
 end
 
 function displacement_δ(τ, Ω, Ω′, φ, δ)
@@ -142,7 +129,8 @@ function displacement_δ(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
-    return phase0 * τ * displacement_δ_kernel(o, o′, d, s, c)
+    V = @gen_trig_ratios(d, s, c, cos_f1, cos_f2, sin_c2, sin_c3)
+    return phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V)
 end
 
 function displacement_gradients(τ, Ω, Ω′, φ, δ)
@@ -151,11 +139,12 @@ function displacement_gradients(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
+    V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, sin_c3, cos_f1, cos_f2)
 
-    τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (phase0 * τΩs[1], phase0 * τΩs[2], phase0 * τΩs[3],
-            Utils.mulim(phase0 * displacement_kernel(o, o′, d, s, c)),
-            phase0 * τ * displacement_δ_kernel(o, o′, d, s, c))
+            Utils.mulim(phase0 * displacement_kernel(o, o′, d, s, c, V)),
+            phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V))
 end
 
 function displacement_δ_gradients(τ, Ω, Ω′, φ, δ)
@@ -164,10 +153,11 @@ function displacement_δ_gradients(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
+    V = @gen_trig_ratios(d, s, c, cos_f1, cos_f2, cos_f3_2, sin_f3_3, sin_c2, sin_c3)
 
-    τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (phase0 * τΩsδ[1], phase0 * τΩsδ[2], phase0 * τΩsδ[3],
-            Utils.mulim(phase0 * τ * displacement_δ_kernel(o, o′, d, s, c)),
+            Utils.mulim(phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V)),
             phase0 * τΩsδ[4])
 end
 
@@ -177,7 +167,9 @@ function cumulative_displacement(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
-    return phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c)
+    V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f2, sin_f2)
+
+    return phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c, V)
 end
 
 function cumulative_displacement_gradients(τ, Ω, Ω′, φ, δ)
@@ -186,10 +178,12 @@ function cumulative_displacement_gradients(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
+    V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f2, sin_f2,
+                         sin_f3_2, cos_f3_2, sin_c1, sin_c2)
 
-    τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (phase0 * τΩsδ[1], phase0 * τΩsδ[2], phase0 * τΩsδ[3],
-            Utils.mulim(phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c)),
+            Utils.mulim(phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c, V)),
             phase0 * τΩsδ[4])
 end
 
@@ -199,7 +193,9 @@ function enclosed_area_complex(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
-    return enclosed_area_complex_kernel(o, o′, d, s, c)
+    V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f3, sin_f3)
+
+    return enclosed_area_complex_kernel(o, o′, d, s, c, V)
 end
 
 # Twice the enclosed area
@@ -208,7 +204,9 @@ function enclosed_area(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
-    return enclosed_area_kernel(o, o′, d, s, c)
+    V = @gen_trig_ratios(d, s, c, sin_f1, sin_f3)
+
+    return enclosed_area_kernel(o, o′, d, s, c, V)
 end
 
 function enclosed_area_δ(τ, Ω, Ω′, φ, δ)
@@ -216,7 +214,9 @@ function enclosed_area_δ(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
-    return τ * enclosed_area_δ_kernel(o, o′, d, s, c)
+    V = @gen_trig_ratios(d, s, c, sin_f2, sin_f4)
+
+    return τ * enclosed_area_δ_kernel(o, o′, d, s, c, V)
 end
 
 function enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
@@ -224,10 +224,11 @@ function enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
+    V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, sin_f2, sin_f3, sin_f4)
 
-    τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (τΩs[1], τΩs[2], τΩs[3], zero(φ),
-            τ * enclosed_area_δ_kernel(o, o′, d, s, c))
+            τ * enclosed_area_δ_kernel(o, o′, d, s, c, V))
 end
 
 function enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
@@ -235,8 +236,10 @@ function enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
     o = Ω * τ
     o′ = Ω′ * τ^2
     s, c = sincos(d)
+    V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, sin_f2, sin_f3_2,
+                         sin_f4, sin_f5, sin_c1)
 
-    τΩsδ = enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+    τΩsδ = enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (τΩsδ[1], τΩsδ[2], τΩsδ[3], zero(φ), τΩsδ[4])
 end
 
@@ -266,33 +269,36 @@ end
         sφ, cφ = sincos(φ)
         phase0 = complex(cφ, sφ)
         phase0_τ = phase0 * τ
+        V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, sin_c3,
+                             cos_f1, sin_f1, cos_f2, sin_f2,
+                             cos_f3_2, sin_f3, sin_f3_2, sin_f3_3, sin_f4, sin_f5)
 
-        area = A(phase0 * displacement_kernel(o, o′, d, s, c),
-                 enclosed_area_kernel(o, o′, d, s, c))
+        area = A(phase0 * displacement_kernel(o, o′, d, s, c, V),
+                 enclosed_area_kernel(o, o′, d, s, c, V))
         if SegSeq.is_dummy(CD)
             cumdis = CD(nothing)
         else
-            cumdis = CD(phase0_τ * cumulative_displacement_kernel(o, o′, d, s, c))
+            cumdis = CD(phase0_τ * cumulative_displacement_kernel(o, o′, d, s, c, V))
         end
         if SegSeq.is_dummy(AG)
             area_mode = AG(nothing, nothing)
         else
-            area_mode = AG(phase0_τ * displacement_δ_kernel(o, o′, d, s, c),
-                           τ * enclosed_area_δ_kernel(o, o′, d, s, c))
+            area_mode = AG(phase0_τ * displacement_δ_kernel(o, o′, d, s, c, V),
+                           τ * enclosed_area_δ_kernel(o, o′, d, s, c, V))
         end
         res = SegSeq.SegData{T,A,CD,AG}(τ, area, cumdis, area_mode)
         if !need_grad
             return res, nothing
         end
         if SegSeq.is_dummy(AG)
-            disδ = phase0_τ * displacement_δ_kernel(o, o′, d, s, c)
-            areaδ = τ * enclosed_area_δ_kernel(o, o′, d, s, c)
+            disδ = phase0_τ * displacement_δ_kernel(o, o′, d, s, c, V)
+            areaδ = τ * enclosed_area_δ_kernel(o, o′, d, s, c, V)
         else
             disδ = area_mode.disδ
             areaδ = area_mode.areaδ
         end
-        dis_τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
-        area_τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+        dis_τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
+        area_τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
         area_grad = SA[A(phase0 * dis_τΩs[1], area_τΩs[1]),
                        A(phase0 * dis_τΩs[2], area_τΩs[2]),
                        A(phase0 * dis_τΩs[3], area_τΩs[3]),
@@ -302,7 +308,8 @@ end
             cumdis_grad = SA[CD(nothing), CD(nothing), CD(nothing),
                              CD(nothing), CD(nothing)]
         else
-            cumdis_τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+            cumdis_τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c,
+                                                                    Ω, Ω′, τ, V)
             cumdis_grad = SA[CD(phase0 * cumdis_τΩsδ[1]),
                              CD(phase0 * cumdis_τΩsδ[2]),
                              CD(phase0 * cumdis_τΩsδ[3]),
@@ -314,8 +321,8 @@ end
                                 AG(nothing, nothing), AG(nothing, nothing),
                                 AG(nothing, nothing)]
         else
-            disδ_τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
-            areaδ_τΩsδ = enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ)
+            disδ_τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
+            areaδ_τΩsδ = enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
             area_mode_grad = SA[AG(phase0 * disδ_τΩsδ[1], areaδ_τΩsδ[1]),
                                 AG(phase0 * disδ_τΩsδ[2], areaδ_τΩsδ[2]),
                                 AG(phase0 * disδ_τΩsδ[3], areaδ_τΩsδ[3]),
