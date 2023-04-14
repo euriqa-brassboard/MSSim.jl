@@ -2,12 +2,13 @@
 
 module SymLinear
 
+using Test
+using ForwardDiff
+using Setfield
+
 using MSSim
 const PN = MSSim.PureNumeric
 const SL = MSSim.SymLinear
-
-using Test
-using ForwardDiff
 
 function get_Ω_θ_func(Ω, Ω′, φ, δ)
     return t->Ω + Ω′ * t, t->φ + δ * t
