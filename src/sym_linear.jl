@@ -420,7 +420,9 @@ end
                                           Val(need_cumdis), Val(need_area_mode),
                                           Val(need_grad))
         sys.seg_buf[i] = seg
-        push!(sys.seg_grad_buf, grad)
+        if need_grad
+            push!(sys.seg_grad_buf, grad)
+        end
         φ += pulse.τ * δ
         Ω += pulse.τ * pulse.Ω′
     end
