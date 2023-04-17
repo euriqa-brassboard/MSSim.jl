@@ -425,8 +425,8 @@ end
         if need_grad
             push!(sys.seg_grad_buf, grad)
         end
-        φ += pulse.τ * δ
-        Ω += pulse.τ * pulse.Ω′
+        φ = muladd(pulse.τ, δ, φ)
+        Ω = muladd(pulse.τ, pulse.Ω′, Ω)
     end
 end
 
@@ -454,7 +454,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
             result.τ = single_result.τ
         end
         result.dis[mode_idx] = dis_scale * single_result.area.dis
-        result.area += area_scale * single_result.area.area
+        result.area = muladd(area_scale, single_result.area.area, result.area)
         if need_cumdis
             result.cumdis[mode_idx] = dis_scale * single_result.cumdis.cumdis
         end
@@ -505,37 +505,45 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
 
                 # displacement
                 # τ
-                res_dis_sgrad[1] = dis_scale * (area_sgrad[1].dis +
-                    dis_dΩ * pulse.Ω′ + dis_dφ * δ)
+                res_dis_sgrad[1] = dis_scale * muladd(dis_dφ, δ,
+                                                      muladd(dis_dΩ, pulse.Ω′,
+                                                             area_sgrad[1].dis))
                 # Ω
                 new_dis_dΩ = area_sgrad[2].dis + dis_dΩ
                 res_dis_sgrad[2] = dis_scale * new_dis_dΩ
                 # Ω′
-                res_dis_sgrad[3] = dis_scale * (area_sgrad[3].dis + dis_dΩ * pulse.τ)
+                res_dis_sgrad[3] = dis_scale * muladd(dis_dΩ, pulse.τ,
+                                                      area_sgrad[3].dis)
                 # φ
                 new_dis_dφ = area_sgrad[4].dis + dis_dφ
                 res_dis_sgrad[4] = dis_scale * new_dis_dφ
                 # ω
-                res_dis_sgrad[5] = dis_scale * (area_sgrad[5].dis + dis_dφ * pulse.τ)
+                res_dis_sgrad[5] = dis_scale * muladd(dis_dφ, pulse.τ,
+                                                      area_sgrad[5].dis)
                 dis_dΩ = new_dis_dΩ
                 dis_dφ = new_dis_dφ
 
                 # area
                 # τ
-                res_area_sgrad[1] += area_scale * (area_sgrad[1].area +
-                    area_dΩ * pulse.Ω′ + area_dφ * δ)
+                res_area_sgrad[1] = muladd(muladd(area_dφ, δ,
+                                                  muladd(area_dΩ, pulse.Ω′,
+                                                         area_sgrad[1].area)),
+                                           area_scale, res_area_sgrad[1])
                 # Ω
                 new_area_dΩ = area_sgrad[2].area + area_dΩ
-                res_area_sgrad[2] += area_scale * new_area_dΩ
+                res_area_sgrad[2] = muladd(area_scale, new_area_dΩ, res_area_sgrad[2])
                 # Ω′
-                res_area_sgrad[3] += area_scale * (area_sgrad[3].area +
-                    area_dΩ * pulse.τ)
+                res_area_sgrad[3] = muladd(muladd(area_dΩ, pulse.τ,
+                                                  area_sgrad[3].area),
+                                           area_scale, res_area_sgrad[3])
                 # φ
                 new_area_dφ = area_sgrad[4].area + area_dφ
-                res_area_sgrad[4] += area_scale * new_area_dφ
+                res_area_sgrad[4] = muladd(area_scale, new_area_dφ,
+                                           res_area_sgrad[4])
                 # ω
-                res_area_sgrad[5] += area_scale * (area_sgrad[5].area +
-                    area_dφ * pulse.τ)
+                res_area_sgrad[5] = muladd(muladd(area_dφ, pulse.τ,
+                                                  area_sgrad[5].area),
+                                           area_scale, res_area_sgrad[5])
                 area_dΩ = new_area_dΩ
                 area_dφ = new_area_dφ
 
@@ -543,20 +551,22 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
                     res_cumdis_sgrad = cumdis_grad[seg_idx]
                     cumdis_sgrad = single_result.cumdis_grad[seg_idx]
                     # τ
-                    res_cumdis_sgrad[1] = dis_scale * (cumdis_sgrad[1].cumdis +
-                        cumdis_dΩ * pulse.Ω′ + cumdis_dφ * δ)
+                    res_cumdis_sgrad[1] = dis_scale * muladd(
+                        cumdis_dφ, δ,
+                        muladd(cumdis_dΩ, pulse.Ω′,
+                               cumdis_sgrad[1].cumdis))
                     # Ω
                     new_cumdis_dΩ = cumdis_sgrad[2].cumdis + cumdis_dΩ
                     res_cumdis_sgrad[2] = dis_scale * new_cumdis_dΩ
                     # Ω′
-                    res_cumdis_sgrad[3] = dis_scale * (cumdis_sgrad[3].cumdis +
-                        cumdis_dΩ * pulse.τ)
+                    res_cumdis_sgrad[3] = dis_scale * muladd(cumdis_dΩ, pulse.τ,
+                                                             cumdis_sgrad[3].cumdis)
                     # φ
                     new_cumdis_dφ = cumdis_sgrad[4].cumdis + cumdis_dφ
                     res_cumdis_sgrad[4] = dis_scale * new_cumdis_dφ
                     # ω
-                    res_cumdis_sgrad[5] = dis_scale * (cumdis_sgrad[5].cumdis +
-                        cumdis_dφ * pulse.τ)
+                    res_cumdis_sgrad[5] = dis_scale * muladd(cumdis_dφ, pulse.τ,
+                                                             cumdis_sgrad[5].cumdis)
                     cumdis_dΩ = new_cumdis_dΩ
                     cumdis_dφ = new_cumdis_dφ
                 end
@@ -568,39 +578,41 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
 
                     # displacement
                     # τ
-                    res_disδ_sgrad[1] = dis_scale * (area_mode_sgrad[1].disδ +
-                        disδ_dΩ * pulse.Ω′ + disδ_dφ * δ)
+                    res_disδ_sgrad[1] = dis_scale * muladd(
+                        disδ_dφ, δ, muladd(disδ_dΩ, pulse.Ω′,
+                                              area_mode_sgrad[1].disδ))
                     # Ω
                     new_disδ_dΩ = area_mode_sgrad[2].disδ + disδ_dΩ
                     res_disδ_sgrad[2] = dis_scale * new_disδ_dΩ
                     # Ω′
-                    res_disδ_sgrad[3] = dis_scale * (area_mode_sgrad[3].disδ +
-                        disδ_dΩ * pulse.τ)
+                    res_disδ_sgrad[3] = dis_scale * muladd(disδ_dΩ, pulse.τ,
+                                                            area_mode_sgrad[3].disδ)
                     # φ
                     new_disδ_dφ = area_mode_sgrad[4].disδ + disδ_dφ
                     res_disδ_sgrad[4] = dis_scale * new_disδ_dφ
                     # ω
-                    res_disδ_sgrad[5] = dis_scale * (area_mode_sgrad[5].disδ +
-                        disδ_dφ * pulse.τ)
+                    res_disδ_sgrad[5] = dis_scale * muladd(disδ_dφ, pulse.τ,
+                                                            area_mode_sgrad[5].disδ)
                     disδ_dΩ = new_disδ_dΩ
                     disδ_dφ = new_disδ_dφ
 
                     # area
                     # τ
-                    res_areaδ_sgrad[1] = area_scale * (area_mode_sgrad[1].areaδ +
-                        areaδ_dΩ * pulse.Ω′ + areaδ_dφ * δ)
+                    res_areaδ_sgrad[1] = area_scale * muladd(
+                        areaδ_dφ, δ,
+                        muladd(areaδ_dΩ, pulse.Ω′, area_mode_sgrad[1].areaδ))
                     # Ω
                     new_areaδ_dΩ = area_mode_sgrad[2].areaδ + areaδ_dΩ
                     res_areaδ_sgrad[2] = area_scale * new_areaδ_dΩ
                     # Ω′
-                    res_areaδ_sgrad[3] = area_scale * (area_mode_sgrad[3].areaδ +
-                        areaδ_dΩ * pulse.τ)
+                    res_areaδ_sgrad[3] = area_scale * muladd(areaδ_dΩ, pulse.τ,
+                                                              area_mode_sgrad[3].areaδ)
                     # φ
                     new_areaδ_dφ = area_mode_sgrad[4].areaδ + areaδ_dφ
                     res_areaδ_sgrad[4] = area_scale * new_areaδ_dφ
                     # ω
-                    res_areaδ_sgrad[5] = area_scale * (area_mode_sgrad[5].areaδ +
-                        areaδ_dφ * pulse.τ)
+                    res_areaδ_sgrad[5] = area_scale * muladd(areaδ_dφ, pulse.τ,
+                                                              area_mode_sgrad[5].areaδ)
                     areaδ_dΩ = new_areaδ_dΩ
                     areaδ_dφ = new_areaδ_dφ
                 end
