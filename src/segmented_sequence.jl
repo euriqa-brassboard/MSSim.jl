@@ -105,7 +105,7 @@ function compute_single_mode!(
         p_τ = zero(T)
         for i in 1:nseg
             seg = segments[i]
-            buffer.disφ[i] = seg.area_mode.disδ + Utils.mulim(seg.area.dis * p_τ)
+            buffer.disφ[i] = muladd(Utils.mulim(seg.area.dis), p_τ, seg.area_mode.disδ)
             p_τ += seg.τ
         end
     end
@@ -158,15 +158,18 @@ function compute_single_mode!(
 
         np_τ += seg.τ
         np_dis += seg.area.dis
-        np_area += imag(conj(p_dis) * seg.area.dis) + seg.area.area
+        np_area += muladd(real(p_dis), imag(seg.area.dis),
+                          muladd(-imag(p_dis), real(seg.area.dis), seg.area.area))
         if need_cumdis
-            np_cumdis += p_dis * seg.τ + seg.cumdis.cumdis
+            np_cumdis += muladd(p_dis, seg.τ, seg.cumdis.cumdis)
         end
         if need_area_mode
             real_disδ = buffer.disφ[i]
             np_real_disδ += real_disδ
-            np_areaδ += (imag(conj(p_dis) * real_disδ) +
-                imag(buffer.dis_backward[i] * conj(real_disδ)) + seg.area_mode.areaδ)
+            dis_b = buffer.dis_backward[i]
+            np_areaδ += muladd(real(p_dis) - real(dis_b), imag(real_disδ),
+                                muladd(imag(dis_b) - imag(p_dis), real(real_disδ),
+                                       seg.area_mode.areaδ))
         end
         @inline if need_grads
             seg_grad = seg_grads[i]
@@ -188,31 +191,36 @@ function compute_single_mode!(
                 τ_grad[j] = τ_v
 
                 dis_v = sg.area.dis
-                area_v = (imag(conj(p_dis) * dis_v) + imag(dis_b * conj(dis_v))
-                          + sg.area.area)
+                area_v = muladd(real(p_dis) - real(dis_b), imag(dis_v),
+                                muladd(imag(dis_b) - imag(p_dis), real(dis_v),
+                                       sg.area.area))
                 area_grad[j] = A(dis_v, area_v)
 
                 if need_cumdis
-                    cumdis_v = τ_v * p_dis + τ_b * dis_v + sg.cumdis.cumdis
+                    cumdis_v = muladd(τ_v, p_dis, muladd(τ_b, dis_v, sg.cumdis.cumdis))
                     cumdis_grad[j] = CD(cumdis_v)
                 else
                     cumdis_grad[j] = CD(nothing)
                 end
 
                 if need_area_mode
-                    disδ_v0 = sg.area_mode.disδ + Utils.mulim(dis_v * p_τ)
-                    disδ_v = disδ_v0 + Utils.mulim(dis_b * τ_v)
+                    disδ_v0 = muladd(Utils.mulim(dis_v), p_τ, sg.area_mode.disδ)
+                    disδ_v = muladd(Utils.mulim(dis_b), τ_v, disδ_v0)
                     # Note that the expression below isn't simply the derivative
                     # of the areaδ. This is because disδ depends on the sum of τ's
-                    # so areaδ actually contains a thrird summation
+                    # so areaδ actually contains a third summation
                     # that breaks the change-of-summation-order trick that we've
                     # used for all other expressions.
-                    areaδ_v = (sg.area_mode.areaδ +
-                        imag(conj(p_dis) * disδ_v) +
-                        imag(conj(dis_v) * disφ_b) +
-                        τ_v * real(conj(dis_b) * seg.area.dis) +
-                        imag(dis_b * conj(disδ_v0)) +
-                        imag(dis_v * conj(p_real_disδ)))
+                    areaδ_v = (
+                        muladd(imag(dis_b),
+                               muladd(τ_v, imag(seg.area.dis), real(disδ_v0)),
+                               muladd(real(dis_b),
+                                      muladd(τ_v, real(seg.area.dis), -imag(disδ_v0)),
+                                      real(dis_v) * (imag(disφ_b) - imag(p_real_disδ))))
+                        + muladd(imag(dis_v), real(p_real_disδ) - real(disφ_b),
+                                 muladd(-imag(p_dis), real(disδ_v),
+                                        muladd(real(p_dis), imag(disδ_v),
+                                               sg.area_mode.areaδ))))
                     area_mode_grad[j] = AG(disδ_v, areaδ_v)
                 else
                     area_mode_grad[j] = AG(nothing, nothing)

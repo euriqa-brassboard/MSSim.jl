@@ -273,17 +273,19 @@ end
                              cos_f1, sin_f1, cos_f2, sin_f2,
                              cos_f3_2, sin_f3, sin_f3_2, sin_f3_3, sin_f4, sin_f5)
 
-        area = A(phase0 * displacement_kernel(o, o′, d, s, c, V),
+        area = A(Utils.mul(phase0, displacement_kernel(o, o′, d, s, c, V)),
                  enclosed_area_kernel(o, o′, d, s, c, V))
         if SegSeq.is_dummy(CD)
             cumdis = CD(nothing)
         else
-            cumdis = CD(phase0_τ * cumulative_displacement_kernel(o, o′, d, s, c, V))
+            cumdis = CD(Utils.mul(phase0_τ, cumulative_displacement_kernel(o, o′, d,
+                                                                            s, c, V)))
         end
         if SegSeq.is_dummy(AG)
             area_mode = AG(nothing, nothing)
         else
-            area_mode = AG(phase0_τ * displacement_δ_kernel(o, o′, d, s, c, V),
+            area_mode = AG(Utils.mul(phase0_τ, displacement_δ_kernel(o, o′, d,
+                                                                       s, c, V)),
                            τ * enclosed_area_δ_kernel(o, o′, d, s, c, V))
         end
         res = SegSeq.SegData{T,A,CD,AG}(τ, area, cumdis, area_mode)
@@ -291,7 +293,7 @@ end
             return res, nothing
         end
         if SegSeq.is_dummy(AG)
-            disδ = phase0_τ * displacement_δ_kernel(o, o′, d, s, c, V)
+            disδ = Utils.mul(phase0_τ, displacement_δ_kernel(o, o′, d, s, c, V))
             areaδ = τ * enclosed_area_δ_kernel(o, o′, d, s, c, V)
         else
             disδ = area_mode.disδ
@@ -299,9 +301,9 @@ end
         end
         dis_τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
         area_τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-        area_grad = SA[A(phase0 * dis_τΩs[1], area_τΩs[1]),
-                       A(phase0 * dis_τΩs[2], area_τΩs[2]),
-                       A(phase0 * dis_τΩs[3], area_τΩs[3]),
+        area_grad = SA[A(Utils.mul(phase0, dis_τΩs[1]), area_τΩs[1]),
+                       A(Utils.mul(phase0, dis_τΩs[2]), area_τΩs[2]),
+                       A(Utils.mul(phase0, dis_τΩs[3]), area_τΩs[3]),
                        A(Utils.mulim(area.dis), zero(T)),
                        A(disδ, areaδ)]
         if SegSeq.is_dummy(CD)
@@ -310,11 +312,11 @@ end
         else
             cumdis_τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c,
                                                                     Ω, Ω′, τ, V)
-            cumdis_grad = SA[CD(phase0 * cumdis_τΩsδ[1]),
-                             CD(phase0 * cumdis_τΩsδ[2]),
-                             CD(phase0 * cumdis_τΩsδ[3]),
+            cumdis_grad = SA[CD(Utils.mul(phase0, cumdis_τΩsδ[1])),
+                             CD(Utils.mul(phase0, cumdis_τΩsδ[2])),
+                             CD(Utils.mul(phase0, cumdis_τΩsδ[3])),
                              CD(Utils.mulim(cumdis.cumdis)),
-                             CD(phase0 * cumdis_τΩsδ[4])]
+                             CD(Utils.mul(phase0, cumdis_τΩsδ[4]))]
         end
         if SegSeq.is_dummy(AG)
             area_mode_grad = SA[AG(nothing, nothing), AG(nothing, nothing),
@@ -323,11 +325,11 @@ end
         else
             disδ_τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
             areaδ_τΩsδ = enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-            area_mode_grad = SA[AG(phase0 * disδ_τΩsδ[1], areaδ_τΩsδ[1]),
-                                AG(phase0 * disδ_τΩsδ[2], areaδ_τΩsδ[2]),
-                                AG(phase0 * disδ_τΩsδ[3], areaδ_τΩsδ[3]),
+            area_mode_grad = SA[AG(Utils.mul(phase0, disδ_τΩsδ[1]), areaδ_τΩsδ[1]),
+                                AG(Utils.mul(phase0, disδ_τΩsδ[2]), areaδ_τΩsδ[2]),
+                                AG(Utils.mul(phase0, disδ_τΩsδ[3]), areaδ_τΩsδ[3]),
                                 AG(Utils.mulim(area_mode.disδ), zero(T)),
-                                AG(phase0 * disδ_τΩsδ[4], areaδ_τΩsδ[4])]
+                                AG(Utils.mul(phase0, disδ_τΩsδ[4]), areaδ_τΩsδ[4])]
         end
         SD = SegSeq.SegData{T,A,CD,AG}
         grads = SA[SD(1, area_grad[1], cumdis_grad[1], area_mode_grad[1]),

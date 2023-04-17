@@ -74,6 +74,11 @@ end
 # Math utility functions
 
 @inline mulim(x) = @inline complex(-imag(x), real(x))
+@inline mul(x, y) = @inline x * y
+@inline function mul(x::Complex, y::Complex)
+    return complex(muladd(real(x), real(y), -imag(x) * imag(y)),
+                   muladd(real(x), imag(y), imag(x) * real(y)))
+end
 
 fastabs(x::Number) = abs(x)
 fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
