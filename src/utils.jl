@@ -2,6 +2,10 @@
 
 module Utils
 
+# Storing array of arrays using a single flattened array.
+# Used to store segment gradients.
+# We can't store them using a matrix since in principle different segments could have
+# different number of parameters/gradients.
 struct JaggedMatrix{T} <: AbstractVector{SubArray{T,1,Vector{T},Tuple{UnitRange{Int}},true}}
     values::Vector{T}
     idx_ranges::Vector{UnitRange{Int}}
@@ -73,16 +77,24 @@ end
 
 # Math utility functions
 
+# Multiply by `im`.
+# The default implementation for floating point number contains handling
+# of signed zeros and such that we don't care about.
 @inline mulim(x) = @inline complex(-imag(x), real(x))
+# Multiply that allows fma.
 @inline mul(x, y) = @inline x * y
 @inline function mul(x::Complex, y::Complex)
     return complex(muladd(real(x), real(y), -imag(x) * imag(y)),
                    muladd(real(x), imag(y), imag(x) * real(y)))
 end
 
-fastabs(x::Number) = abs(x)
-fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
+# Copied from base julia, used for taylor expansion threshold
+# (though we basically never call these with complex number anyway...)
+@inline fastabs(x::Number) = abs(x)
+@inline fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
 
+# Implementation/generation code to compute ratios with trigonometric functions
+# in the numerator accurately and efficiently.
 module TR
 
 # First n Taylor coefficients for sin and cos

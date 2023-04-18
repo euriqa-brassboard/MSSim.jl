@@ -11,6 +11,9 @@ import ...SegSeq
 
 using StaticArrays
 
+# Generate a structure with the trig ratios we need precomputed
+# It's easier for the compiler to do DCE on the values we don't use
+# then to do CSE on branchy code that are duplicated.
 function _trig_field_name(name)
     m = match(r"^sin_c([_0-9]*)$", name)
     if m !== nothing
@@ -43,6 +46,8 @@ macro gen_trig_ratios(d, s, c, names...)
 end
 
 # Integral for each segments
+# The kernel version are shared by both the test version
+# and the version used in actual computation.
 @inline function displacement_kernel(o, o′, d, s, c, V)
     return complex(muladd(o + o′, V.S_C1, -o′ * V.C1),
                    muladd(o * d, V.C1, o′ * V.S_C2))
@@ -113,6 +118,8 @@ end
             τ^2 * muladd(o * (o + o′), -V.S3_2, -o′^2 * V.S5))
 end
 
+# These are for testing only.
+# The `compute_values` below is the one that's used in actual computation.
 function displacement(τ, Ω, Ω′, φ, δ)
     phase0 = cis(φ)
     d = δ * τ
@@ -251,6 +258,9 @@ end
 # * Gradient of enclosed area w.r.t. detuning (areaδ)
 # As well as the gradient of everything above w.r.t. each of the input parameters
 
+# Compute all the values we want for this segment in one go.
+# This should allow the compiler to reuse many of the intermediate results
+# when computing different values.
 @inline function (compute_values(τ::_T, Ω, Ω′, φ, δ, ::Val{need_cumdis},
                                  ::Val{need_area_mode}, ::Val{need_grad})
                   where {_T,need_cumdis,need_area_mode,need_grad})
@@ -346,6 +356,10 @@ end
 import ..Utils
 import ..SegSeq
 
+# Segment parameter
+# We use the phase and amplitude jump instead of their absolute values
+# as the parameters since these are closer to what we actually want to control
+# in the experiment.
 struct Pulse{T}
     τ::T
     dΩ::T

@@ -2,8 +2,13 @@
 
 module SegSeq
 
+# Common code to compute a MS gate that consists of many segments
+# This includes the representation of segmented sequence,
+# and the code to combine them to compute the properties of the whole sequence.
+
 using ..Utils
 
+# Sequence segment representation
 is_dummy(::Type{T}) where T = false
 
 struct AreaData{T}
@@ -247,6 +252,12 @@ function compute_single_mode!(
     return
 end
 
+# Note that we only provide a data structure to store the result here.
+# The combination of multiple modes into a final result is both simple enough
+# and segment-specific enough that it's easier to just implement it
+# by the user.
+# If we ever come to a point where there are multiple users we can try to combine them
+# together...
 mutable struct MultiModeResult{T,VCD,VDD,VAD}
     τ::T
     dis::Vector{Complex{T}}
