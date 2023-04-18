@@ -101,7 +101,7 @@ function compute_single_mode!(
     resize!(buffer.τ_backward, need_grads && need_cumdis ? nseg : 0)
     resize!(buffer.disφ, need_area_mode ? nseg : 0)
     resize!(buffer.disφ_backward, need_grads && need_area_mode ? nseg : 0)
-    if need_area_mode
+    @inbounds if need_area_mode
         p_τ = zero(T)
         for i in 1:nseg
             seg = segments[i]
@@ -109,7 +109,7 @@ function compute_single_mode!(
             p_τ += seg.τ
         end
     end
-    if need_grads || need_area_mode
+    @inbounds if need_grads || need_area_mode
         p_τ = zero(T)
         p_dis = complex(zero(T))
         p_real_disδ = complex(zero(T))
@@ -147,7 +147,7 @@ function compute_single_mode!(
     p_cumdis = complex(zero(T))
     p_real_disδ = complex(zero(T))
     p_areaδ = zero(T)
-    for i in 1:nseg
+    @inbounds for i in 1:nseg
         seg = segments[i]
         np_τ = p_τ
         np_dis = p_dis
@@ -282,7 +282,7 @@ end
 
 function _init_grads_vector(grads::Vector{Utils.JaggedMatrix{T}}, nmodes) where T
     resize!(grads, nmodes)
-    for i in 1:nmodes
+    @inbounds for i in 1:nmodes
         if isassigned(grads, i)
             empty!(grads[i])
         else

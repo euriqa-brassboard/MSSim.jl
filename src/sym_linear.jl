@@ -410,7 +410,7 @@ end
     mode = sys.modes[mode_idx]
     φ = zero(T)
     Ω = zero(T)
-    @inline for i in 1:nseg
+    @inline @inbounds for i in 1:nseg
         pulse = sys.pulses[i]
         Ω += pulse.dΩ
         φ += pulse.dφ
@@ -438,7 +438,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
     result = sys.result
     single_result = sys.single_result
 
-    @inline for mode_idx in 1:nmodes
+    @inline @inbounds for mode_idx in 1:nmodes
         _fill_seg_buf!(sys, mode_idx)
         mode = sys.modes[mode_idx]
         SegSeq.compute_single_mode!(single_result, sys.seg_buf, sys.buffer,
