@@ -421,20 +421,23 @@ end
     resize!(sys.seg_buf, nseg)
     empty!(sys.seg_grad_buf)
 
-    mode = sys.modes[mode_idx]
+    @inbounds mode = sys.modes[mode_idx]
     φ = zero(T)
     Ω = zero(T)
+    pulses = sys.pulses
+    seg_buf = sys.seg_buf
+    seg_grad_buf = sys.seg_grad_buf
     @inline @inbounds for i in 1:nseg
-        pulse = sys.pulses[i]
+        pulse = pulses[i]
         Ω += pulse.dΩ
         φ += pulse.dφ
         δ = pulse.ω - mode.ω
         seg, grad = SegInt.compute_values(pulse.τ, Ω, pulse.Ω′, φ, δ,
                                           Val(need_cumdis), Val(need_area_mode),
                                           Val(need_grad))
-        sys.seg_buf[i] = seg
+        seg_buf[i] = seg
         if need_grad
-            push!(sys.seg_grad_buf, grad)
+            push!(seg_grad_buf, grad)
         end
         φ = muladd(pulse.τ, δ, φ)
         Ω = muladd(pulse.τ, pulse.Ω′, Ω)
@@ -451,6 +454,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
 
     result = sys.result
     single_result = sys.single_result
+    pulses = sys.pulses
 
     @inline @inbounds for mode_idx in 1:nmodes
         _fill_seg_buf!(sys, mode_idx)
@@ -507,7 +511,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
             disδ_dφ = complex(zero(T))
 
             for seg_idx in nseg:-1:1
-                pulse = sys.pulses[seg_idx]
+                pulse = pulses[seg_idx]
                 δ = pulse.ω - mode.ω
 
                 res_dis_sgrad = dis_grad[seg_idx]

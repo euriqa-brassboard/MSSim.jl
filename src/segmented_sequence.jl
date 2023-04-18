@@ -57,10 +57,10 @@ mutable struct SingleModeResult{T,A,CD,AG}
     cumdis::CD
     area_mode::AG
 
-    τ_grad::Utils.JaggedMatrix{T}
-    area_grad::Utils.JaggedMatrix{A}
-    cumdis_grad::Utils.JaggedMatrix{CD}
-    area_mode_grad::Utils.JaggedMatrix{AG}
+    const τ_grad::Utils.JaggedMatrix{T}
+    const area_grad::Utils.JaggedMatrix{A}
+    const cumdis_grad::Utils.JaggedMatrix{CD}
+    const area_mode_grad::Utils.JaggedMatrix{AG}
     function SingleModeResult{T,A,CD,AG}() where {T,A,CD,AG}
         return new(zero(T), A(), CD(), AG(),
                    Utils.JaggedMatrix{T}(), Utils.JaggedMatrix{A}(),
@@ -102,15 +102,21 @@ function compute_single_mode!(
     need_cumdis = !is_cumdis_dummy(SD)
     need_area_mode = !is_area_mode_dummy(SD)
     need_grads = seg_grads !== nothing
-    resize!(buffer.dis_backward, need_grads || need_area_mode ? nseg : 0)
-    resize!(buffer.τ_backward, need_grads && need_cumdis ? nseg : 0)
-    resize!(buffer.disφ, need_area_mode ? nseg : 0)
-    resize!(buffer.disφ_backward, need_grads && need_area_mode ? nseg : 0)
+
+    buffer_dis_backward = buffer.dis_backward
+    buffer_τ_backward = buffer.τ_backward
+    buffer_disφ = buffer.disφ
+    buffer_disφ_backward = buffer.disφ_backward
+
+    resize!(buffer_dis_backward, need_grads || need_area_mode ? nseg : 0)
+    resize!(buffer_τ_backward, need_grads && need_cumdis ? nseg : 0)
+    resize!(buffer_disφ, need_area_mode ? nseg : 0)
+    resize!(buffer_disφ_backward, need_grads && need_area_mode ? nseg : 0)
     @inbounds if need_area_mode
         p_τ = zero(T)
         for i in 1:nseg
             seg = segments[i]
-            buffer.disφ[i] = muladd(Utils.mulim(seg.area.dis), p_τ, seg.area_mode.disδ)
+            buffer_disφ[i] = muladd(Utils.mulim(seg.area.dis), p_τ, seg.area_mode.disδ)
             p_τ += seg.τ
         end
     end
@@ -121,29 +127,33 @@ function compute_single_mode!(
         for i in nseg:-1:1
             seg = segments[i]
             if need_grads && need_cumdis
-                buffer.τ_backward[i] = p_τ
+                buffer_τ_backward[i] = p_τ
             end
-            buffer.dis_backward[i] = p_dis
+            buffer_dis_backward[i] = p_dis
             if need_grads && need_area_mode
-                buffer.disφ_backward[i] = p_real_disδ
-                p_real_disδ += buffer.disφ[i]
+                buffer_disφ_backward[i] = p_real_disδ
+                p_real_disδ += buffer_disφ[i]
             end
             p_τ += seg.τ
             p_dis += seg.area.dis
         end
     end
 
+    result_τ_grad = result.τ_grad
+    result_area_grad = result.area_grad
+    result_cumdis_grad = result.cumdis_grad
+    result_area_mode_grad = result.area_mode_grad
     if need_grads
         @assert length(seg_grads) == nseg
-        resize!(result.τ_grad, seg_grads)
-        resize!(result.area_grad, seg_grads)
-        resize!(result.cumdis_grad, seg_grads)
-        resize!(result.area_mode_grad, seg_grads)
+        resize!(result_τ_grad, seg_grads)
+        resize!(result_area_grad, seg_grads)
+        resize!(result_cumdis_grad, seg_grads)
+        resize!(result_area_mode_grad, seg_grads)
     else
-        empty!(result.τ_grad)
-        empty!(result.area_grad)
-        empty!(result.cumdis_grad)
-        empty!(result.area_mode_grad)
+        empty!(result_τ_grad)
+        empty!(result_area_grad)
+        empty!(result_cumdis_grad)
+        empty!(result_area_mode_grad)
     end
 
     p_τ = zero(T)
@@ -169,9 +179,9 @@ function compute_single_mode!(
             np_cumdis += muladd(p_dis, seg.τ, seg.cumdis.cumdis)
         end
         if need_area_mode
-            real_disδ = buffer.disφ[i]
+            real_disδ = buffer_disφ[i]
             np_real_disδ += real_disδ
-            dis_b = buffer.dis_backward[i]
+            dis_b = buffer_dis_backward[i]
             np_areaδ += muladd(real(p_dis) - real(dis_b), imag(real_disδ),
                                 muladd(imag(dis_b) - imag(p_dis), real(real_disδ),
                                        seg.area_mode.areaδ))
@@ -179,15 +189,15 @@ function compute_single_mode!(
         @inline if need_grads
             seg_grad = seg_grads[i]
 
-            τ_grad = result.τ_grad[i]
-            area_grad = result.area_grad[i]
-            cumdis_grad = result.cumdis_grad[i]
-            area_mode_grad = result.area_mode_grad[i]
+            τ_grad = result_τ_grad[i]
+            area_grad = result_area_grad[i]
+            cumdis_grad = result_cumdis_grad[i]
+            area_mode_grad = result_area_mode_grad[i]
             nvar = length(seg_grad)
 
-            dis_b = buffer.dis_backward[i]
-            disφ_b = need_area_mode ? buffer.disφ_backward[i] : complex(zero(T))
-            τ_b = need_cumdis ? buffer.τ_backward[i] : zero(T)
+            dis_b = buffer_dis_backward[i]
+            disφ_b = need_area_mode ? buffer_disφ_backward[i] : complex(zero(T))
+            τ_b = need_cumdis ? buffer_τ_backward[i] : zero(T)
 
             for j in 1:nvar
                 sg = seg_grad[j]
