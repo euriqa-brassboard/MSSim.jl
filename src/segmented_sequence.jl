@@ -226,16 +226,21 @@ function compute_single_mode!(
                     # so areaδ actually contains a third summation
                     # that breaks the change-of-summation-order trick that we've
                     # used for all other expressions.
-                    areaδ_v = (
-                        muladd(imag(dis_b),
-                               muladd(τ_v, imag(seg.area.dis), real(disδ_v0)),
-                               muladd(real(dis_b),
-                                      muladd(τ_v, real(seg.area.dis), -imag(disδ_v0)),
-                                      real(dis_v) * (imag(disφ_b) - imag(p_real_disδ))))
-                        + muladd(imag(dis_v), real(p_real_disδ) - real(disφ_b),
-                                 muladd(-imag(p_dis), real(disδ_v),
-                                        muladd(real(p_dis), imag(disδ_v),
-                                               sg.area_mode.areaδ))))
+                    areaδ_v =
+                        muladd(
+                            imag(dis_b), muladd(τ_v, imag(seg.area.dis), real(disδ_v0)),
+                            muladd(
+                                real(dis_b), muladd(τ_v, real(seg.area.dis),
+                                                    -imag(disδ_v0)),
+                                muladd(
+                                    -imag(p_dis), real(disδ_v),
+                                    muladd(
+                                        real(p_dis), imag(disδ_v),
+                                        muladd(real(dis_v),
+                                               imag(disφ_b) - imag(p_real_disδ),
+                                               muladd(imag(dis_v),
+                                                      real(p_real_disδ) - real(disφ_b),
+                                                      sg.area_mode.areaδ))))))
                     area_mode_grad[j] = AG(disδ_v, areaδ_v)
                 else
                     area_mode_grad[j] = AG(nothing, nothing)
