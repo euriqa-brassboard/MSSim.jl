@@ -33,7 +33,7 @@ Base.similar(m::JaggedMatrix, ::Type{AT}) where AT <: AbstractVector{T} where T 
 function Base.resize!(dst::JaggedMatrix, src::JaggedMatrix)
     resize!(dst.values, length(src.values))
     resize!(dst.idx_ranges, length(src.idx_ranges))
-    dst.idx_ranges .= src.idx_ranges
+    @inline dst.idx_ranges .= src.idx_ranges
     return dst
 end
 
@@ -44,7 +44,7 @@ function Base.resize!(dst::JaggedMatrix, src::AbstractVector)
     for (i, ary) in enumerate(src)
         neles = length(ary)
         new_last_idx = last_idx + neles
-        dst.idx_ranges[i] = (last_idx + 1):new_last_idx
+        @inline dst.idx_ranges[i] = (last_idx + 1):new_last_idx
         last_idx = new_last_idx
     end
     resize!(dst.values, last_idx)

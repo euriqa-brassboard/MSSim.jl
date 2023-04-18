@@ -325,19 +325,14 @@ function (init_multi_mode_result!(result::MultiModeResult{T,VCD,VDD,AD},
     need_cumdis = VCD !== Nothing
     need_area_mode = AD !== Nothing
 
-    result.τ = zero(T)
     resize!(result.dis, nmodes)
-    result.dis .= complex(zero(T))
     result.area = zero(T)
     if need_cumdis
         resize!(result.cumdis, nmodes)
-        result.cumdis .= complex(zero(T))
     end
     if need_area_mode
         resize!(result.disδ, nmodes)
-        result.disδ .= complex(zero(T))
         resize!(result.areaδ, nmodes)
-        result.areaδ .= zero(T)
     end
 
     empty!(result.τ_grad)
