@@ -400,9 +400,6 @@ end
 
 @inline function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
                         mode_idx) where {T,A,CD,AG,MR,need_grad}
-    if mode_idx == sys.cur_mod
-        return
-    end
     need_cumdis = !SegSeq.is_dummy(CD)
     need_area_mode = !SegSeq.is_dummy(AG)
 
