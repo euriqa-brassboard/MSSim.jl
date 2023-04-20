@@ -285,13 +285,13 @@ end
 
         area = A(Utils.mul(phase0, displacement_kernel(o, o′, d, s, c, V)),
                  enclosed_area_kernel(o, o′, d, s, c, V))
-        if SegSeq.is_dummy(CD)
+        if !need_cumdis
             cumdis = CD(nothing)
         else
             cumdis = CD(Utils.mul(phase0_τ, cumulative_displacement_kernel(o, o′, d,
                                                                             s, c, V)))
         end
-        if SegSeq.is_dummy(AG)
+        if !need_area_mode
             area_mode = AG(nothing, nothing)
         else
             area_mode = AG(Utils.mul(phase0_τ, displacement_δ_kernel(o, o′, d,
@@ -302,7 +302,7 @@ end
         if !need_grad
             return res, nothing
         end
-        if SegSeq.is_dummy(AG)
+        if !need_area_mode
             disδ = Utils.mul(phase0_τ, displacement_δ_kernel(o, o′, d, s, c, V))
             areaδ = τ * enclosed_area_δ_kernel(o, o′, d, s, c, V)
         else
@@ -316,7 +316,7 @@ end
                        A(Utils.mul(phase0, dis_τΩs[3]), area_τΩs[3]),
                        A(Utils.mulim(area.dis), zero(T)),
                        A(disδ, areaδ)]
-        if SegSeq.is_dummy(CD)
+        if !need_cumdis
             cumdis_grad = SA[CD(nothing), CD(nothing), CD(nothing),
                              CD(nothing), CD(nothing)]
         else
@@ -328,7 +328,7 @@ end
                              CD(Utils.mulim(cumdis.cumdis)),
                              CD(Utils.mul(phase0, cumdis_τΩsδ[4]))]
         end
-        if SegSeq.is_dummy(AG)
+        if !need_area_mode
             area_mode_grad = SA[AG(nothing, nothing), AG(nothing, nothing),
                                 AG(nothing, nothing), AG(nothing, nothing),
                                 AG(nothing, nothing)]
@@ -413,7 +413,7 @@ mutable struct System{T,A,CD,AG,MR,need_grad}
 end
 
 @inline function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
-                        mode_idx) where {T,A,CD,AG,MR,need_grad}
+                                mode_idx) where {T,A,CD,AG,MR,need_grad}
     need_cumdis = !SegSeq.is_dummy(CD)
     need_area_mode = !SegSeq.is_dummy(AG)
 
