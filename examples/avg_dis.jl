@@ -93,13 +93,15 @@ function gradient_function(g, opt::OptContext, ωs...)
 end
 
 function optimize!(opt::OptContext, init_ωs)
-    model = Model(Ipopt.Optimizer)
-    set_optimizer_attribute(model, "max_iter",
-                            parse(Int, get(ENV, "OPT_MAX_ITER", "30000")))
-    set_optimizer_attribute(model, "print_level", 5)
-    # set_optimizer_attribute(model, "print_level", 0)
-    # model = Model(NLopt.Optimizer)
+    # model = Model(Ipopt.Optimizer)
+    # set_optimizer_attribute(model, "max_iter",
+    #                         parse(Int, get(ENV, "OPT_MAX_ITER", "30000")))
+    # set_optimizer_attribute(model, "print_level", 5)
+    # # set_optimizer_attribute(model, "print_level", 0)
+    model = Model(NLopt.Optimizer)
     # set_optimizer_attribute(model, "algorithm", :LN_COBYLA)
+    # set_optimizer_attribute(model, "algorithm", :LD_MMA)
+    set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 
     nseg = length(opt.sys.pulses)
     nω = (nseg + 1) ÷ 2
@@ -112,9 +114,11 @@ function optimize!(opt::OptContext, init_ωs)
     @NLobjective(model, Min, f(ωs...))
     eval_count[] = 0
     @time JuMP.optimize!(model)
+    # @btime JuMP.optimize!($model)
     @show eval_count[]
     ωsv = value.(ωs)
-    return ωsv, objective_function(opt, ωsv...)
+    objv = objective_function(opt, ωsv...)
+    return ωsv, objv, opt.sys.result.area
 end
 
 # const modes = [MSSim.SymLinear.Mode{Float64}(2.1, 1, 1),
@@ -123,8 +127,8 @@ end
 #                MSSim.SymLinear.Mode{Float64}(2.4, 1, 1),
 #                MSSim.SymLinear.Mode{Float64}(2.5, 1, 1)]
 const modes = [MSSim.SymLinear.Mode{Float64}(ω, 1, 1)
-               for ω in range(2.0, 2.5, length=29)]
+               for ω in range(2.0, 2.5, length=29 * 3)]
 
-const opt = OptContext{Float64}(modes, 2, 0.2, 400)
-const opt_res = optimize!(opt, fill(2.3, 200))
+const opt = OptContext{Float64}(modes, 2, 0.2, 400 * 4)
+const opt_res = @btime optimize!(opt, fill(2.3, 200 * 4))
 @show opt_res
