@@ -268,7 +268,7 @@ end
     T = float(_T)
     CT = Complex{T}
     A = SegSeq.AreaData{T}
-    CD = need_cumdis ? SegSeq.CumDisData{T,CT} : SegSeq.DummyCumDisData
+    CD = need_cumdis ? CT : Nothing
     AG = need_area_mode ? SegSeq.AreaModeData{T,CT} : SegSeq.DummyAreaModeData
 
     @inline begin
@@ -286,10 +286,10 @@ end
         area = A(Utils.mul(phase0, displacement_kernel(o, o′, d, s, c, V)),
                  enclosed_area_kernel(o, o′, d, s, c, V))
         if !need_cumdis
-            cumdis = CD(nothing)
+            cumdis = nothing
         else
-            cumdis = CD(Utils.mul(phase0_τ, cumulative_displacement_kernel(o, o′, d,
-                                                                            s, c, V)))
+            cumdis = Utils.mul(phase0_τ, cumulative_displacement_kernel(o, o′, d,
+                                                                         s, c, V))
         end
         if !need_area_mode
             area_mode = AG(nothing, nothing)
@@ -317,16 +317,15 @@ end
                        A(Utils.mulim(area.dis), zero(T)),
                        A(disδ, areaδ)]
         if !need_cumdis
-            cumdis_grad = SA[CD(nothing), CD(nothing), CD(nothing),
-                             CD(nothing), CD(nothing)]
+            cumdis_grad = SA[nothing, nothing, nothing, nothing, nothing]
         else
             cumdis_τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c,
                                                                     Ω, Ω′, τ, V)
-            cumdis_grad = SA[CD(Utils.mul(phase0, cumdis_τΩsδ[1])),
-                             CD(Utils.mul(phase0, cumdis_τΩsδ[2])),
-                             CD(Utils.mul(phase0, cumdis_τΩsδ[3])),
-                             CD(Utils.mulim(cumdis.cumdis)),
-                             CD(Utils.mul(phase0, cumdis_τΩsδ[4]))]
+            cumdis_grad = SA[Utils.mul(phase0, cumdis_τΩsδ[1]),
+                             Utils.mul(phase0, cumdis_τΩsδ[2]),
+                             Utils.mul(phase0, cumdis_τΩsδ[3]),
+                             Utils.mulim(cumdis),
+                             Utils.mul(phase0, cumdis_τΩsδ[4])]
         end
         if !need_area_mode
             area_mode_grad = SA[AG(nothing, nothing), AG(nothing, nothing),
@@ -391,7 +390,7 @@ mutable struct System{T,A,CD,AG,MR,need_grad}
 
         CT = Complex{T}
         A = SegSeq.AreaData{T}
-        CD = need_cumdis ? SegSeq.CumDisData{T,CT} : SegSeq.DummyCumDisData
+        CD = need_cumdis ? CT : Nothing
         AG = need_area_mode ? SegSeq.AreaModeData{T,CT} : SegSeq.DummyAreaModeData
         SD = SegSeq.SegData{T,A,CD,AG}
 
@@ -414,7 +413,7 @@ end
 
 @inline function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
                                 mode_idx) where {T,A,CD,AG,MR,need_grad}
-    need_cumdis = !SegSeq.is_dummy(CD)
+    need_cumdis = CD !== Nothing
     need_area_mode = !SegSeq.is_dummy(AG)
 
     nseg = length(sys.pulses)
@@ -447,7 +446,7 @@ end
 function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_grad}
     nmodes = length(sys.modes)
     nseg = length(sys.pulses)
-    need_cumdis = !SegSeq.is_dummy(CD)
+    need_cumdis = CD !== Nothing
     need_area_mode = !SegSeq.is_dummy(AG)
 
     SegSeq.init_multi_mode_result!(sys.result, nmodes, Val(need_grad))
@@ -471,7 +470,7 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
         result.dis[mode_idx] = dis_scale * single_result.area.dis
         result.area = muladd(area_scale, single_result.area.area, result.area)
         if need_cumdis
-            result.cumdis[mode_idx] = dis_scale * single_result.cumdis.cumdis
+            result.cumdis[mode_idx] = dis_scale * single_result.cumdis
         end
         if need_area_mode
             result.disδ[mode_idx] = dis_scale * single_result.area_mode.disδ
@@ -569,19 +568,19 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
                     res_cumdis_sgrad[1] = dis_scale * muladd(
                         cumdis_dφ, δ,
                         muladd(cumdis_dΩ, pulse.Ω′,
-                               cumdis_sgrad[1].cumdis))
+                               cumdis_sgrad[1]))
                     # Ω
-                    new_cumdis_dΩ = cumdis_sgrad[2].cumdis + cumdis_dΩ
+                    new_cumdis_dΩ = cumdis_sgrad[2] + cumdis_dΩ
                     res_cumdis_sgrad[2] = dis_scale * new_cumdis_dΩ
                     # Ω′
                     res_cumdis_sgrad[3] = dis_scale * muladd(cumdis_dΩ, pulse.τ,
-                                                             cumdis_sgrad[3].cumdis)
+                                                             cumdis_sgrad[3])
                     # φ
-                    new_cumdis_dφ = cumdis_sgrad[4].cumdis + cumdis_dφ
+                    new_cumdis_dφ = cumdis_sgrad[4] + cumdis_dφ
                     res_cumdis_sgrad[4] = dis_scale * new_cumdis_dφ
                     # ω
                     res_cumdis_sgrad[5] = dis_scale * muladd(cumdis_dφ, pulse.τ,
-                                                             cumdis_sgrad[5].cumdis)
+                                                             cumdis_sgrad[5])
                     cumdis_dΩ = new_cumdis_dΩ
                     cumdis_dφ = new_cumdis_dφ
                 end

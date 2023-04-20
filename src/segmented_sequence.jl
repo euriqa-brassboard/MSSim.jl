@@ -8,8 +8,11 @@ module SegSeq
 
 using ..Utils
 
+_empty(::Type{T}) where T = T()
+_empty(::Type{T}) where T<:Number = zero(T)
+
 # Sequence segment representation
-is_dummy(::Type{T}) where T = false
+is_dummy(::Type{T}) where T = T === Nothing
 
 struct AreaData{T}
     dis::Complex{T}
@@ -17,15 +20,6 @@ struct AreaData{T}
     AreaData{T}(dis, area) where T = new(dis, area)
     AreaData{T}() where T = new(zero(T), zero(T))
 end
-
-struct CumDisData{T,CT}
-    cumdis::CT
-    CumDisData{T,CT}(cumdis) where {T,CT} = new(cumdis)
-    CumDisData{T,CT}() where {T,CT} = new(zero(T))
-    CumDisData{Nothing,Nothing}() = new(nothing)
-end
-const DummyCumDisData = CumDisData{Nothing,Nothing}
-is_dummy(::Type{DummyCumDisData}) = true
 
 struct AreaModeData{T,CT}
     disδ::CT
@@ -43,8 +37,6 @@ struct SegData{T,A,CD,AG}
     cumdis::CD
     area_mode::AG
 end
-is_cumdis_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
-    is_dummy(CD)
 is_area_mode_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
     is_dummy(AG)
 
@@ -62,7 +54,7 @@ mutable struct SingleModeResult{T,A,CD,AG}
     const cumdis_grad::Utils.JaggedMatrix{CD}
     const area_mode_grad::Utils.JaggedMatrix{AG}
     function SingleModeResult{T,A,CD,AG}() where {T,A,CD,AG}
-        return new(zero(T), A(), CD(), AG(),
+        return new(zero(T), A(), _empty(CD), AG(),
                    Utils.JaggedMatrix{T}(), Utils.JaggedMatrix{A}(),
                    Utils.JaggedMatrix{CD}(), Utils.JaggedMatrix{AG}())
     end
@@ -99,7 +91,7 @@ function compute_single_mode!(
     seg_grads::Union{_SGV{T,A,CD,AG},Nothing}=nothing) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
 
     nseg = length(segments)
-    need_cumdis = !is_cumdis_dummy(SD)
+    need_cumdis = CD !== Nothing
     need_area_mode = !is_area_mode_dummy(SD)
     need_grads = seg_grads !== nothing
 
@@ -176,7 +168,7 @@ function compute_single_mode!(
         np_area += muladd(real(p_dis), imag(seg.area.dis),
                           muladd(-imag(p_dis), real(seg.area.dis), seg.area.area))
         if need_cumdis
-            np_cumdis += muladd(p_dis, seg.τ, seg.cumdis.cumdis)
+            np_cumdis += muladd(p_dis, seg.τ, seg.cumdis)
         end
         if need_area_mode
             real_disδ = buffer_disφ[i]
@@ -212,10 +204,10 @@ function compute_single_mode!(
                 area_grad[j] = A(dis_v, area_v)
 
                 if need_cumdis
-                    cumdis_v = muladd(τ_v, p_dis, muladd(τ_b, dis_v, sg.cumdis.cumdis))
-                    cumdis_grad[j] = CD(cumdis_v)
+                    cumdis_v = muladd(τ_v, p_dis, muladd(τ_b, dis_v, sg.cumdis))
+                    cumdis_grad[j] = cumdis_v
                 else
-                    cumdis_grad[j] = CD(nothing)
+                    cumdis_grad[j] = nothing
                 end
 
                 if need_area_mode
@@ -259,7 +251,7 @@ function compute_single_mode!(
     result.τ = p_τ
     result.area = A(p_dis, p_area)
     if need_cumdis
-        result.cumdis = CD(p_cumdis)
+        result.cumdis = p_cumdis
     end
     if need_area_mode
         result.area_mode = AG(p_real_disδ, p_areaδ)

@@ -188,7 +188,7 @@ end
             @test d.area.dis ≈ v_dis atol=1e-10
             @test d.area.area ≈ v_area atol=1e-10
             if need_cumdis
-                @test d.cumdis.cumdis ≈ v_cumdis atol=1e-10
+                @test d.cumdis ≈ v_cumdis atol=1e-10
             end
             if need_area_mode
                 @test d.area_mode.disδ ≈ v_disδ atol=1e-10
@@ -209,11 +209,11 @@ end
                 @test grad[5].area.area ≈ v_area_grad[5] atol=1e-10
 
                 if need_cumdis
-                    @test grad[1].cumdis.cumdis ≈ v_cumdis_grad[1] atol=1e-10
-                    @test grad[2].cumdis.cumdis ≈ v_cumdis_grad[2] atol=1e-10
-                    @test grad[3].cumdis.cumdis ≈ v_cumdis_grad[3] atol=1e-10
-                    @test grad[4].cumdis.cumdis ≈ v_cumdis_grad[4] atol=1e-10
-                    @test grad[5].cumdis.cumdis ≈ v_cumdis_grad[5] atol=1e-10
+                    @test grad[1].cumdis ≈ v_cumdis_grad[1] atol=1e-10
+                    @test grad[2].cumdis ≈ v_cumdis_grad[2] atol=1e-10
+                    @test grad[3].cumdis ≈ v_cumdis_grad[3] atol=1e-10
+                    @test grad[4].cumdis ≈ v_cumdis_grad[4] atol=1e-10
+                    @test grad[5].cumdis ≈ v_cumdis_grad[5] atol=1e-10
                 end
 
                 if need_area_mode

@@ -24,7 +24,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
     T = Float64
     CT = Complex{T}
     A = SS.AreaData{T}
-    CD = SS.CumDisData{T,CT}
+    CD = CT
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
@@ -36,13 +36,13 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
         @test result.τ == τ
         @test result.area.dis == d.area.dis
         @test result.area.area == d.area.area
-        @test result.cumdis.cumdis == d.cumdis.cumdis
+        @test result.cumdis == d.cumdis
         @test result.area_mode.disδ == d.area_mode.disδ
         @test result.area_mode.areaδ == d.area_mode.areaδ
 
         for (need_cumdis, need_area_mode) in Iterators.product((false, true),
                                                                (false, true))
-            CD′ = need_cumdis ? CD : SS.DummyCumDisData
+            CD′ = need_cumdis ? CD : Nothing
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
             result′ = SS.SingleModeResult{T,A,CD′,AG′}()
@@ -53,7 +53,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
             @test result′.area.dis == d.area.dis
             @test result′.area.area == d.area.area
             if need_cumdis
-                @test result′.cumdis.cumdis == d.cumdis.cumdis
+                @test result′.cumdis == d.cumdis
             end
             if need_area_mode
                 @test result′.area_mode.disδ == d.area_mode.disδ
@@ -67,7 +67,7 @@ end
     T = Float64
     CT = Complex{T}
     A = SS.AreaData{T}
-    CD = SS.CumDisData{T,CT}
+    CD = CT
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
@@ -80,14 +80,14 @@ end
         @test nd.τ == d.τ
         @test nd.area.dis ≈ -d.area.dis
         @test nd.area.area ≈ -d.area.area
-        @test nd.cumdis.cumdis ≈ d.cumdis.cumdis - d.area.dis * τ
+        @test nd.cumdis ≈ d.cumdis - d.area.dis * τ
         @test nd.area_mode.disδ ≈ d.area_mode.disδ - im * τ * d.area.dis
         @test nd.area_mode.areaδ ≈ d.area_mode.areaδ
         SS.compute_single_mode!(result, [d, nd], buffer)
         @test result.τ ≈ 2 * τ
         @test result.area.dis ≈ 0 atol=1e-8
         @test result.area.area ≈ 0 atol=1e-8
-        @test result.cumdis.cumdis ≈ 2 * d.cumdis.cumdis
+        @test result.cumdis ≈ 2 * d.cumdis
         @test result.area_mode.disδ ≈ 2 * d.area_mode.disδ - 2 * im * τ * d.area.dis
         @test result.area_mode.areaδ ≈
             (2 * imag(d.area_mode.disδ * conj(d.area.dis))
@@ -97,13 +97,13 @@ end
         @test result.τ ≈ 2 * τ
         @test result.area.dis ≈ 2 * d.area.dis atol=1e-8
         @test result.area.area ≈ 2 * d.area.area atol=1e-8
-        @test result.cumdis.cumdis ≈ 2 * d.cumdis.cumdis + τ * d.area.dis
+        @test result.cumdis ≈ 2 * d.cumdis + τ * d.area.dis
         @test result.area_mode.disδ ≈ 2 * d.area_mode.disδ + im * τ * d.area.dis
         @test result.area_mode.areaδ ≈ τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
 
         for (need_cumdis, need_area_mode) in Iterators.product((false, true),
                                                                (false, true))
-            CD′ = need_cumdis ? CD : SS.DummyCumDisData
+            CD′ = need_cumdis ? CD : Nothing
             AG′ = need_area_mode ? AG : SS.DummyAreaModeData
 
             result′ = SS.SingleModeResult{T,A,CD′,AG′}()
@@ -114,7 +114,7 @@ end
             @test result′.area.dis ≈ 2 * d.area.dis atol=1e-8
             @test result′.area.area ≈ 2 * d.area.area atol=1e-8
             if need_cumdis
-                @test result′.cumdis.cumdis ≈ 2 * d.cumdis.cumdis + τ * d.area.dis
+                @test result′.cumdis ≈ 2 * d.cumdis + τ * d.area.dis
             end
             if need_area_mode
                 @test result′.area_mode.disδ ≈
@@ -131,7 +131,7 @@ end
             @test result.τ ≈ τ + τ′
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
-            @test result.cumdis.cumdis == d.cumdis.cumdis
+            @test result.cumdis == d.cumdis
             @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
@@ -139,7 +139,7 @@ end
             @test result.τ ≈ τ + τ′
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
-            @test result.cumdis.cumdis ≈ d.cumdis.cumdis + τ′ * d.area.dis
+            @test result.cumdis ≈ d.cumdis + τ′ * d.area.dis
             @test result.area_mode.disδ == d.area_mode.disδ
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
@@ -147,7 +147,7 @@ end
             @test result.τ ≈ τ + τ′ * 2
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
-            @test result.cumdis.cumdis == d.cumdis.cumdis
+            @test result.cumdis == d.cumdis
             @test result.area_mode.disδ ≈ d.area_mode.disδ + 2 * im * τ′ * d.area.dis
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
@@ -155,7 +155,7 @@ end
             @test result.τ ≈ τ + τ′ * 2
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
-            @test result.cumdis.cumdis ≈ d.cumdis.cumdis + τ′ * d.area.dis
+            @test result.cumdis ≈ d.cumdis + τ′ * d.area.dis
             @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
             @test result.area_mode.areaδ == d.area_mode.areaδ
 
@@ -163,7 +163,7 @@ end
             @test result.τ ≈ τ + τ′ * 2
             @test result.area.dis == d.area.dis
             @test result.area.area == d.area.area
-            @test result.cumdis.cumdis ≈ d.cumdis.cumdis + 2 * τ′ * d.area.dis
+            @test result.cumdis ≈ d.cumdis + 2 * τ′ * d.area.dis
             @test result.area_mode.disδ == d.area_mode.disδ
             @test result.area_mode.areaδ == d.area_mode.areaδ
         end
@@ -174,7 +174,7 @@ end
     T = Float64
     CT = Complex{T}
     A = SS.AreaData{T}
-    CD = SS.CumDisData{T,CT}
+    CD = CT
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
@@ -205,7 +205,7 @@ end
         @test result.τ == 4 * τ
         @test result.area.dis ≈ 0 atol=1e-10
         @test result.area.area ≈ -(Ω * τ)^2 * 4
-        @test result.cumdis.cumdis ≈ 0 atol=1e-10
+        @test result.cumdis ≈ 0 atol=1e-10
         @test result.area_mode.disδ ≈ 0 atol=1e-10
         if τ != 0 && Ω != 0
             @test result.area_mode.areaδ != 0
@@ -251,7 +251,7 @@ end
 function get_seg_data(params::AbstractVector{SegParam{T}}) where T
     CT = Complex{T}
     A = SS.AreaData{T}
-    CD = SS.CumDisData{T,CT}
+    CD = CT
     AG = SS.AreaModeData{T,CT}
     grads = U.JaggedMatrix{SS.SegData{T,A,CD,AG}}()
     function compute_values(param)
@@ -267,7 +267,7 @@ end
     T = Float64
     CT = Complex{T}
     A = SS.AreaData{T}
-    CD = SS.CumDisData{T,CT}
+    CD = CT
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
@@ -288,7 +288,7 @@ end
         @test result.τ ≈ total_time
         @test result.area.dis ≈ dis rtol=1e-3 atol=1e-3
         @test result.area.area ≈ area rtol=3e-2 atol=3e-2
-        @test result.cumdis.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
+        @test result.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
     end
     for i in 1:100
         test_nseg(1)
@@ -336,7 +336,7 @@ end
     T = Float64
     CT = Complex{T}
     A = SS.AreaData{T}
-    CD = SS.CumDisData{T,CT}
+    CD = CT
     AG = SS.AreaModeData{T,CT}
 
     buffer = SS.SeqComputeBuffer{T}()
@@ -365,7 +365,7 @@ end
         return SS.SegData(compute_grad((x->x.τ).(results)..., h),
                           A(compute_grad((x->x.area.dis).(results)..., h),
                             compute_grad((x->x.area.area).(results)..., h)),
-                          CD(compute_grad((x->x.cumdis.cumdis).(results)..., h)),
+                          compute_grad((x->x.cumdis).(results)..., h),
                           AG(compute_grad((x->x.area_mode.disδ).(results)..., h),
                              compute_grad((x->x.area_mode.areaδ).(results)..., h)))
     end
@@ -403,7 +403,7 @@ end
                       rtol=1e-8, atol=1e-8)
                 @test(result.area_grad[i][j].area ≈ grads[j][i].area.area,
                       rtol=1e-5, atol=1e-5)
-                @test(result.cumdis_grad[i][j].cumdis ≈ grads[j][i].cumdis.cumdis,
+                @test(result.cumdis_grad[i][j] ≈ grads[j][i].cumdis,
                       rtol=1e-5, atol=1e-5)
                 @test(result.area_mode_grad[i][j].disδ ≈ grads[j][i].area_mode.disδ,
                       rtol=1e-5, atol=1e-5)
