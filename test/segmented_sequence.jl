@@ -33,12 +33,12 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
     for (τ, Ω, Ω′, φ, δ) in all_params
         d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
         SS.compute_single_mode!(result, [d], buffer)
-        @test result.τ == τ
-        @test result.area.dis == d.area.dis
-        @test result.area.area == d.area.area
-        @test result.cumdis == d.cumdis
-        @test result.area_mode.disδ == d.area_mode.disδ
-        @test result.area_mode.areaδ == d.area_mode.areaδ
+        @test result.val.τ == τ
+        @test result.val.area.dis == d.area.dis
+        @test result.val.area.area == d.area.area
+        @test result.val.cumdis == d.cumdis
+        @test result.val.area_mode.disδ == d.area_mode.disδ
+        @test result.val.area_mode.areaδ == d.area_mode.areaδ
 
         for (need_cumdis, need_area_mode) in Iterators.product((false, true),
                                                                (false, true))
@@ -49,15 +49,15 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
             SS.compute_single_mode!(result′, [d′], buffer)
-            @test result′.τ == τ
-            @test result′.area.dis == d.area.dis
-            @test result′.area.area == d.area.area
+            @test result′.val.τ == τ
+            @test result′.val.area.dis == d.area.dis
+            @test result′.val.area.area == d.area.area
             if need_cumdis
-                @test result′.cumdis == d.cumdis
+                @test result′.val.cumdis == d.cumdis
             end
             if need_area_mode
-                @test result′.area_mode.disδ == d.area_mode.disδ
-                @test result′.area_mode.areaδ == d.area_mode.areaδ
+                @test result′.val.area_mode.disδ == d.area_mode.disδ
+                @test result′.val.area_mode.areaδ == d.area_mode.areaδ
             end
         end
     end
@@ -84,22 +84,22 @@ end
         @test nd.area_mode.disδ ≈ d.area_mode.disδ - im * τ * d.area.dis
         @test nd.area_mode.areaδ ≈ d.area_mode.areaδ
         SS.compute_single_mode!(result, [d, nd], buffer)
-        @test result.τ ≈ 2 * τ
-        @test result.area.dis ≈ 0 atol=1e-8
-        @test result.area.area ≈ 0 atol=1e-8
-        @test result.cumdis ≈ 2 * d.cumdis
-        @test result.area_mode.disδ ≈ 2 * d.area_mode.disδ - 2 * im * τ * d.area.dis
-        @test result.area_mode.areaδ ≈
+        @test result.val.τ ≈ 2 * τ
+        @test result.val.area.dis ≈ 0 atol=1e-8
+        @test result.val.area.area ≈ 0 atol=1e-8
+        @test result.val.cumdis ≈ 2 * d.cumdis
+        @test result.val.area_mode.disδ ≈ 2 * d.area_mode.disδ - 2 * im * τ * d.area.dis
+        @test result.val.area_mode.areaδ ≈
             (2 * imag(d.area_mode.disδ * conj(d.area.dis))
              - 2 * τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ)
 
         SS.compute_single_mode!(result, [d, d], buffer)
-        @test result.τ ≈ 2 * τ
-        @test result.area.dis ≈ 2 * d.area.dis atol=1e-8
-        @test result.area.area ≈ 2 * d.area.area atol=1e-8
-        @test result.cumdis ≈ 2 * d.cumdis + τ * d.area.dis
-        @test result.area_mode.disδ ≈ 2 * d.area_mode.disδ + im * τ * d.area.dis
-        @test result.area_mode.areaδ ≈ τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
+        @test result.val.τ ≈ 2 * τ
+        @test result.val.area.dis ≈ 2 * d.area.dis atol=1e-8
+        @test result.val.area.area ≈ 2 * d.area.area atol=1e-8
+        @test result.val.cumdis ≈ 2 * d.cumdis + τ * d.area.dis
+        @test result.val.area_mode.disδ ≈ 2 * d.area_mode.disδ + im * τ * d.area.dis
+        @test result.val.area_mode.areaδ ≈ τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
 
         for (need_cumdis, need_area_mode) in Iterators.product((false, true),
                                                                (false, true))
@@ -110,16 +110,16 @@ end
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
             SS.compute_single_mode!(result′, [d′, d′], buffer)
-            @test result′.τ == 2 * τ
-            @test result′.area.dis ≈ 2 * d.area.dis atol=1e-8
-            @test result′.area.area ≈ 2 * d.area.area atol=1e-8
+            @test result′.val.τ == 2 * τ
+            @test result′.val.area.dis ≈ 2 * d.area.dis atol=1e-8
+            @test result′.val.area.area ≈ 2 * d.area.area atol=1e-8
             if need_cumdis
-                @test result′.cumdis ≈ 2 * d.cumdis + τ * d.area.dis
+                @test result′.val.cumdis ≈ 2 * d.cumdis + τ * d.area.dis
             end
             if need_area_mode
-                @test result′.area_mode.disδ ≈
+                @test result′.val.area_mode.disδ ≈
                     2 * d.area_mode.disδ + im * τ * d.area.dis
-                @test result′.area_mode.areaδ ≈
+                @test result′.val.area_mode.areaδ ≈
                     τ * abs2(d.area.dis) + 2 * d.area_mode.areaδ
             end
         end
@@ -128,44 +128,44 @@ end
             d0, = SL.SegInt.compute_values(τ′, 0.0, 0.0, 0.0, 0.0,
                                            Val(true), Val(true), Val(false))
             SS.compute_single_mode!(result, [d0, d], buffer)
-            @test result.τ ≈ τ + τ′
-            @test result.area.dis == d.area.dis
-            @test result.area.area == d.area.area
-            @test result.cumdis == d.cumdis
-            @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
-            @test result.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.τ ≈ τ + τ′
+            @test result.val.area.dis == d.area.dis
+            @test result.val.area.area == d.area.area
+            @test result.val.cumdis == d.cumdis
+            @test result.val.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
+            @test result.val.area_mode.areaδ == d.area_mode.areaδ
 
             SS.compute_single_mode!(result, [d, d0], buffer)
-            @test result.τ ≈ τ + τ′
-            @test result.area.dis == d.area.dis
-            @test result.area.area == d.area.area
-            @test result.cumdis ≈ d.cumdis + τ′ * d.area.dis
-            @test result.area_mode.disδ == d.area_mode.disδ
-            @test result.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.τ ≈ τ + τ′
+            @test result.val.area.dis == d.area.dis
+            @test result.val.area.area == d.area.area
+            @test result.val.cumdis ≈ d.cumdis + τ′ * d.area.dis
+            @test result.val.area_mode.disδ == d.area_mode.disδ
+            @test result.val.area_mode.areaδ == d.area_mode.areaδ
 
             SS.compute_single_mode!(result, [d0, d0, d], buffer)
-            @test result.τ ≈ τ + τ′ * 2
-            @test result.area.dis == d.area.dis
-            @test result.area.area == d.area.area
-            @test result.cumdis == d.cumdis
-            @test result.area_mode.disδ ≈ d.area_mode.disδ + 2 * im * τ′ * d.area.dis
-            @test result.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.τ ≈ τ + τ′ * 2
+            @test result.val.area.dis == d.area.dis
+            @test result.val.area.area == d.area.area
+            @test result.val.cumdis == d.cumdis
+            @test result.val.area_mode.disδ ≈ d.area_mode.disδ + 2 * im * τ′ * d.area.dis
+            @test result.val.area_mode.areaδ == d.area_mode.areaδ
 
             SS.compute_single_mode!(result, [d0, d, d0], buffer)
-            @test result.τ ≈ τ + τ′ * 2
-            @test result.area.dis == d.area.dis
-            @test result.area.area == d.area.area
-            @test result.cumdis ≈ d.cumdis + τ′ * d.area.dis
-            @test result.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
-            @test result.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.τ ≈ τ + τ′ * 2
+            @test result.val.area.dis == d.area.dis
+            @test result.val.area.area == d.area.area
+            @test result.val.cumdis ≈ d.cumdis + τ′ * d.area.dis
+            @test result.val.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.area.dis
+            @test result.val.area_mode.areaδ == d.area_mode.areaδ
 
             SS.compute_single_mode!(result, [d, d0, d0], buffer)
-            @test result.τ ≈ τ + τ′ * 2
-            @test result.area.dis == d.area.dis
-            @test result.area.area == d.area.area
-            @test result.cumdis ≈ d.cumdis + 2 * τ′ * d.area.dis
-            @test result.area_mode.disδ == d.area_mode.disδ
-            @test result.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.τ ≈ τ + τ′ * 2
+            @test result.val.area.dis == d.area.dis
+            @test result.val.area.area == d.area.area
+            @test result.val.cumdis ≈ d.cumdis + 2 * τ′ * d.area.dis
+            @test result.val.area_mode.disδ == d.area_mode.disδ
+            @test result.val.area_mode.areaδ == d.area_mode.areaδ
         end
     end
 end
@@ -202,13 +202,13 @@ end
                                        Val(true), Val(true), Val(false))
 
         SS.compute_single_mode!(result, [d1, d2, d3, d4], buffer)
-        @test result.τ == 4 * τ
-        @test result.area.dis ≈ 0 atol=1e-10
-        @test result.area.area ≈ -(Ω * τ)^2 * 4
-        @test result.cumdis ≈ 0 atol=1e-10
-        @test result.area_mode.disδ ≈ 0 atol=1e-10
+        @test result.val.τ == 4 * τ
+        @test result.val.area.dis ≈ 0 atol=1e-10
+        @test result.val.area.area ≈ -(Ω * τ)^2 * 4
+        @test result.val.cumdis ≈ 0 atol=1e-10
+        @test result.val.area_mode.disδ ≈ 0 atol=1e-10
         if τ != 0 && Ω != 0
-            @test result.area_mode.areaδ != 0
+            @test result.val.area_mode.areaδ != 0
         end
     end
 end
@@ -285,10 +285,10 @@ end
         cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
                                              rtol=1e-8, atol=1e-8)
         area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=5e-6, atol=5e-6)
-        @test result.τ ≈ total_time
-        @test result.area.dis ≈ dis rtol=1e-3 atol=1e-3
-        @test result.area.area ≈ area rtol=3e-2 atol=3e-2
-        @test result.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
+        @test result.val.τ ≈ total_time
+        @test result.val.area.dis ≈ dis rtol=1e-3 atol=1e-3
+        @test result.val.area.area ≈ area rtol=3e-2 atol=3e-2
+        @test result.val.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
     end
     for i in 1:100
         test_nseg(1)
@@ -348,7 +348,7 @@ end
         seg_data, seg_grads = get_seg_data(params)
         SS.compute_single_mode!(result, seg_data, buffer,
                                 need_grad ? seg_grads : nothing)
-        @test result.τ ≈ sum(param.τ for param in params)
+        @test result.val.τ ≈ sum(param.τ for param in params)
         return
     end
 
@@ -356,8 +356,7 @@ end
     function eval_grad(param_cb, nh)
         function eval_wrapper(params)
             eval_params(result′, params, false)
-            return SS.SegData(result′.τ, result′.area,
-                              result′.cumdis, result′.area_mode)
+            return result′.val
         end
         h = nh / 4
         hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
@@ -393,8 +392,8 @@ end
                  [eval_grad(add_single_offset_callback(params, i, :δ), nhδ)
                   for i in 1:nseg]]
 
-        @test result.area_mode.disδ ≈ grad_δ.area.dis rtol=1e-8 atol=1e-8
-        @test result.area_mode.areaδ ≈ grad_δ.area.area rtol=1e-8 atol=1e-8
+        @test result.val.area_mode.disδ ≈ grad_δ.area.dis rtol=1e-8 atol=1e-8
+        @test result.val.area_mode.areaδ ≈ grad_δ.area.area rtol=1e-8 atol=1e-8
 
         for i in 1:nseg
             for j in 1:5

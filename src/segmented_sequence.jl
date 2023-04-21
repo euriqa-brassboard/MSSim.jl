@@ -44,14 +44,11 @@ const _SGS{T,A,CD,AG} = AbstractVector{SegData{T,A,CD,AG}}
 const _SGV{T,A,CD,AG} = AbstractVector{SGS} where SGS <: _SGS{T,A,CD,AG}
 
 mutable struct SingleModeResult{T,A,CD,AG}
-    τ::T
-    area::A
-    cumdis::CD
-    area_mode::AG
+    val::SegData{T,A,CD,AG}
 
     const grad::Utils.JaggedMatrix{SegData{T,A,CD,AG}}
     function SingleModeResult{T,A,CD,AG}() where {T,A,CD,AG}
-        return new(zero(T), A(), _empty(CD), AG(),
+        return new(SegData(zero(T), A(), _empty(CD), AG()),
                    Utils.JaggedMatrix{SegData{T,A,CD,AG}}())
     end
 end
@@ -138,9 +135,18 @@ function compute_single_mode!(
     p_τ = zero(T)
     p_dis = complex(zero(T))
     p_area = zero(T)
-    p_cumdis = complex(zero(T))
-    p_real_disδ = complex(zero(T))
-    p_areaδ = zero(T)
+    if need_cumdis
+        p_cumdis = complex(zero(T))
+    else
+        p_cumdis = nothing
+    end
+    if need_area_mode
+        p_real_disδ = complex(zero(T))
+        p_areaδ = zero(T)
+    else
+        p_real_disδ = nothing
+        p_areaδ = nothing
+    end
     @inbounds for i in 1:nseg
         seg = segments[i]
         np_τ = p_τ
@@ -230,14 +236,7 @@ function compute_single_mode!(
         p_areaδ = np_areaδ
     end
 
-    result.τ = p_τ
-    result.area = A(p_dis, p_area)
-    if need_cumdis
-        result.cumdis = p_cumdis
-    end
-    if need_area_mode
-        result.area_mode = AG(p_real_disδ, p_areaδ)
-    end
+    result.val = SegData(p_τ, A(p_dis, p_area), p_cumdis, AG(p_real_disδ, p_areaδ))
     return
 end
 

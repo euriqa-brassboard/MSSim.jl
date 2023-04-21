@@ -465,16 +465,16 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
         area_scale = mode.area_scale
 
         if mode_idx == 1
-            result.τ = single_result.τ
+            result.τ = single_result.val.τ
         end
-        result.dis[mode_idx] = dis_scale * single_result.area.dis
-        result.area = muladd(area_scale, single_result.area.area, result.area)
+        result.dis[mode_idx] = dis_scale * single_result.val.area.dis
+        result.area = muladd(area_scale, single_result.val.area.area, result.area)
         if need_cumdis
-            result.cumdis[mode_idx] = dis_scale * single_result.cumdis
+            result.cumdis[mode_idx] = dis_scale * single_result.val.cumdis
         end
         if need_area_mode
-            result.disδ[mode_idx] = dis_scale * single_result.area_mode.disδ
-            result.areaδ[mode_idx] = area_scale * single_result.area_mode.areaδ
+            result.disδ[mode_idx] = dis_scale * single_result.val.area_mode.disδ
+            result.areaδ[mode_idx] = area_scale * single_result.val.area_mode.areaδ
         end
         if need_grad
             if mode_idx == 1
