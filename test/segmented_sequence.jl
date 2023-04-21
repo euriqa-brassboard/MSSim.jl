@@ -123,10 +123,8 @@ end
                 @test result′.val.cumdis ≈ 2 * d.cumdis + τ * d.dis
             end
             if need_area_mode
-                @test result′.val.disδ ≈
-                    2 * d.disδ + im * τ * d.dis
-                @test result′.val.areaδ ≈
-                    τ * abs2(d.dis) + 2 * d.areaδ
+                @test result′.val.disδ ≈ 2 * d.disδ + im * τ * d.dis
+                @test result′.val.areaδ ≈ τ * abs2(d.dis) + 2 * d.areaδ
             end
         end
 
