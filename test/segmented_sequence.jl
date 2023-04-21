@@ -398,16 +398,16 @@ end
 
         for i in 1:nseg
             for j in 1:5
-                @test(result.τ_grad[i][j] ≈ grads[j][i].τ, rtol=1e-8, atol=1e-8)
-                @test(result.area_grad[i][j].dis ≈ grads[j][i].area.dis,
+                @test(result.grad[i][j].τ ≈ grads[j][i].τ, rtol=1e-8, atol=1e-8)
+                @test(result.grad[i][j].area.dis ≈ grads[j][i].area.dis,
                       rtol=1e-8, atol=1e-8)
-                @test(result.area_grad[i][j].area ≈ grads[j][i].area.area,
+                @test(result.grad[i][j].area.area ≈ grads[j][i].area.area,
                       rtol=1e-5, atol=1e-5)
-                @test(result.cumdis_grad[i][j] ≈ grads[j][i].cumdis,
+                @test(result.grad[i][j].cumdis ≈ grads[j][i].cumdis,
                       rtol=1e-5, atol=1e-5)
-                @test(result.area_mode_grad[i][j].disδ ≈ grads[j][i].area_mode.disδ,
+                @test(result.grad[i][j].area_mode.disδ ≈ grads[j][i].area_mode.disδ,
                       rtol=1e-5, atol=1e-5)
-                @test(result.area_mode_grad[i][j].areaδ ≈ grads[j][i].area_mode.areaδ,
+                @test(result.grad[i][j].area_mode.areaδ ≈ grads[j][i].area_mode.areaδ,
                       rtol=1e-4, atol=1e-4)
             end
         end
