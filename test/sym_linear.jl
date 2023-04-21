@@ -185,8 +185,8 @@ end
             d, grad = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                                Val(need_area_mode),
                                                Val(need_grad))
-            @test d.area.dis ≈ v_dis atol=1e-10
-            @test d.area.area ≈ v_area atol=1e-10
+            @test d.dis ≈ v_dis atol=1e-10
+            @test d.area ≈ v_area atol=1e-10
             if need_cumdis
                 @test d.cumdis ≈ v_cumdis atol=1e-10
             end
@@ -197,16 +197,16 @@ end
             if need_grad
                 @test length(grad) == 5
 
-                @test grad[1].area.dis ≈ v_dis_grad[1] atol=1e-10
-                @test grad[2].area.dis ≈ v_dis_grad[2] atol=1e-10
-                @test grad[3].area.dis ≈ v_dis_grad[3] atol=1e-10
-                @test grad[4].area.dis ≈ v_dis_grad[4] atol=1e-10
-                @test grad[5].area.dis ≈ v_dis_grad[5] atol=1e-10
-                @test grad[1].area.area ≈ v_area_grad[1] atol=1e-10
-                @test grad[2].area.area ≈ v_area_grad[2] atol=1e-10
-                @test grad[3].area.area ≈ v_area_grad[3] atol=1e-10
-                @test grad[4].area.area ≈ v_area_grad[4] atol=1e-10
-                @test grad[5].area.area ≈ v_area_grad[5] atol=1e-10
+                @test grad[1].dis ≈ v_dis_grad[1] atol=1e-10
+                @test grad[2].dis ≈ v_dis_grad[2] atol=1e-10
+                @test grad[3].dis ≈ v_dis_grad[3] atol=1e-10
+                @test grad[4].dis ≈ v_dis_grad[4] atol=1e-10
+                @test grad[5].dis ≈ v_dis_grad[5] atol=1e-10
+                @test grad[1].area ≈ v_area_grad[1] atol=1e-10
+                @test grad[2].area ≈ v_area_grad[2] atol=1e-10
+                @test grad[3].area ≈ v_area_grad[3] atol=1e-10
+                @test grad[4].area ≈ v_area_grad[4] atol=1e-10
+                @test grad[5].area ≈ v_area_grad[5] atol=1e-10
 
                 if need_cumdis
                     @test grad[1].cumdis ≈ v_cumdis_grad[1] atol=1e-10

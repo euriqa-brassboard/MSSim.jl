@@ -14,13 +14,6 @@ _empty(::Type{T}) where T<:Number = zero(T)
 # Sequence segment representation
 is_dummy(::Type{T}) where T = T === Nothing
 
-struct AreaData{T}
-    dis::Complex{T}
-    area::T
-    AreaData{T}(dis, area) where T = new(dis, area)
-    AreaData{T}() where T = new(zero(T), zero(T))
-end
-
 struct AreaModeData{T,CT}
     disδ::CT
     areaδ::T
@@ -31,25 +24,26 @@ end
 const DummyAreaModeData = AreaModeData{Nothing,Nothing}
 is_dummy(::Type{DummyAreaModeData}) = true
 
-struct SegData{T,A,CD,AG}
+struct SegData{T,D,A,CD,AG}
     τ::T
+    dis::D
     area::A
     cumdis::CD
     area_mode::AG
 end
-is_area_mode_dummy(::Type{SegData{T,A,CD,AG}}) where {T,A,CD,AG} =
+is_area_mode_dummy(::Type{SegData{T,D,A,CD,AG}}) where {T,D,A,CD,AG} =
     is_dummy(AG)
 
-const _SGS{T,A,CD,AG} = AbstractVector{SegData{T,A,CD,AG}}
-const _SGV{T,A,CD,AG} = AbstractVector{SGS} where SGS <: _SGS{T,A,CD,AG}
+const _SGS{T,D,A,CD,AG} = AbstractVector{SegData{T,D,A,CD,AG}}
+const _SGV{T,D,A,CD,AG} = AbstractVector{SGS} where SGS <: _SGS{T,D,A,CD,AG}
 
-mutable struct SingleModeResult{T,A,CD,AG}
-    val::SegData{T,A,CD,AG}
+mutable struct SingleModeResult{T,D,A,CD,AG}
+    val::SegData{T,D,A,CD,AG}
 
-    const grad::Utils.JaggedMatrix{SegData{T,A,CD,AG}}
-    function SingleModeResult{T,A,CD,AG}() where {T,A,CD,AG}
-        return new(SegData(zero(T), A(), _empty(CD), AG()),
-                   Utils.JaggedMatrix{SegData{T,A,CD,AG}}())
+    const grad::Utils.JaggedMatrix{SegData{T,D,A,CD,AG}}
+    function SingleModeResult{T,D,A,CD,AG}() where {T,D,A,CD,AG}
+        return new(SegData(zero(T), _empty(D), _empty(A), _empty(CD), AG()),
+                   Utils.JaggedMatrix{SegData{T,D,A,CD,AG}}())
     end
 end
 
@@ -78,10 +72,10 @@ struct SeqComputeBuffer{T}
 end
 
 function compute_single_mode!(
-    result::SingleModeResult{T,A,CD,AG},
+    result::SingleModeResult{T,D,A,CD,AG},
     segments::AbstractVector{SD},
     buffer::SeqComputeBuffer{T},
-    seg_grads::Union{_SGV{T,A,CD,AG},Nothing}=nothing) where SD <: SegData{T,A,CD,AG} where {T,A,CD,AG}
+    seg_grads::Union{_SGV{T,D,A,CD,AG},Nothing}=nothing) where SD <: SegData{T,D,A,CD,AG} where {T,D,A,CD,AG}
 
     nseg = length(segments)
     need_cumdis = CD !== Nothing
@@ -101,7 +95,7 @@ function compute_single_mode!(
         p_τ = zero(T)
         for i in 1:nseg
             seg = segments[i]
-            buffer_disφ[i] = muladd(Utils.mulim(seg.area.dis), p_τ, seg.area_mode.disδ)
+            buffer_disφ[i] = muladd(Utils.mulim(seg.dis), p_τ, seg.area_mode.disδ)
             p_τ += seg.τ
         end
     end
@@ -120,7 +114,7 @@ function compute_single_mode!(
                 p_real_disδ += buffer_disφ[i]
             end
             p_τ += seg.τ
-            p_dis += seg.area.dis
+            p_dis += seg.dis
         end
     end
 
@@ -157,9 +151,9 @@ function compute_single_mode!(
         np_areaδ = p_areaδ
 
         np_τ += seg.τ
-        np_dis += seg.area.dis
-        np_area += muladd(real(p_dis), imag(seg.area.dis),
-                          muladd(-imag(p_dis), real(seg.area.dis), seg.area.area))
+        np_dis += seg.dis
+        np_area += muladd(real(p_dis), imag(seg.dis),
+                          muladd(-imag(p_dis), real(seg.dis), seg.area))
         if need_cumdis
             np_cumdis += muladd(p_dis, seg.τ, seg.cumdis)
         end
@@ -186,10 +180,10 @@ function compute_single_mode!(
 
                 τ_v = sg.τ
 
-                dis_v = sg.area.dis
+                dis_v = sg.dis
                 area_v = muladd(real(p_dis) - real(dis_b), imag(dis_v),
                                 muladd(imag(dis_b) - imag(p_dis), real(dis_v),
-                                       sg.area.area))
+                                       sg.area))
 
                 if need_cumdis
                     cumdis_v = muladd(τ_v, p_dis, muladd(τ_b, dis_v, sg.cumdis))
@@ -207,9 +201,9 @@ function compute_single_mode!(
                     # used for all other expressions.
                     areaδ_v =
                         muladd(
-                            imag(dis_b), muladd(τ_v, imag(seg.area.dis), real(disδ_v0)),
+                            imag(dis_b), muladd(τ_v, imag(seg.dis), real(disδ_v0)),
                             muladd(
-                                real(dis_b), muladd(τ_v, real(seg.area.dis),
+                                real(dis_b), muladd(τ_v, real(seg.dis),
                                                     -imag(disδ_v0)),
                                 muladd(
                                     -imag(p_dis), real(disδ_v),
@@ -224,7 +218,7 @@ function compute_single_mode!(
                     disδ_v = nothing
                     areaδ_v = nothing
                 end
-                r_grad[j] = SD(τ_v, A(dis_v, area_v), cumdis_v, AG(disδ_v, areaδ_v))
+                r_grad[j] = SD(τ_v, dis_v, area_v, cumdis_v, AG(disδ_v, areaδ_v))
             end
         end
 
@@ -236,7 +230,7 @@ function compute_single_mode!(
         p_areaδ = np_areaδ
     end
 
-    result.val = SegData(p_τ, A(p_dis, p_area), p_cumdis, AG(p_real_disδ, p_areaδ))
+    result.val = SegData(p_τ, p_dis, p_area, p_cumdis, AG(p_real_disδ, p_areaδ))
     return
 end
 

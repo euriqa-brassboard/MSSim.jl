@@ -267,9 +267,11 @@ end
 
     T = float(_T)
     CT = Complex{T}
-    A = SegSeq.AreaData{T}
+    D = CT
+    A = T
     CD = need_cumdis ? CT : Nothing
     AG = need_area_mode ? SegSeq.AreaModeData{T,CT} : SegSeq.DummyAreaModeData
+    SD = SegSeq.SegData{T,D,A,CD,AG}
 
     @inline begin
         d = δ * τ
@@ -283,8 +285,8 @@ end
                              cos_f1, sin_f1, cos_f2, sin_f2,
                              cos_f3_2, sin_f3, sin_f3_2, sin_f3_3, sin_f4, sin_f5)
 
-        area = A(Utils.mul(phase0, displacement_kernel(o, o′, d, s, c, V)),
-                 enclosed_area_kernel(o, o′, d, s, c, V))
+        dis = Utils.mul(phase0, displacement_kernel(o, o′, d, s, c, V))
+        area = enclosed_area_kernel(o, o′, d, s, c, V)
         if !need_cumdis
             cumdis = nothing
         else
@@ -298,7 +300,7 @@ end
                                                                        s, c, V)),
                            τ * enclosed_area_δ_kernel(o, o′, d, s, c, V))
         end
-        res = SegSeq.SegData{T,A,CD,AG}(τ, area, cumdis, area_mode)
+        res = SD(τ, dis, area, cumdis, area_mode)
         if !need_grad
             return res, nothing
         end
@@ -310,12 +312,10 @@ end
             areaδ = area_mode.areaδ
         end
         dis_τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
+        dis_grad = SA[Utils.mul(phase0, dis_τΩs[1]), Utils.mul(phase0, dis_τΩs[2]),
+                      Utils.mul(phase0, dis_τΩs[3]), Utils.mulim(dis), disδ]
         area_τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-        area_grad = SA[A(Utils.mul(phase0, dis_τΩs[1]), area_τΩs[1]),
-                       A(Utils.mul(phase0, dis_τΩs[2]), area_τΩs[2]),
-                       A(Utils.mul(phase0, dis_τΩs[3]), area_τΩs[3]),
-                       A(Utils.mulim(area.dis), zero(T)),
-                       A(disδ, areaδ)]
+        area_grad = SA[area_τΩs[1], area_τΩs[2], area_τΩs[3], zero(T), areaδ]
         if !need_cumdis
             cumdis_grad = SA[nothing, nothing, nothing, nothing, nothing]
         else
@@ -340,12 +340,11 @@ end
                                 AG(Utils.mulim(area_mode.disδ), zero(T)),
                                 AG(Utils.mul(phase0, disδ_τΩsδ[4]), areaδ_τΩsδ[4])]
         end
-        SD = SegSeq.SegData{T,A,CD,AG}
-        grads = SA[SD(1, area_grad[1], cumdis_grad[1], area_mode_grad[1]),
-                   SD(0, area_grad[2], cumdis_grad[2], area_mode_grad[2]),
-                   SD(0, area_grad[3], cumdis_grad[3], area_mode_grad[3]),
-                   SD(0, area_grad[4], cumdis_grad[4], area_mode_grad[4]),
-                   SD(0, area_grad[5], cumdis_grad[5], area_mode_grad[5])]
+        grads = SA[SD(1, dis_grad[1], area_grad[1], cumdis_grad[1], area_mode_grad[1]),
+                   SD(0, dis_grad[2], area_grad[2], cumdis_grad[2], area_mode_grad[2]),
+                   SD(0, dis_grad[3], area_grad[3], cumdis_grad[3], area_mode_grad[3]),
+                   SD(0, dis_grad[4], area_grad[4], cumdis_grad[4], area_mode_grad[4]),
+                   SD(0, dis_grad[5], area_grad[5], cumdis_grad[5], area_mode_grad[5])]
         return res, grads
     end
 end
@@ -373,15 +372,15 @@ struct Mode{T}
     area_scale::T
 end
 
-mutable struct System{T,A,CD,AG,MR,need_grad}
+mutable struct System{T,D,A,CD,AG,MR,need_grad}
     const pulses::Vector{Pulse{T}}
     const modes::Vector{Mode{T}}
 
     cur_mod::Int
-    const seg_buf::Vector{SegSeq.SegData{T,A,CD,AG}}
-    const seg_grad_buf::Utils.JaggedMatrix{SegSeq.SegData{T,A,CD,AG}}
+    const seg_buf::Vector{SegSeq.SegData{T,D,A,CD,AG}}
+    const seg_grad_buf::Utils.JaggedMatrix{SegSeq.SegData{T,D,A,CD,AG}}
     const buffer::SegSeq.SeqComputeBuffer{T}
-    const single_result::SegSeq.SingleModeResult{T,A,CD,AG}
+    const single_result::SegSeq.SingleModeResult{T,D,A,CD,AG}
     const result::MR
 
     function System{T}(modes::AbstractVector,
@@ -389,20 +388,21 @@ mutable struct System{T,A,CD,AG,MR,need_grad}
                        ::Val{need_grad}) where {T,need_cumdis,need_area_mode,need_grad}
 
         CT = Complex{T}
-        A = SegSeq.AreaData{T}
+        D = CT
+        A = T
         CD = need_cumdis ? CT : Nothing
         AG = need_area_mode ? SegSeq.AreaModeData{T,CT} : SegSeq.DummyAreaModeData
-        SD = SegSeq.SegData{T,A,CD,AG}
+        SD = SegSeq.SegData{T,D,A,CD,AG}
 
         pulses = Pulse{T}[]
         seg_buf = SD[]
         seg_grad_buf = Utils.JaggedMatrix{SD}()
         buffer = SegSeq.SeqComputeBuffer{T}()
-        single_result = SegSeq.SingleModeResult{T,A,CD,AG}()
+        single_result = SegSeq.SingleModeResult{T,D,A,CD,AG}()
         result = SegSeq.MultiModeResult{T}(Val(need_cumdis), Val(need_area_mode))
-        return new{T,A,CD,AG,typeof(result),need_grad}(pulses, modes, 0, seg_buf,
-                                                       seg_grad_buf, buffer,
-                                                       single_result, result)
+        return new{T,D,A,CD,AG,typeof(result),need_grad}(pulses, modes, 0, seg_buf,
+                                                         seg_grad_buf, buffer,
+                                                         single_result, result)
     end
     function System{T}(::Val{need_cumdis}, ::Val{need_area_mode},
                        ::Val{need_grad}) where {T,need_cumdis,need_area_mode,need_grad}
@@ -411,8 +411,8 @@ mutable struct System{T,A,CD,AG,MR,need_grad}
     end
 end
 
-@inline function _fill_seg_buf!(sys::System{T,A,CD,AG,MR,need_grad},
-                                mode_idx) where {T,A,CD,AG,MR,need_grad}
+@inline function _fill_seg_buf!(sys::System{T,D,A,CD,AG,MR,need_grad},
+                                mode_idx) where {T,D,A,CD,AG,MR,need_grad}
     need_cumdis = CD !== Nothing
     need_area_mode = !SegSeq.is_dummy(AG)
 
@@ -443,7 +443,7 @@ end
     end
 end
 
-function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_grad}
+function compute!(sys::System{T,D,A,CD,AG,MR,need_grad}) where {T,D,A,CD,AG,MR,need_grad}
     nmodes = length(sys.modes)
     nseg = length(sys.pulses)
     need_cumdis = CD !== Nothing
@@ -467,8 +467,8 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
         if mode_idx == 1
             result.τ = single_result.val.τ
         end
-        result.dis[mode_idx] = dis_scale * single_result.val.area.dis
-        result.area = muladd(area_scale, single_result.val.area.area, result.area)
+        result.dis[mode_idx] = dis_scale * single_result.val.dis
+        result.area = muladd(area_scale, single_result.val.area, result.area)
         if need_cumdis
             result.cumdis[mode_idx] = dis_scale * single_result.val.cumdis
         end
@@ -521,19 +521,19 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
                 # τ
                 res_dis_sgrad[1] = dis_scale * muladd(dis_dφ, δ,
                                                       muladd(dis_dΩ, pulse.Ω′,
-                                                             sgrad[1].area.dis))
+                                                             sgrad[1].dis))
                 # Ω
-                new_dis_dΩ = sgrad[2].area.dis + dis_dΩ
+                new_dis_dΩ = sgrad[2].dis + dis_dΩ
                 res_dis_sgrad[2] = dis_scale * new_dis_dΩ
                 # Ω′
                 res_dis_sgrad[3] = dis_scale * muladd(dis_dΩ, pulse.τ,
-                                                      sgrad[3].area.dis)
+                                                      sgrad[3].dis)
                 # φ
-                new_dis_dφ = sgrad[4].area.dis + dis_dφ
+                new_dis_dφ = sgrad[4].dis + dis_dφ
                 res_dis_sgrad[4] = dis_scale * new_dis_dφ
                 # ω
                 res_dis_sgrad[5] = dis_scale * muladd(dis_dφ, pulse.τ,
-                                                      sgrad[5].area.dis)
+                                                      sgrad[5].dis)
                 dis_dΩ = new_dis_dΩ
                 dis_dφ = new_dis_dφ
 
@@ -541,22 +541,22 @@ function compute!(sys::System{T,A,CD,AG,MR,need_grad}) where {T,A,CD,AG,MR,need_
                 # τ
                 res_area_sgrad[1] = muladd(muladd(area_dφ, δ,
                                                   muladd(area_dΩ, pulse.Ω′,
-                                                         sgrad[1].area.area)),
+                                                         sgrad[1].area)),
                                            area_scale, res_area_sgrad[1])
                 # Ω
-                new_area_dΩ = sgrad[2].area.area + area_dΩ
+                new_area_dΩ = sgrad[2].area + area_dΩ
                 res_area_sgrad[2] = muladd(area_scale, new_area_dΩ, res_area_sgrad[2])
                 # Ω′
                 res_area_sgrad[3] = muladd(muladd(area_dΩ, pulse.τ,
-                                                  sgrad[3].area.area),
+                                                  sgrad[3].area),
                                            area_scale, res_area_sgrad[3])
                 # φ
-                new_area_dφ = sgrad[4].area.area + area_dφ
+                new_area_dφ = sgrad[4].area + area_dφ
                 res_area_sgrad[4] = muladd(area_scale, new_area_dφ,
                                            res_area_sgrad[4])
                 # ω
                 res_area_sgrad[5] = muladd(muladd(area_dφ, pulse.τ,
-                                                  sgrad[5].area.area),
+                                                  sgrad[5].area),
                                            area_scale, res_area_sgrad[5])
                 area_dΩ = new_area_dΩ
                 area_dφ = new_area_dφ
