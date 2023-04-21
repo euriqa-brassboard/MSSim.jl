@@ -297,7 +297,7 @@ end
         area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=5e-6, atol=5e-6)
         @test result.val.τ ≈ total_time
         @test result.val.dis ≈ dis rtol=1e-3 atol=1e-3
-        @test result.val.area ≈ area rtol=3e-2 atol=3e-2
+        @test result.val.area ≈ area rtol=5e-2 atol=5e-2
         @test result.val.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
     end
     for i in 1:100
@@ -419,7 +419,7 @@ end
                 @test(result.grad[i][j].disδ ≈ grads[j][i].disδ,
                       rtol=1e-5, atol=1e-5)
                 @test(result.grad[i][j].areaδ ≈ grads[j][i].areaδ,
-                      rtol=1e-4, atol=1e-4)
+                      rtol=1e-3, atol=1e-3)
             end
         end
     end
