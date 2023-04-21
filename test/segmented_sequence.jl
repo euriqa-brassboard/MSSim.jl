@@ -26,10 +26,11 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
     D = CT
     A = T
     CD = CT
-    AG = SS.AreaModeData{T,CT}
+    DG = CT
+    AG = T
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T,D,A,CD,AG}()
+    result = SS.SingleModeResult{T,D,A,CD,DG,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
         d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
@@ -38,15 +39,16 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
         @test result.val.dis == d.dis
         @test result.val.area == d.area
         @test result.val.cumdis == d.cumdis
-        @test result.val.area_mode.disδ == d.area_mode.disδ
-        @test result.val.area_mode.areaδ == d.area_mode.areaδ
+        @test result.val.disδ == d.disδ
+        @test result.val.areaδ == d.areaδ
 
         for (need_cumdis, need_area_mode) in Iterators.product((false, true),
                                                                (false, true))
             CD′ = need_cumdis ? CD : Nothing
-            AG′ = need_area_mode ? AG : SS.DummyAreaModeData
+            DG′ = need_area_mode ? DG : Nothing
+            AG′ = need_area_mode ? AG : Nothing
 
-            result′ = SS.SingleModeResult{T,D,A,CD′,AG′}()
+            result′ = SS.SingleModeResult{T,D,A,CD′,DG′,AG′}()
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
             SS.compute_single_mode!(result′, [d′], buffer)
@@ -57,8 +59,8 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
                 @test result′.val.cumdis == d.cumdis
             end
             if need_area_mode
-                @test result′.val.area_mode.disδ == d.area_mode.disδ
-                @test result′.val.area_mode.areaδ == d.area_mode.areaδ
+                @test result′.val.disδ == d.disδ
+                @test result′.val.areaδ == d.areaδ
             end
         end
     end
@@ -70,10 +72,11 @@ end
     D = CT
     A = T
     CD = CT
-    AG = SS.AreaModeData{T,CT}
+    DG = CT
+    AG = T
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T,D,A,CD,AG}()
+    result = SS.SingleModeResult{T,D,A,CD,DG,AG}()
 
     for (τ, Ω, Ω′, φ, δ) in all_params
         d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(true), Val(true), Val(false))
@@ -83,32 +86,33 @@ end
         @test nd.dis ≈ -d.dis
         @test nd.area ≈ -d.area
         @test nd.cumdis ≈ d.cumdis - d.dis * τ
-        @test nd.area_mode.disδ ≈ d.area_mode.disδ - im * τ * d.dis
-        @test nd.area_mode.areaδ ≈ d.area_mode.areaδ
+        @test nd.disδ ≈ d.disδ - im * τ * d.dis
+        @test nd.areaδ ≈ d.areaδ
         SS.compute_single_mode!(result, [d, nd], buffer)
         @test result.val.τ ≈ 2 * τ
         @test result.val.dis ≈ 0 atol=1e-8
         @test result.val.area ≈ 0 atol=1e-8
         @test result.val.cumdis ≈ 2 * d.cumdis
-        @test result.val.area_mode.disδ ≈ 2 * d.area_mode.disδ - 2 * im * τ * d.dis
-        @test result.val.area_mode.areaδ ≈
-            (2 * imag(d.area_mode.disδ * conj(d.dis))
-             - 2 * τ * abs2(d.dis) + 2 * d.area_mode.areaδ)
+        @test result.val.disδ ≈ 2 * d.disδ - 2 * im * τ * d.dis
+        @test result.val.areaδ ≈
+            (2 * imag(d.disδ * conj(d.dis))
+             - 2 * τ * abs2(d.dis) + 2 * d.areaδ)
 
         SS.compute_single_mode!(result, [d, d], buffer)
         @test result.val.τ ≈ 2 * τ
         @test result.val.dis ≈ 2 * d.dis atol=1e-8
         @test result.val.area ≈ 2 * d.area atol=1e-8
         @test result.val.cumdis ≈ 2 * d.cumdis + τ * d.dis
-        @test result.val.area_mode.disδ ≈ 2 * d.area_mode.disδ + im * τ * d.dis
-        @test result.val.area_mode.areaδ ≈ τ * abs2(d.dis) + 2 * d.area_mode.areaδ
+        @test result.val.disδ ≈ 2 * d.disδ + im * τ * d.dis
+        @test result.val.areaδ ≈ τ * abs2(d.dis) + 2 * d.areaδ
 
         for (need_cumdis, need_area_mode) in Iterators.product((false, true),
                                                                (false, true))
             CD′ = need_cumdis ? CD : Nothing
-            AG′ = need_area_mode ? AG : SS.DummyAreaModeData
+            DG′ = need_area_mode ? DG : Nothing
+            AG′ = need_area_mode ? AG : Nothing
 
-            result′ = SS.SingleModeResult{T,D,A,CD′,AG′}()
+            result′ = SS.SingleModeResult{T,D,A,CD′,DG′,AG′}()
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                             Val(need_area_mode), Val(false))
             SS.compute_single_mode!(result′, [d′, d′], buffer)
@@ -119,10 +123,10 @@ end
                 @test result′.val.cumdis ≈ 2 * d.cumdis + τ * d.dis
             end
             if need_area_mode
-                @test result′.val.area_mode.disδ ≈
-                    2 * d.area_mode.disδ + im * τ * d.dis
-                @test result′.val.area_mode.areaδ ≈
-                    τ * abs2(d.dis) + 2 * d.area_mode.areaδ
+                @test result′.val.disδ ≈
+                    2 * d.disδ + im * τ * d.dis
+                @test result′.val.areaδ ≈
+                    τ * abs2(d.dis) + 2 * d.areaδ
             end
         end
 
@@ -134,40 +138,40 @@ end
             @test result.val.dis == d.dis
             @test result.val.area == d.area
             @test result.val.cumdis == d.cumdis
-            @test result.val.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.dis
-            @test result.val.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.disδ ≈ d.disδ + im * τ′ * d.dis
+            @test result.val.areaδ == d.areaδ
 
             SS.compute_single_mode!(result, [d, d0], buffer)
             @test result.val.τ ≈ τ + τ′
             @test result.val.dis == d.dis
             @test result.val.area == d.area
             @test result.val.cumdis ≈ d.cumdis + τ′ * d.dis
-            @test result.val.area_mode.disδ == d.area_mode.disδ
-            @test result.val.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.disδ == d.disδ
+            @test result.val.areaδ == d.areaδ
 
             SS.compute_single_mode!(result, [d0, d0, d], buffer)
             @test result.val.τ ≈ τ + τ′ * 2
             @test result.val.dis == d.dis
             @test result.val.area == d.area
             @test result.val.cumdis == d.cumdis
-            @test result.val.area_mode.disδ ≈ d.area_mode.disδ + 2 * im * τ′ * d.dis
-            @test result.val.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.disδ ≈ d.disδ + 2 * im * τ′ * d.dis
+            @test result.val.areaδ == d.areaδ
 
             SS.compute_single_mode!(result, [d0, d, d0], buffer)
             @test result.val.τ ≈ τ + τ′ * 2
             @test result.val.dis == d.dis
             @test result.val.area == d.area
             @test result.val.cumdis ≈ d.cumdis + τ′ * d.dis
-            @test result.val.area_mode.disδ ≈ d.area_mode.disδ + im * τ′ * d.dis
-            @test result.val.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.disδ ≈ d.disδ + im * τ′ * d.dis
+            @test result.val.areaδ == d.areaδ
 
             SS.compute_single_mode!(result, [d, d0, d0], buffer)
             @test result.val.τ ≈ τ + τ′ * 2
             @test result.val.dis == d.dis
             @test result.val.area == d.area
             @test result.val.cumdis ≈ d.cumdis + 2 * τ′ * d.dis
-            @test result.val.area_mode.disδ == d.area_mode.disδ
-            @test result.val.area_mode.areaδ == d.area_mode.areaδ
+            @test result.val.disδ == d.disδ
+            @test result.val.areaδ == d.areaδ
         end
     end
 end
@@ -178,10 +182,11 @@ end
     D = CT
     A = T
     CD = CT
-    AG = SS.AreaModeData{T,CT}
+    DG = CT
+    AG = T
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T,D,A,CD,AG}()
+    result = SS.SingleModeResult{T,D,A,CD,DG,AG}()
 
     p0 = 0
     p1 = 1 + 1im
@@ -209,9 +214,9 @@ end
         @test result.val.dis ≈ 0 atol=1e-10
         @test result.val.area ≈ -(Ω * τ)^2 * 4
         @test result.val.cumdis ≈ 0 atol=1e-10
-        @test result.val.area_mode.disδ ≈ 0 atol=1e-10
+        @test result.val.disδ ≈ 0 atol=1e-10
         if τ != 0 && Ω != 0
-            @test result.val.area_mode.areaδ != 0
+            @test result.val.areaδ != 0
         end
     end
 end
@@ -256,8 +261,9 @@ function get_seg_data(params::AbstractVector{SegParam{T}}) where T
     D = CT
     A = T
     CD = CT
-    AG = SS.AreaModeData{T,CT}
-    grads = U.JaggedMatrix{SS.SegData{T,D,A,CD,AG}}()
+    DG = CT
+    AG = T
+    grads = U.JaggedMatrix{SS.SegData{T,D,A,CD,DG,AG}}()
     function compute_values(param)
         res, grad = SL.SegInt.compute_values(param.τ, param.Ω, param.Ω′, param.φ,
                                              param.δ, Val(true), Val(true), Val(true))
@@ -273,10 +279,11 @@ end
     D = CT
     A = T
     CD = CT
-    AG = SS.AreaModeData{T,CT}
+    DG = CT
+    AG = T
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T,D,A,CD,AG}()
+    result = SS.SingleModeResult{T,D,A,CD,DG,AG}()
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
@@ -343,10 +350,11 @@ end
     D = CT
     A = T
     CD = CT
-    AG = SS.AreaModeData{T,CT}
+    DG = CT
+    AG = T
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T,D,A,CD,AG}()
+    result = SS.SingleModeResult{T,D,A,CD,DG,AG}()
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
@@ -358,7 +366,7 @@ end
         return
     end
 
-    result′ = SS.SingleModeResult{T,D,A,CD,AG}()
+    result′ = SS.SingleModeResult{T,D,A,CD,DG,AG}()
     function eval_grad(param_cb, nh)
         function eval_wrapper(params)
             eval_params(result′, params, false)
@@ -371,8 +379,8 @@ end
                           compute_grad((x->x.dis).(results)..., h),
                           compute_grad((x->x.area).(results)..., h),
                           compute_grad((x->x.cumdis).(results)..., h),
-                          AG(compute_grad((x->x.area_mode.disδ).(results)..., h),
-                             compute_grad((x->x.area_mode.areaδ).(results)..., h)))
+                          compute_grad((x->x.disδ).(results)..., h),
+                          compute_grad((x->x.areaδ).(results)..., h))
     end
 
     function test_nseg(nseg)
@@ -398,8 +406,8 @@ end
                  [eval_grad(add_single_offset_callback(params, i, :δ), nhδ)
                   for i in 1:nseg]]
 
-        @test result.val.area_mode.disδ ≈ grad_δ.dis rtol=1e-8 atol=1e-8
-        @test result.val.area_mode.areaδ ≈ grad_δ.area rtol=1e-8 atol=1e-8
+        @test result.val.disδ ≈ grad_δ.dis rtol=1e-8 atol=1e-8
+        @test result.val.areaδ ≈ grad_δ.area rtol=1e-8 atol=1e-8
 
         for i in 1:nseg
             for j in 1:5
@@ -410,9 +418,9 @@ end
                       rtol=1e-5, atol=1e-5)
                 @test(result.grad[i][j].cumdis ≈ grads[j][i].cumdis,
                       rtol=1e-5, atol=1e-5)
-                @test(result.grad[i][j].area_mode.disδ ≈ grads[j][i].area_mode.disδ,
+                @test(result.grad[i][j].disδ ≈ grads[j][i].disδ,
                       rtol=1e-5, atol=1e-5)
-                @test(result.grad[i][j].area_mode.areaδ ≈ grads[j][i].area_mode.areaδ,
+                @test(result.grad[i][j].areaδ ≈ grads[j][i].areaδ,
                       rtol=1e-4, atol=1e-4)
             end
         end

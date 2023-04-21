@@ -191,8 +191,8 @@ end
                 @test d.cumdis ≈ v_cumdis atol=1e-10
             end
             if need_area_mode
-                @test d.area_mode.disδ ≈ v_disδ atol=1e-10
-                @test d.area_mode.areaδ ≈ v_areaδ atol=1e-10
+                @test d.disδ ≈ v_disδ atol=1e-10
+                @test d.areaδ ≈ v_areaδ atol=1e-10
             end
             if need_grad
                 @test length(grad) == 5
@@ -217,16 +217,16 @@ end
                 end
 
                 if need_area_mode
-                    @test grad[1].area_mode.disδ ≈ v_disδ_grad[1] atol=1e-10
-                    @test grad[2].area_mode.disδ ≈ v_disδ_grad[2] atol=1e-10
-                    @test grad[3].area_mode.disδ ≈ v_disδ_grad[3] atol=1e-10
-                    @test grad[4].area_mode.disδ ≈ v_disδ_grad[4] atol=1e-10
-                    @test grad[5].area_mode.disδ ≈ v_disδ_grad[5] atol=1e-10
-                    @test grad[1].area_mode.areaδ ≈ v_areaδ_grad[1] atol=1e-10
-                    @test grad[2].area_mode.areaδ ≈ v_areaδ_grad[2] atol=1e-10
-                    @test grad[3].area_mode.areaδ ≈ v_areaδ_grad[3] atol=1e-10
-                    @test grad[4].area_mode.areaδ ≈ v_areaδ_grad[4] atol=1e-10
-                    @test grad[5].area_mode.areaδ ≈ v_areaδ_grad[5] atol=1e-10
+                    @test grad[1].disδ ≈ v_disδ_grad[1] atol=1e-10
+                    @test grad[2].disδ ≈ v_disδ_grad[2] atol=1e-10
+                    @test grad[3].disδ ≈ v_disδ_grad[3] atol=1e-10
+                    @test grad[4].disδ ≈ v_disδ_grad[4] atol=1e-10
+                    @test grad[5].disδ ≈ v_disδ_grad[5] atol=1e-10
+                    @test grad[1].areaδ ≈ v_areaδ_grad[1] atol=1e-10
+                    @test grad[2].areaδ ≈ v_areaδ_grad[2] atol=1e-10
+                    @test grad[3].areaδ ≈ v_areaδ_grad[3] atol=1e-10
+                    @test grad[4].areaδ ≈ v_areaδ_grad[4] atol=1e-10
+                    @test grad[5].areaδ ≈ v_areaδ_grad[5] atol=1e-10
                 end
             else
                 @test grad === nothing
