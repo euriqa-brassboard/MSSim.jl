@@ -82,12 +82,28 @@ function update!(opt::OptContext{T}, ωs) where T
 end
 
 function objective_function(opt::OptContext, ωs...)
-    update!(opt, ωs)
+    try
+        update!(opt, ωs)
+    catch
+        for (exc, bt) in current_exceptions()
+            showerror(stdout, exc, bt)
+            println(stdout)
+        end
+        rethrow()
+    end
     return opt.res.obj
 end
 
 function gradient_function(g, opt::OptContext, ωs...)
-    update!(opt, ωs)
+    try
+        update!(opt, ωs)
+    catch
+        for (exc, bt) in current_exceptions()
+            showerror(stdout, exc, bt)
+            println(stdout)
+        end
+        rethrow()
+    end
     g .= opt.res.grad
     return
 end
