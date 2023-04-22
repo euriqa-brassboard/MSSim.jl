@@ -95,14 +95,14 @@ function compute_single_mode!(
             seg = segments[i]
             if need_grads && need_cumdis
                 buffer_τ_backward[i] = p_τ
+                p_τ += seg.τ
             end
             buffer_dis_backward[i] = p_dis
+            p_dis += seg.dis
             if need_grads && need_area_mode
                 buffer_disφ_backward[i] = p_real_disδ
                 p_real_disδ += buffer_disφ[i]
             end
-            p_τ += seg.τ
-            p_dis += seg.dis
         end
     end
 
@@ -117,18 +117,9 @@ function compute_single_mode!(
     p_τ = zero(T)
     p_dis = complex(zero(T))
     p_area = zero(T)
-    if need_cumdis
-        p_cumdis = complex(zero(T))
-    else
-        p_cumdis = nothing
-    end
-    if need_area_mode
-        p_real_disδ = complex(zero(T))
-        p_areaδ = zero(T)
-    else
-        p_real_disδ = nothing
-        p_areaδ = nothing
-    end
+    p_cumdis = need_cumdis ? complex(zero(T)) : nothing
+    p_real_disδ = need_area_mode ? complex(zero(T)) : nothing
+    p_areaδ = need_area_mode ? zero(T) : nothing
     @inbounds for i in 1:nseg
         seg = segments[i]
         np_τ = p_τ
