@@ -63,7 +63,8 @@ function compute_single_mode!(
     result::SingleModeResult{T,D,A,CD,DG,AG},
     segments::AbstractVector{SD},
     buffer::SeqComputeBuffer{T},
-    seg_grads::Union{_SGV{T,D,A,CD,DG,AG},Nothing}=nothing) where SD <: SegData{T,D,A,CD,DG,AG} where {T,D,A,CD,DG,AG}
+    seg_grads::Union{_SGV{T,D,A,CD,DG,AG},Nothing}=nothing,
+    ::Val{has_τ_grad}=Val(true)) where SD <: SegData{T,D,A,CD,DG,AG} where {T,D,A,CD,DG,AG,has_τ_grad}
 
     nseg = length(segments)
     need_cumdis = CD !== Nothing
@@ -157,7 +158,7 @@ function compute_single_mode!(
             for j in 1:nvar
                 sg = seg_grad[j]
 
-                τ_v = sg.τ
+                τ_v = has_τ_grad ? sg.τ : Utils.Zero()
 
                 dis_v = sg.dis
                 area_v = muladd(real(p_dis) - real(dis_b), imag(dis_v),
@@ -197,7 +198,8 @@ function compute_single_mode!(
                     disδ_v = nothing
                     areaδ_v = nothing
                 end
-                r_grad[j] = SD(τ_v, dis_v, area_v, cumdis_v, disδ_v, areaδ_v)
+                r_grad[j] = SD(has_τ_grad ? τ_v : zero(T),
+                               dis_v, area_v, cumdis_v, disδ_v, areaδ_v)
             end
         end
 
