@@ -436,9 +436,15 @@ end
         Ω += pulse.dΩ
         φ += pulse.dφ
         δ = pulse.ω - mode.ω
-        seg, grad = SegInt.compute_values(pulse.τ, Ω, pulse.Ω′, φ, δ,
-                                          Val(need_cumdis), Val(need_area_mode),
-                                          Val(need_grad))
+        if pulse.Ω′ == 0
+            seg, grad = SegInt.compute_values(pulse.τ, Ω, Utils.Zero(), φ, δ,
+                                              Val(need_cumdis), Val(need_area_mode),
+                                              Val(need_grad))
+        else
+            seg, grad = SegInt.compute_values(pulse.τ, Ω, pulse.Ω′, φ, δ,
+                                              Val(need_cumdis), Val(need_area_mode),
+                                              Val(need_grad))
+        end
         seg_buf[i] = seg
         if need_grad
             push!(seg_grad_buf, grad)
