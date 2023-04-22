@@ -88,6 +88,38 @@ end
                    muladd(real(x), imag(y), imag(x) * real(y)))
 end
 
+struct Zero
+end
+
+@inline Base.:+(::Zero) = Zero()
+@inline Base.:+(x, ::Zero) = x
+@inline Base.:+(::Zero, x) = x
+@inline Base.:+(::Zero, ::Zero) = Zero()
+
+@inline Base.:-(::Zero) = Zero()
+@inline Base.:-(x, ::Zero) = x
+@inline Base.:-(::Zero, x) = -x
+@inline Base.:-(::Zero, ::Zero) = Zero()
+
+@inline Base.:*(x, ::Zero) = Zero()
+@inline Base.:*(::Zero, x) = Zero()
+@inline Base.:*(::Zero, ::Zero) = Zero()
+
+@inline Base.:/(x, ::Zero) = x / 0
+@inline Base.:/(::Zero, x) = Zero()
+@inline Base.:/(::Zero, ::Zero) = 0 / 0
+
+@inline Base.:^(::Zero, x) = Zero()
+@inline Base.:^(x, ::Zero) = one(x)
+
+@inline Base.muladd(::Zero, ::Zero, ::Zero) = Zero()
+@inline Base.muladd(x, ::Zero, ::Zero) = Zero()
+@inline Base.muladd(::Zero, y, ::Zero) = Zero()
+@inline Base.muladd(x, y, ::Zero) = x * y
+@inline Base.muladd(::Zero, ::Zero, z) = z
+@inline Base.muladd(x, ::Zero, z) = z
+@inline Base.muladd(::Zero, y, z) = z
+
 # Copied from base julia, used for taylor expansion threshold
 # (though we basically never call these with complex number anyway...)
 @inline fastabs(x::Number) = abs(x)
