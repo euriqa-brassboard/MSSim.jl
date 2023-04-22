@@ -491,7 +491,9 @@ function compute!(sys::System{T,D,A,CD,DG,AG,MR,need_grad}) where {T,D,A,CD,DG,A
 
         if mode_idx == 1
             resize!(result.τ_grad, single_result.grad)
-            result.τ_grad.values .= getfield.(single_result.grad.values, :τ)
+            for i in 1:length(result.τ_grad.values)
+                result.τ_grad.values[i] = single_result.grad.values[i].τ
+            end
 
             resize!(result.area_grad, single_result.grad)
             result.area_grad.values .= 0
