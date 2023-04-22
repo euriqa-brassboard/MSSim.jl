@@ -16,5 +16,6 @@ for (cumdis, area_mode, grad) in Iterators.product((false, true), (false, true),
         push!(sys.pulses, MSSim.SymLinear.Pulse{Float64}(10, 2, 3.4, 0, 5.0 * i))
     end
 
-    display(@benchmark MSSim.SymLinear.compute!($(sys)))
+    # display(@benchmark MSSim.SymLinear.compute!($(sys)))
+    @btime MSSim.SymLinear.compute!($(sys))
 end
