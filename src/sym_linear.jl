@@ -420,6 +420,25 @@ mutable struct System{T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T},MR,pmask}
     end
 end
 
+@inline function pindex_input(pmask::ParamGradMask)
+    ngrad_in = 0
+    idxs = (τ=pmask.τ ? (ngrad_in = ngrad_in + 1) : nothing,
+            Ω=(pmask.dΩ || pmask.Ω′) ? (ngrad_in = ngrad_in + 1) : nothing,
+            Ω′=pmask.Ω′ ? (ngrad_in = ngrad_in + 1) : nothing,
+            φ=(pmask.dφ || pmask.ω) ? (ngrad_in = ngrad_in + 1) : nothing,
+            δ=pmask.ω ? (ngrad_in = ngrad_in + 1) : nothing)
+    return idxs, ngrad_in
+end
+@inline function pindex_output(pmask::ParamGradMask)
+    ngrad_out = 0
+    idxs = (τ=pmask.τ ? (ngrad_out = ngrad_out + 1) : nothing,
+            Ω=pmask.dΩ ? (ngrad_out = ngrad_out + 1) : nothing,
+            Ω′=pmask.Ω′ ? (ngrad_out = ngrad_out + 1) : nothing,
+            φ=pmask.dφ ? (ngrad_out = ngrad_out + 1) : nothing,
+            δ=pmask.ω ? (ngrad_out = ngrad_out + 1) : nothing)
+    return idxs, ngrad_out
+end
+
 @inline function _fill_seg_buf!(sys::System{T,SDV,SDG,MR,pmask},
                                 mode_idx) where {T,SDV,SDG,MR,pmask}
 
@@ -449,12 +468,12 @@ end
         seg_buf[i] = seg
         if maskg != zero(SegSeq.ValueMask)
             grad_buf = seg_grad_buf[i]
-            j = 0
-            pmask.τ && (grad_buf[(j = j + 1;)] = grad[1])
-            (pmask.dΩ || pmask.Ω′) && (grad_buf[(j = j + 1;)] = grad[2])
-            pmask.Ω′ && (grad_buf[(j = j + 1;)] = grad[3])
-            (pmask.dφ || pmask.ω) && (grad_buf[(j = j + 1;)] = grad[4])
-            pmask.ω && (grad_buf[(j = j + 1;)] = grad[5])
+            gi, = pindex_input(pmask)
+            pmask.τ && (grad_buf[gi.τ] = grad[1])
+            (pmask.dΩ || pmask.Ω′) && (grad_buf[gi.Ω] = grad[2])
+            pmask.Ω′ && (grad_buf[gi.Ω′] = grad[3])
+            (pmask.dφ || pmask.ω) && (grad_buf[gi.φ] = grad[4])
+            pmask.ω && (grad_buf[gi.δ] = grad[5])
         end
         φ = muladd(pulse.τ, δ, φ)
         Ω = muladd(pulse.τ, pulse.Ω′, Ω)
@@ -479,19 +498,8 @@ function compute!(sys::System{T,SDV,SDG,MR,pmask}) where {T,SDV,SDG,MR,pmask}
     maskg = SegSeq.value_mask(SDG)
     need_grad = maskg !== zero(SegSeq.ValueMask)
 
-    ngrad_in = 0
-    τ_gi = pmask.τ ? (ngrad_in = ngrad_in + 1) : nothing
-    Ω_gi = (pmask.dΩ || pmask.Ω′) ? (ngrad_in = ngrad_in + 1) : nothing
-    Ω′_gi = pmask.Ω′ ? (ngrad_in = ngrad_in + 1) : nothing
-    φ_gi = (pmask.dφ || pmask.ω) ? (ngrad_in = ngrad_in + 1) : nothing
-    δ_gi = pmask.ω ? (ngrad_in = ngrad_in + 1) : nothing
-
-    ngrad_out = 0
-    τ_go = pmask.τ ? (ngrad_out = ngrad_out + 1) : nothing
-    Ω_go = pmask.dΩ ? (ngrad_out = ngrad_out + 1) : nothing
-    Ω′_go = pmask.Ω′ ? (ngrad_out = ngrad_out + 1) : nothing
-    φ_go = pmask.dφ ? (ngrad_out = ngrad_out + 1) : nothing
-    δ_go = pmask.ω ? (ngrad_out = ngrad_out + 1) : nothing
+    gi, ngrad_in = pindex_input(pmask)
+    go, ngrad_out = pindex_output(pmask)
 
     pulses = sys.pulses
     nmodes = length(sys.modes)
@@ -592,35 +600,35 @@ function compute!(sys::System{T,SDV,SDG,MR,pmask}) where {T,SDV,SDG,MR,pmask}
                 res_dis_sgrad = dis_grad[seg_idx]
                 # τ
                 if pmask.τ
-                    res_dis_sgrad[τ_go] = dis_scale * muladd(dis_dφ, δ,
+                    res_dis_sgrad[go.τ] = dis_scale * muladd(dis_dφ, δ,
                                                               muladd(dis_dΩ, pulse.Ω′,
-                                                                     sgrad[τ_gi].dis))
+                                                                     sgrad[gi.τ].dis))
                 end
                 # Ω
                 if pmask.dΩ || pmask.Ω′
                     old_dis_dΩ = dis_dΩ
-                    dis_dΩ = sgrad[Ω_gi].dis + dis_dΩ
+                    dis_dΩ = sgrad[gi.Ω].dis + dis_dΩ
                 end
                 if pmask.dΩ
-                    res_dis_sgrad[Ω_go] = dis_scale * dis_dΩ
+                    res_dis_sgrad[go.Ω] = dis_scale * dis_dΩ
                 end
                 # Ω′
                 if pmask.Ω′
-                    res_dis_sgrad[Ω′_go] = dis_scale * muladd(old_dis_dΩ, pulse.τ,
-                                                                sgrad[Ω′_gi].dis)
+                    res_dis_sgrad[go.Ω′] = dis_scale * muladd(old_dis_dΩ, pulse.τ,
+                                                                sgrad[gi.Ω′].dis)
                 end
                 # φ
                 if pmask.dφ || pmask.ω
                     old_dis_dφ = dis_dφ
-                    dis_dφ = sgrad[φ_gi].dis + dis_dφ
+                    dis_dφ = sgrad[gi.φ].dis + dis_dφ
                 end
                 if pmask.dφ
-                    res_dis_sgrad[φ_go] = dis_scale * dis_dφ
+                    res_dis_sgrad[go.φ] = dis_scale * dis_dφ
                 end
                 # ω
                 if pmask.ω
-                    res_dis_sgrad[δ_go] = dis_scale * muladd(old_dis_dφ, pulse.τ,
-                                                              sgrad[δ_gi].dis)
+                    res_dis_sgrad[go.δ] = dis_scale * muladd(old_dis_dφ, pulse.τ,
+                                                              sgrad[gi.δ].dis)
                 end
             end
 
@@ -629,41 +637,41 @@ function compute!(sys::System{T,SDV,SDG,MR,pmask}) where {T,SDV,SDG,MR,pmask}
                 res_area_sgrad = result.area_grad[seg_idx]
                 # τ
                 if pmask.τ
-                    res_area_sgrad[τ_go] = muladd(muladd(area_dφ, δ,
+                    res_area_sgrad[go.τ] = muladd(muladd(area_dφ, δ,
                                                           muladd(area_dΩ, pulse.Ω′,
-                                                                 sgrad[τ_gi].area)),
-                                                   area_scale, res_area_sgrad[τ_go])
+                                                                 sgrad[gi.τ].area)),
+                                                   area_scale, res_area_sgrad[go.τ])
                 end
                 # Ω
                 if pmask.dΩ || pmask.Ω′
                     old_area_dΩ = area_dΩ
-                    area_dΩ = sgrad[Ω_gi].area + area_dΩ
+                    area_dΩ = sgrad[gi.Ω].area + area_dΩ
                 end
                 if pmask.dΩ
-                    res_area_sgrad[Ω_go] = muladd(area_scale, area_dΩ,
-                                                   res_area_sgrad[Ω_go])
+                    res_area_sgrad[go.Ω] = muladd(area_scale, area_dΩ,
+                                                   res_area_sgrad[go.Ω])
                 end
                 # Ω′
                 if pmask.Ω′
-                    res_area_sgrad[Ω′_go] = muladd(muladd(old_area_dΩ, pulse.τ,
-                                                            sgrad[Ω′_gi].area),
+                    res_area_sgrad[go.Ω′] = muladd(muladd(old_area_dΩ, pulse.τ,
+                                                            sgrad[gi.Ω′].area),
                                                      area_scale,
-                                                     res_area_sgrad[Ω′_go])
+                                                     res_area_sgrad[go.Ω′])
                 end
                 # φ
                 if pmask.dφ || pmask.ω
                     old_area_dφ = area_dφ
-                    area_dφ = sgrad[φ_gi].area + area_dφ
+                    area_dφ = sgrad[gi.φ].area + area_dφ
                 end
                 if pmask.dφ
-                    res_area_sgrad[φ_go] = muladd(area_scale, area_dφ,
-                                                   res_area_sgrad[φ_go])
+                    res_area_sgrad[go.φ] = muladd(area_scale, area_dφ,
+                                                   res_area_sgrad[go.φ])
                 end
                 # ω
                 if pmask.ω
-                    res_area_sgrad[δ_go] = muladd(muladd(old_area_dφ, pulse.τ,
-                                                          sgrad[δ_gi].area),
-                                                   area_scale, res_area_sgrad[δ_go])
+                    res_area_sgrad[go.δ] = muladd(muladd(old_area_dφ, pulse.τ,
+                                                          sgrad[gi.δ].area),
+                                                   area_scale, res_area_sgrad[go.δ])
                 end
             end
 
@@ -671,36 +679,36 @@ function compute!(sys::System{T,SDV,SDG,MR,pmask}) where {T,SDV,SDG,MR,pmask}
                 res_cumdis_sgrad = cumdis_grad[seg_idx]
                 # τ
                 if pmask.τ
-                    res_cumdis_sgrad[τ_go] = dis_scale * muladd(
+                    res_cumdis_sgrad[go.τ] = dis_scale * muladd(
                         cumdis_dφ, δ,
-                        muladd(cumdis_dΩ, pulse.Ω′, sgrad[τ_gi].cumdis))
+                        muladd(cumdis_dΩ, pulse.Ω′, sgrad[gi.τ].cumdis))
                 end
                 # Ω
                 if pmask.dΩ || pmask.Ω′
                     old_cumdis_dΩ = cumdis_dΩ
-                    cumdis_dΩ = sgrad[Ω_gi].cumdis + cumdis_dΩ
+                    cumdis_dΩ = sgrad[gi.Ω].cumdis + cumdis_dΩ
                 end
                 if pmask.dΩ
-                    res_cumdis_sgrad[Ω_go] = dis_scale * cumdis_dΩ
+                    res_cumdis_sgrad[go.Ω] = dis_scale * cumdis_dΩ
                 end
                 # Ω′
                 if pmask.Ω′
-                    res_cumdis_sgrad[Ω′_go] =
+                    res_cumdis_sgrad[go.Ω′] =
                         dis_scale * muladd(old_cumdis_dΩ, pulse.τ,
-                                           sgrad[Ω′_gi].cumdis)
+                                           sgrad[gi.Ω′].cumdis)
                 end
                 # φ
                 if pmask.dφ || pmask.ω
                     old_cumdis_dφ = cumdis_dφ
-                    cumdis_dφ = sgrad[φ_gi].cumdis + cumdis_dφ
+                    cumdis_dφ = sgrad[gi.φ].cumdis + cumdis_dφ
                 end
                 if pmask.dφ
-                    res_cumdis_sgrad[φ_go] = dis_scale * cumdis_dφ
+                    res_cumdis_sgrad[go.φ] = dis_scale * cumdis_dφ
                 end
                 # ω
                 if pmask.ω
-                    res_cumdis_sgrad[δ_go] = dis_scale * muladd(old_cumdis_dφ, pulse.τ,
-                                                                 sgrad[δ_gi].cumdis)
+                    res_cumdis_sgrad[go.δ] = dis_scale * muladd(old_cumdis_dφ, pulse.τ,
+                                                                 sgrad[gi.δ].cumdis)
                 end
             end
 
@@ -709,34 +717,34 @@ function compute!(sys::System{T,SDV,SDG,MR,pmask}) where {T,SDV,SDG,MR,pmask}
                 res_disδ_sgrad = disδ_grad[seg_idx]
                 # τ
                 if pmask.τ
-                    res_disδ_sgrad[τ_go] = dis_scale * muladd(
-                        disδ_dφ, δ, muladd(disδ_dΩ, pulse.Ω′, sgrad[τ_gi].disδ))
+                    res_disδ_sgrad[go.τ] = dis_scale * muladd(
+                        disδ_dφ, δ, muladd(disδ_dΩ, pulse.Ω′, sgrad[gi.τ].disδ))
                 end
                 # Ω
                 if pmask.dΩ || pmask.Ω′
                     old_disδ_dΩ = disδ_dΩ
-                    disδ_dΩ = sgrad[Ω_gi].disδ + disδ_dΩ
+                    disδ_dΩ = sgrad[gi.Ω].disδ + disδ_dΩ
                 end
                 if pmask.dΩ
-                    res_disδ_sgrad[Ω_go] = dis_scale * disδ_dΩ
+                    res_disδ_sgrad[go.Ω] = dis_scale * disδ_dΩ
                 end
                 # Ω′
                 if pmask.Ω′
-                    res_disδ_sgrad[Ω′_go] = dis_scale * muladd(old_disδ_dΩ, pulse.τ,
-                                                                  sgrad[Ω′_gi].disδ)
+                    res_disδ_sgrad[go.Ω′] = dis_scale * muladd(old_disδ_dΩ, pulse.τ,
+                                                                  sgrad[gi.Ω′].disδ)
                 end
                 # φ
                 if pmask.dφ || pmask.ω
                     old_disδ_dφ = disδ_dφ
-                    disδ_dφ = sgrad[φ_gi].disδ + disδ_dφ
+                    disδ_dφ = sgrad[gi.φ].disδ + disδ_dφ
                 end
                 if pmask.dφ
-                    res_disδ_sgrad[φ_go] = dis_scale * disδ_dφ
+                    res_disδ_sgrad[go.φ] = dis_scale * disδ_dφ
                 end
                 # ω
                 if pmask.ω
-                    res_disδ_sgrad[δ_go] = dis_scale * muladd(old_disδ_dφ, pulse.τ,
-                                                                sgrad[δ_gi].disδ)
+                    res_disδ_sgrad[go.δ] = dis_scale * muladd(old_disδ_dφ, pulse.τ,
+                                                                sgrad[gi.δ].disδ)
                 end
             end
 
@@ -745,35 +753,35 @@ function compute!(sys::System{T,SDV,SDG,MR,pmask}) where {T,SDV,SDG,MR,pmask}
                 res_areaδ_sgrad = areaδ_grad[seg_idx]
                 # τ
                 if pmask.τ
-                    res_areaδ_sgrad[τ_go] = area_scale * muladd(
+                    res_areaδ_sgrad[go.τ] = area_scale * muladd(
                         areaδ_dφ, δ,
-                        muladd(areaδ_dΩ, pulse.Ω′, sgrad[τ_gi].areaδ))
+                        muladd(areaδ_dΩ, pulse.Ω′, sgrad[gi.τ].areaδ))
                 end
                 # Ω
                 if pmask.dΩ || pmask.Ω′
                     old_areaδ_dΩ = areaδ_dΩ
-                    areaδ_dΩ = sgrad[Ω_gi].areaδ + areaδ_dΩ
+                    areaδ_dΩ = sgrad[gi.Ω].areaδ + areaδ_dΩ
                 end
                 if pmask.dΩ
-                    res_areaδ_sgrad[Ω_go] = area_scale * areaδ_dΩ
+                    res_areaδ_sgrad[go.Ω] = area_scale * areaδ_dΩ
                 end
                 # Ω′
                 if pmask.Ω′
-                    res_areaδ_sgrad[Ω′_go] = area_scale * muladd(old_areaδ_dΩ, pulse.τ,
-                                                                    sgrad[Ω′_gi].areaδ)
+                    res_areaδ_sgrad[go.Ω′] = area_scale * muladd(old_areaδ_dΩ, pulse.τ,
+                                                                    sgrad[gi.Ω′].areaδ)
                 end
                 # φ
                 if pmask.dφ || pmask.ω
                     old_areaδ_dφ = areaδ_dφ
-                    areaδ_dφ = sgrad[φ_gi].areaδ + areaδ_dφ
+                    areaδ_dφ = sgrad[gi.φ].areaδ + areaδ_dφ
                 end
                 if pmask.dφ
-                    res_areaδ_sgrad[φ_go] = area_scale * areaδ_dφ
+                    res_areaδ_sgrad[go.φ] = area_scale * areaδ_dφ
                 end
                 # ω
                 if pmask.ω
-                    res_areaδ_sgrad[δ_go] = area_scale * muladd(old_areaδ_dφ, pulse.τ,
-                                                                  sgrad[δ_gi].areaδ)
+                    res_areaδ_sgrad[go.δ] = area_scale * muladd(old_areaδ_dφ, pulse.τ,
+                                                                  sgrad[gi.δ].areaδ)
                 end
             end
         end
