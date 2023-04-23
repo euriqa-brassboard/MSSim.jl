@@ -422,8 +422,6 @@ end
     need_area_mode = DG !== Nothing
 
     nseg = length(sys.pulses)
-    resize!(sys.seg_buf, nseg)
-    empty!(sys.seg_grad_buf)
 
     @inbounds mode = sys.modes[mode_idx]
     φ = zero(T)
@@ -447,7 +445,7 @@ end
         end
         seg_buf[i] = seg
         if need_grad
-            push!(seg_grad_buf, grad)
+            seg_grad_buf[i] .= grad
         end
         φ = muladd(pulse.τ, δ, φ)
         Ω = muladd(pulse.τ, pulse.Ω′, Ω)
@@ -455,8 +453,10 @@ end
 end
 
 function compute!(sys::System{T,D,A,CD,DG,AG,MR,need_grad}) where {T,D,A,CD,DG,AG,MR,need_grad}
+
+    pulses = sys.pulses
     nmodes = length(sys.modes)
-    nseg = length(sys.pulses)
+    nseg = length(pulses)
     need_cumdis = CD !== Nothing
     need_area_mode = DG !== Nothing
 
@@ -464,13 +464,22 @@ function compute!(sys::System{T,D,A,CD,DG,AG,MR,need_grad}) where {T,D,A,CD,DG,A
 
     result = sys.result
     single_result = sys.single_result
-    pulses = sys.pulses
+
+    resize!(sys.seg_buf, nseg)
+    if need_grad
+        Utils.resize_uniform!(sys.seg_grad_buf, nseg, 5)
+        Utils.resize_uniform!(single_result.grad, nseg, 5)
+    else
+        empty!(sys.seg_grad_buf)
+        empty!(single_result.grad)
+    end
 
     @inline @inbounds for mode_idx in 1:nmodes
         _fill_seg_buf!(sys, mode_idx)
         mode = sys.modes[mode_idx]
         SegSeq.compute_single_mode!(single_result, sys.seg_buf, sys.buffer,
-                                    need_grad ? sys.seg_grad_buf : nothing)
+                                    need_grad ? sys.seg_grad_buf : nothing,
+                                    Val(true), Val(true))
 
         dis_scale = mode.dis_scale
         area_scale = mode.area_scale

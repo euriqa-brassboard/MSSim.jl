@@ -30,6 +30,16 @@ Base.similar(m::JaggedMatrix{T}) where T = _similar(m, T)
 Base.similar(m::JaggedMatrix, ::Type{AT}) where AT <: AbstractVector{T} where T =
     _similar(m, T)
 
+function resize_uniform!(dst::JaggedMatrix, len, sublen)
+    resize!(dst.values, len * sublen)
+    resize!(dst.idx_ranges, len)
+    @inbounds for i in 1:len
+        last_idx = (i - 1) * sublen
+        dst.idx_ranges[i] = (last_idx + 1):(last_idx + sublen)
+    end
+    return dst
+end
+
 function Base.resize!(dst::JaggedMatrix, src::JaggedMatrix)
     resize!(dst.values, length(src.values))
     resize!(dst.idx_ranges, length(src.idx_ranges))

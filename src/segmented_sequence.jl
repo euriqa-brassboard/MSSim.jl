@@ -64,7 +64,8 @@ function compute_single_mode!(
     segments::AbstractVector{SD},
     buffer::SeqComputeBuffer{T},
     seg_grads::Union{_SGV{T,D,A,CD,DG,AG},Nothing}=nothing,
-    ::Val{has_τ_grad}=Val(true)) where SD <: SegData{T,D,A,CD,DG,AG} where {T,D,A,CD,DG,AG,has_τ_grad}
+    ::Val{has_τ_grad}=Val(true),
+    ::Val{res_resized}=Val(false)) where SD <: SegData{T,D,A,CD,DG,AG} where {T,D,A,CD,DG,AG,has_τ_grad,res_resized}
 
     nseg = length(segments)
     need_cumdis = CD !== Nothing
@@ -108,11 +109,13 @@ function compute_single_mode!(
     end
 
     result_grad = result.grad
-    if need_grads
-        @assert length(seg_grads) == nseg
-        resize!(result_grad, seg_grads)
-    else
-        empty!(result_grad)
+    if !res_resized
+        if need_grads
+            @assert length(seg_grads) == nseg
+            resize!(result_grad, seg_grads)
+        else
+            empty!(result_grad)
+        end
     end
 
     p_τ = zero(T)
