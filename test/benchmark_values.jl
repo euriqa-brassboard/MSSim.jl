@@ -14,4 +14,18 @@ for (cumdis, area_mode, grad) in Iterators.product((false, true), (false, true),
     @btime MSSim.SymLinear.SegInt.compute_values(
         $(1.0), $(1.0), $(MSSim.Utils.Zero()), $(1.0), $(1.0),
         $(Val(maskv)), $(Val(maskg)))
+    if grad
+        @btime begin
+            v, g = MSSim.SymLinear.SegInt.compute_values(
+                $(1.0), $(1.0), $(1.0), $(1.0), $(1.0),
+                $(Val(maskv)), $(Val(maskg)))
+            v, g[5]
+        end
+        @btime begin
+            v, g = MSSim.SymLinear.SegInt.compute_values(
+                $(1.0), $(1.0), $(MSSim.Utils.Zero()), $(1.0), $(1.0),
+                $(Val(maskv)), $(Val(maskg)))
+            v, g[5]
+        end
+    end
 end
