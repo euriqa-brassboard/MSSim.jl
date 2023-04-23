@@ -146,6 +146,6 @@ const modes = [MSSim.SymLinear.Mode{Float64}(ω, 1, 1)
                for ω in range(2.0, 2.5, length=29 * 3)]
 
 const opt = OptContext{Float64}(modes, 2, 0.2, 400 * 4)
-# const opt_res = @btime optimize!(opt, fill(2.3, 200 * 4))
-const opt_res = optimize!(opt, fill(2.3, 200 * 4))
+const opt_res = @btime optimize!(opt, fill(2.3, 200 * 4))
+# const opt_res = optimize!(opt, fill(2.3, 200 * 4))
 @show opt_res
