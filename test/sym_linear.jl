@@ -185,48 +185,48 @@ end
             d, grad = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
                                                Val(need_area_mode),
                                                Val(need_grad))
-            @test d.dis ≈ v_dis atol=1e-10
-            @test d.area ≈ v_area atol=1e-10
+            @test d.dis ≈ v_dis atol=1e-10 rtol=1e-10
+            @test d.area ≈ v_area atol=1e-10 rtol=1e-10
             if need_cumdis
-                @test d.cumdis ≈ v_cumdis atol=1e-10
+                @test d.cumdis ≈ v_cumdis atol=1e-10 rtol=1e-10
             end
             if need_area_mode
-                @test d.disδ ≈ v_disδ atol=1e-10
-                @test d.areaδ ≈ v_areaδ atol=1e-10
+                @test d.disδ ≈ v_disδ atol=1e-10 rtol=1e-10
+                @test d.areaδ ≈ v_areaδ atol=1e-10 rtol=1e-10
             end
             if need_grad
                 @test length(grad) == 5
 
-                @test grad[1].dis ≈ v_dis_grad[1] atol=1e-10
-                @test grad[2].dis ≈ v_dis_grad[2] atol=1e-10
-                @test grad[3].dis ≈ v_dis_grad[3] atol=1e-10
-                @test grad[4].dis ≈ v_dis_grad[4] atol=1e-10
-                @test grad[5].dis ≈ v_dis_grad[5] atol=1e-10
-                @test grad[1].area ≈ v_area_grad[1] atol=1e-10
-                @test grad[2].area ≈ v_area_grad[2] atol=1e-10
-                @test grad[3].area ≈ v_area_grad[3] atol=1e-10
-                @test grad[4].area ≈ v_area_grad[4] atol=1e-10
-                @test grad[5].area ≈ v_area_grad[5] atol=1e-10
+                @test grad[1].dis ≈ v_dis_grad[1] atol=1e-10 rtol=1e-10
+                @test grad[2].dis ≈ v_dis_grad[2] atol=1e-10 rtol=1e-10
+                @test grad[3].dis ≈ v_dis_grad[3] atol=1e-10 rtol=1e-10
+                @test grad[4].dis ≈ v_dis_grad[4] atol=1e-10 rtol=1e-10
+                @test grad[5].dis ≈ v_dis_grad[5] atol=1e-10 rtol=1e-10
+                @test grad[1].area ≈ v_area_grad[1] atol=1e-10 rtol=1e-10
+                @test grad[2].area ≈ v_area_grad[2] atol=1e-10 rtol=1e-10
+                @test grad[3].area ≈ v_area_grad[3] atol=1e-10 rtol=1e-10
+                @test grad[4].area ≈ v_area_grad[4] atol=1e-10 rtol=1e-10
+                @test grad[5].area ≈ v_area_grad[5] atol=1e-10 rtol=1e-10
 
                 if need_cumdis
-                    @test grad[1].cumdis ≈ v_cumdis_grad[1] atol=1e-10
-                    @test grad[2].cumdis ≈ v_cumdis_grad[2] atol=1e-10
-                    @test grad[3].cumdis ≈ v_cumdis_grad[3] atol=1e-10
-                    @test grad[4].cumdis ≈ v_cumdis_grad[4] atol=1e-10
-                    @test grad[5].cumdis ≈ v_cumdis_grad[5] atol=1e-10
+                    @test grad[1].cumdis ≈ v_cumdis_grad[1] atol=1e-10 rtol=1e-10
+                    @test grad[2].cumdis ≈ v_cumdis_grad[2] atol=1e-10 rtol=1e-10
+                    @test grad[3].cumdis ≈ v_cumdis_grad[3] atol=1e-10 rtol=1e-10
+                    @test grad[4].cumdis ≈ v_cumdis_grad[4] atol=1e-10 rtol=1e-10
+                    @test grad[5].cumdis ≈ v_cumdis_grad[5] atol=1e-10 rtol=1e-10
                 end
 
                 if need_area_mode
-                    @test grad[1].disδ ≈ v_disδ_grad[1] atol=1e-10
-                    @test grad[2].disδ ≈ v_disδ_grad[2] atol=1e-10
-                    @test grad[3].disδ ≈ v_disδ_grad[3] atol=1e-10
-                    @test grad[4].disδ ≈ v_disδ_grad[4] atol=1e-10
-                    @test grad[5].disδ ≈ v_disδ_grad[5] atol=1e-10
-                    @test grad[1].areaδ ≈ v_areaδ_grad[1] atol=1e-10
-                    @test grad[2].areaδ ≈ v_areaδ_grad[2] atol=1e-10
-                    @test grad[3].areaδ ≈ v_areaδ_grad[3] atol=1e-10
-                    @test grad[4].areaδ ≈ v_areaδ_grad[4] atol=1e-10
-                    @test grad[5].areaδ ≈ v_areaδ_grad[5] atol=1e-10
+                    @test grad[1].disδ ≈ v_disδ_grad[1] atol=1e-10 rtol=1e-10
+                    @test grad[2].disδ ≈ v_disδ_grad[2] atol=1e-10 rtol=1e-10
+                    @test grad[3].disδ ≈ v_disδ_grad[3] atol=1e-10 rtol=1e-10
+                    @test grad[4].disδ ≈ v_disδ_grad[4] atol=1e-10 rtol=1e-10
+                    @test grad[5].disδ ≈ v_disδ_grad[5] atol=1e-10 rtol=1e-10
+                    @test grad[1].areaδ ≈ v_areaδ_grad[1] atol=1e-10 rtol=1e-10
+                    @test grad[2].areaδ ≈ v_areaδ_grad[2] atol=1e-10 rtol=1e-10
+                    @test grad[3].areaδ ≈ v_areaδ_grad[3] atol=1e-10 rtol=1e-10
+                    @test grad[4].areaδ ≈ v_areaδ_grad[4] atol=1e-10 rtol=1e-10
+                    @test grad[5].areaδ ≈ v_areaδ_grad[5] atol=1e-10 rtol=1e-10
                 end
             else
                 @test grad === nothing

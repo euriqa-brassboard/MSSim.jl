@@ -98,6 +98,48 @@ end
                    muladd(real(x), imag(y), imag(x) * real(y)))
 end
 
+@inline _sincos(x) = sincos(x)
+@inline fast_sincos(x) = _sincos(float(x))
+
+const DS1 = -1.66666666666666324348e-01
+const DS2 = 8.33333333332248946124e-03
+const DS3 = -1.98412698298579493134e-04
+const DS4 = 2.75573137070700676789e-06
+const DS5 = -2.50507602534068634195e-08
+const DS6 = 1.58969099521155010221e-10
+@inline function sin_kernel(x::Float64)
+    x² =  x * x
+    return x * evalpoly(x², (1, DS1, DS2, DS3, DS4, DS5, DS6))
+end
+
+const DC1 = 4.16666666666666019037e-02
+const DC2 = -1.38888888888741095749e-03
+const DC3 = 2.48015872894767294178e-05
+const DC4 = -2.75573143513906633035e-07
+const DC5 = 2.08757232129817482790e-09
+const DC6 = -1.13596475577881948265e-11
+@inline function cos_kernel(x::Float64)
+    x² =  x * x
+    return evalpoly(x², (1, -0.5, DC1, DC2, DC3, DC4, DC5, DC6))
+end
+
+@inline function _sincos(x::Float64)
+    q = round(x * (2 / π))
+    n = unsafe_trunc(Int, q) & 3
+    x = muladd(q, -π / 2, x)
+    si = sin_kernel(x)
+    co = cos_kernel(x)
+    if n == 0
+        return si, co
+    elseif n == 1
+        return co, -si
+    elseif n == 2
+        return -si, -co
+    else
+        return -co, si
+    end
+end
+
 struct Zero
 end
 

@@ -125,7 +125,7 @@ function displacement(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, cos_f1)
     return phase0 * displacement_kernel(o, o′, d, s, c, V)
 end
@@ -135,7 +135,7 @@ function displacement_δ(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, cos_f2, sin_c2, sin_c3)
     return phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V)
 end
@@ -145,7 +145,7 @@ function displacement_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, sin_c3, cos_f1, cos_f2)
 
     τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
@@ -159,7 +159,7 @@ function displacement_δ_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, cos_f2, cos_f3_2, sin_f3_3, sin_c2, sin_c3)
 
     τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
@@ -173,7 +173,7 @@ function cumulative_displacement(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f2, sin_f2)
 
     return phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c, V)
@@ -184,7 +184,7 @@ function cumulative_displacement_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f2, sin_f2,
                          sin_f3_2, cos_f3_2, sin_c1, sin_c2)
 
@@ -199,7 +199,7 @@ function enclosed_area_complex(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f3, sin_f3)
 
     return enclosed_area_complex_kernel(o, o′, d, s, c, V)
@@ -210,7 +210,7 @@ function enclosed_area(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_f1, sin_f3)
 
     return enclosed_area_kernel(o, o′, d, s, c, V)
@@ -220,7 +220,7 @@ function enclosed_area_δ(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_f2, sin_f4)
 
     return τ * enclosed_area_δ_kernel(o, o′, d, s, c, V)
@@ -230,7 +230,7 @@ function enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, sin_f2, sin_f3, sin_f4)
 
     τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
@@ -242,7 +242,7 @@ function enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = sincos(d)
+    s, c = Utils.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, sin_f2, sin_f3_2,
                          sin_f4, sin_f5, sin_c1)
 
@@ -278,8 +278,8 @@ end
         d = δ * τ
         o = Ω * τ
         o′ = Ω′ * τ^2
-        s, c = sincos(d)
-        sφ, cφ = sincos(φ)
+        s, c = Utils.fast_sincos(d)
+        sφ, cφ = Utils.fast_sincos(φ)
         phase0 = complex(cφ, sφ)
         phase0_τ = phase0 * τ
         V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, sin_c3,
