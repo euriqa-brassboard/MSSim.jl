@@ -452,6 +452,18 @@ end
     end
 end
 
+@inline function _init_grads_vector(grads::Vector{Utils.JaggedMatrix{T}},
+                                    nmodes, nseg, ngrad) where T
+    resize!(grads, nmodes)
+    @inbounds for i in 1:nmodes
+        if !isassigned(grads, i)
+            grads[i] = Utils.JaggedMatrix{T}()
+        end
+        Utils.resize_uniform!(grads[i], nseg, ngrad)
+    end
+    return
+end
+
 function compute!(sys::System{T,D,A,CD,DG,AG,MR,need_grad}) where {T,D,A,CD,DG,AG,MR,need_grad}
 
     pulses = sys.pulses
@@ -460,10 +472,37 @@ function compute!(sys::System{T,D,A,CD,DG,AG,MR,need_grad}) where {T,D,A,CD,DG,A
     need_cumdis = CD !== Nothing
     need_area_mode = DG !== Nothing
 
-    SegSeq.init_multi_mode_result!(sys.result, nmodes, Val(need_grad))
-
     result = sys.result
     single_result = sys.single_result
+    resize!(result.dis, nmodes)
+
+    result.area = zero(T)
+    if need_cumdis
+        resize!(result.cumdis, nmodes)
+    end
+    if need_area_mode
+        resize!(result.disδ, nmodes)
+        resize!(result.areaδ, nmodes)
+    end
+
+    Utils.resize_uniform!(result.τ_grad, nseg, 5)
+    Utils.resize_uniform!(result.area_grad, nseg, 5)
+    @inbounds result.area_grad.values .= 0
+    if need_grad
+        _init_grads_vector(result.dis_grad, nmodes, nseg, 5)
+        if need_cumdis
+            _init_grads_vector(result.cumdis_grad, nmodes, nseg, 5)
+        end
+        if need_area_mode
+            _init_grads_vector(result.disδ_grad, nmodes, nseg, 5)
+            _init_grads_vector(result.areaδ_grad, nmodes, nseg, 5)
+        end
+    else
+        empty!(result.dis_grad)
+        empty!(result.cumdis_grad)
+        empty!(result.disδ_grad)
+        empty!(result.areaδ_grad)
+    end
 
     resize!(sys.seg_buf, nseg)
     if need_grad
@@ -499,25 +538,17 @@ function compute!(sys::System{T,D,A,CD,DG,AG,MR,need_grad}) where {T,D,A,CD,DG,A
         end
 
         if mode_idx == 1
-            resize!(result.τ_grad, single_result.grad)
             for i in 1:length(result.τ_grad.values)
                 result.τ_grad.values[i] = single_result.grad.values[i].τ
             end
-
-            resize!(result.area_grad, single_result.grad)
-            result.area_grad.values .= 0
         end
         dis_grad = result.dis_grad[mode_idx]
-        resize!(dis_grad, single_result.grad)
         if need_cumdis
             cumdis_grad = result.cumdis_grad[mode_idx]
-            resize!(cumdis_grad, single_result.grad)
         end
         if need_area_mode
             disδ_grad = result.disδ_grad[mode_idx]
-            resize!(disδ_grad, single_result.grad)
             areaδ_grad = result.areaδ_grad[mode_idx]
-            resize!(areaδ_grad, single_result.grad)
         end
 
         dis_dΩ = complex(zero(T))
