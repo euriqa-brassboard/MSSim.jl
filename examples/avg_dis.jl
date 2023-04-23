@@ -67,7 +67,7 @@ function update!(opt::OptContext{T}, ωs) where T
         cd = cumdis[mi]
         obj += abs2(cd)
         for si in 1:nseg
-            cd_g = cumdis_grad[mi][si][5] # Gradient w.r.t. ω
+            cd_g = cumdis_grad[mi][si][end] # Gradient w.r.t. ω
             if si <= nω
                 gi = si
             else
