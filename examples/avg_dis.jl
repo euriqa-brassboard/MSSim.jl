@@ -16,11 +16,19 @@ mutable struct OptResults{T}
     end
 end
 
+const maskv = MSSim.SegSeq.ValueMask(true, true, false, true, false, false)
+# const maskv = MSSim.SegSeq.ValueMask(true, true, true, true, false, false)
+const maskg = MSSim.SegSeq.ValueMask(false, true, false, true, false, false)
+const pmask = MSSim.SymLinear.ParamGradMask(false, false, false, false, true)
+# const maskv = MSSim.SegSeq.ValueMask(true, true, true, true, false, false)
+# const maskg = MSSim.SegSeq.ValueMask(true, true, true, true, false, false)
+# const pmask = MSSim.SymLinear.ParamGradMask(true, true, true, true, true)
+
 struct OptContext{T,Sys}
     sys::Sys
     res::OptResults{T}
     function OptContext{T}(modes::AbstractVector, τ, Ω, nseg) where {T}
-        sys = MSSim.SymLinear.System{T}(modes, Val(true), Val(false), Val(true))
+        sys = MSSim.SymLinear.System{T}(modes, Val(maskv), Val(maskg), Val(pmask))
         resize!(sys.pulses, nseg)
         sys.pulses .= Ref(MSSim.SymLinear.Pulse{T}(τ, 0, 0, 0, 0))
         sys.pulses[1] = MSSim.SymLinear.Pulse{T}(τ, Ω, 0, 0, 0)

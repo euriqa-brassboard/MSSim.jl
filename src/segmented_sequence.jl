@@ -10,28 +10,54 @@ using ..Utils
 
 _empty(::Type{T}) where T = T()
 _empty(::Type{T}) where T<:Number = zero(T)
+Base.@assume_effects :total _stype(T, b::Bool) = b ? T : Nothing
+
+struct ValueMask
+    τ::Bool
+    dis::Bool
+    area::Bool
+    cumdis::Bool
+    disδ::Bool
+    areaδ::Bool
+end
+Base.zero(::Type{ValueMask}) = ValueMask(false, false, false, false, false, false)
 
 # Sequence segment representation
-struct SegData{T,D,A,CD,DG,AG}
-    τ::T
+struct SegData{T,TT,D,A,CD,DG,AG}
+    τ::TT
     dis::D
     area::A
     cumdis::CD
     disδ::DG
     areaδ::AG
+    function SegData{T,TT,D,A,CD,DG,AG}(τ=_empty(TT), dis=_empty(D), area=_empty(A),
+                                        cumdis=_empty(CD), disδ=_empty(DG),
+                                        areaδ=_empty(AG)) where {T,TT,D,A,CD,DG,AG}
+        return new{T,TT,D,A,CD,DG,AG}(τ, dis, area, cumdis, disδ, areaδ)
+    end
+    function SegData{T}(τ::TT, dis::D, area::A, cumdis::CD, disδ::DG,
+                        areaδ::AG) where {T,TT,D,A,CD,DG,AG}
+        return new{T,TT,D,A,CD,DG,AG}(τ, dis, area, cumdis, disδ, areaδ)
+    end
 end
+@inline function SegData(T, mask::ValueMask)
+    CT = Complex{T}
+    return SegData{T,_stype(T, mask.τ),_stype(CT, mask.dis),_stype(T, mask.area),
+                   _stype(CT, mask.cumdis),_stype(CT, mask.disδ),
+                   _stype(T, mask.areaδ)}
+end
+@inline value_mask(::Type{SegData{T,TT,D,A,CD,DG,AG}}) where {T,TT,D,A,CD,DG,AG} =
+    ValueMask(TT !== Nothing, D !== Nothing, A !== Nothing,
+              CD !== Nothing, DG !== Nothing, AG !== Nothing)
+@inline value_mask(sd::SegData) = value_mask(typeof(sd))
 
-const _SGS{T,D,A,CD,DG,AG} = AbstractVector{SegData{T,D,A,CD,DG,AG}}
-const _SGV{T,D,A,CD,DG,AG} = AbstractVector{SGS} where SGS <: _SGS{T,D,A,CD,DG,AG}
-
-mutable struct SingleModeResult{T,D,A,CD,DG,AG}
-    val::SegData{T,D,A,CD,DG,AG}
-
-    const grad::Utils.JaggedMatrix{SegData{T,D,A,CD,DG,AG}}
-    function SingleModeResult{T,D,A,CD,DG,AG}() where {T,D,A,CD,DG,AG}
-        return new(SegData(zero(T), _empty(D), _empty(A), _empty(CD),
-                           _empty(DG), _empty(AG)),
-                   Utils.JaggedMatrix{SegData{T,D,A,CD,DG,AG}}())
+mutable struct SingleModeResult{T,SDV<:SegData,SDG<:SegData}
+    val::SDV
+    const grad::Utils.JaggedMatrix{SDG}
+    function SingleModeResult{T}(::Val{maskv}, ::Val{maskg}) where {T,maskv,maskg}
+        SDV = SegData(T, maskv)
+        SDG = SegData(T, maskg)
+        return new{T,SDV,SDG}(SDV(), Utils.JaggedMatrix{SDG}())
     end
 end
 
@@ -59,29 +85,82 @@ struct SeqComputeBuffer{T}
     end
 end
 
+Base.@assume_effects :total function _check_mask(maskv, maskg, has_τ_grad)
+    disφ_backward = maskg.areaδ
+    buffer_mask = (disφ=maskv.disδ || maskv.areaδ || disφ_backward,
+                   τ_backward=maskg.cumdis,
+                   dis_backward=maskv.areaδ || maskg.area || maskg.disδ || maskg.areaδ,
+                   disφ_backward=disφ_backward)
+
+    if buffer_mask.disφ
+        (maskv.τ && maskv.dis && maskv.disδ) || (return false, buffer_mask)
+    end
+    if buffer_mask.τ_backward
+        maskv.τ || (return false, buffer_mask)
+    end
+    if buffer_mask.dis_backward
+        maskv.dis || (return false, buffer_mask)
+    end
+
+    if maskv.area
+        maskv.dis || (return false, buffer_mask)
+    end
+    if maskv.cumdis
+        (maskv.τ && maskv.dis) || (return false, buffer_mask)
+    end
+    if maskv.areaδ
+        maskv.dis || (return false, buffer_mask)
+    end
+
+    maskg_τ = maskg.τ || !has_τ_grad
+
+    if maskg.area
+        (maskv.dis && maskg.dis) || (return false, buffer_mask)
+    end
+    if maskg.cumdis
+        (maskv.dis && maskg_τ && maskg.dis) || (return false, buffer_mask)
+    end
+    if maskg.disδ
+        (maskv.τ && maskg.dis && maskg_τ) || (return false, buffer_mask)
+    end
+    if maskg.areaδ
+        (maskv.dis && maskv.disδ &&
+            maskg_τ && maskg.disδ && maskg.dis) || (return false, buffer_mask)
+    end
+    return true, buffer_mask
+end
+
+const _SGS{SD} = AbstractVector{SD}
+const _SGV{SD} = AbstractVector{SGS} where SGS <: _SGS{SD}
+
 function compute_single_mode!(
-    result::SingleModeResult{T,D,A,CD,DG,AG},
-    segments::AbstractVector{SD},
+    result::SingleModeResult{T,SDV,SDG},
+    segments::AbstractVector{SDV},
     buffer::SeqComputeBuffer{T},
-    seg_grads::Union{_SGV{T,D,A,CD,DG,AG},Nothing}=nothing,
+    seg_grads::Union{_SGV{SDG},Nothing}=nothing,
     ::Val{has_τ_grad}=Val(true),
-    ::Val{res_resized}=Val(false)) where SD <: SegData{T,D,A,CD,DG,AG} where {T,D,A,CD,DG,AG,has_τ_grad,res_resized}
+    ::Val{res_resized}=Val(false)) where {SDV<:SegData{T},SDG<:SegData{T}} where {T,has_τ_grad,res_resized}
+
+    maskv = value_mask(SDV)
+    maskg = seg_grads === nothing ? zero(ValueMask) : value_mask(SDG)
+    mask_compatible, buffer_mask = _check_mask(maskv, maskg, has_τ_grad)
+    if !mask_compatible
+        error("Incompatible value mask: $maskv, $maskg")
+    end
 
     nseg = length(segments)
-    need_cumdis = CD !== Nothing
-    need_area_mode = DG !== Nothing
-    need_grads = seg_grads !== nothing
+    need_grads = maskg !== zero(ValueMask)
 
     buffer_dis_backward = buffer.dis_backward
     buffer_τ_backward = buffer.τ_backward
     buffer_disφ = buffer.disφ
     buffer_disφ_backward = buffer.disφ_backward
 
-    resize!(buffer_dis_backward, need_grads || need_area_mode ? nseg : 0)
-    resize!(buffer_τ_backward, need_grads && need_cumdis ? nseg : 0)
-    resize!(buffer_disφ, need_area_mode ? nseg : 0)
-    resize!(buffer_disφ_backward, need_grads && need_area_mode ? nseg : 0)
-    @inbounds if need_area_mode
+    resize!(buffer_dis_backward, buffer_mask.dis_backward ? nseg : 0)
+    resize!(buffer_τ_backward, buffer_mask.τ_backward ? nseg : 0)
+    resize!(buffer_disφ, buffer_mask.disφ ? nseg : 0)
+    resize!(buffer_disφ_backward, buffer_mask.disφ_backward ? nseg : 0)
+    @inbounds if buffer_mask.disφ
         p_τ = zero(T)
         for i in 1:nseg
             seg = segments[i]
@@ -89,19 +168,23 @@ function compute_single_mode!(
             p_τ += seg.τ
         end
     end
-    @inbounds if need_grads || need_area_mode
+    @inbounds if (buffer_mask.τ_backward || buffer_mask.dis_backward ||
+        buffer_mask.disφ_backward)
+
         p_τ = zero(T)
         p_dis = complex(zero(T))
         p_real_disδ = complex(zero(T))
         for i in nseg:-1:1
             seg = segments[i]
-            if need_grads && need_cumdis
+            if buffer_mask.τ_backward
                 buffer_τ_backward[i] = p_τ
                 p_τ += seg.τ
             end
-            buffer_dis_backward[i] = p_dis
-            p_dis += seg.dis
-            if need_grads && need_area_mode
+            if buffer_mask.dis_backward
+                buffer_dis_backward[i] = p_dis
+                p_dis += seg.dis
+            end
+            if buffer_mask.disφ_backward
                 buffer_disφ_backward[i] = p_real_disδ
                 p_real_disδ += buffer_disφ[i]
             end
@@ -118,35 +201,37 @@ function compute_single_mode!(
         end
     end
 
-    p_τ = zero(T)
-    p_dis = complex(zero(T))
-    p_area = zero(T)
-    p_cumdis = need_cumdis ? complex(zero(T)) : nothing
-    p_real_disδ = need_area_mode ? complex(zero(T)) : nothing
-    p_areaδ = need_area_mode ? zero(T) : nothing
+    p_τ = maskv.τ ? zero(T) : nothing
+    p_dis = maskv.dis ? complex(zero(T)) : nothing
+    p_area = maskv.area ? zero(T) : nothing
+    p_cumdis = maskv.cumdis ? complex(zero(T)) : nothing
+    p_real_disδ = maskv.disδ ? complex(zero(T)) : nothing
+    p_areaδ = maskv.areaδ ? zero(T) : nothing
     @inbounds for i in 1:nseg
         seg = segments[i]
-        np_τ = p_τ
-        np_dis = p_dis
-        np_area = p_area
-        np_cumdis = p_cumdis
-        np_real_disδ = p_real_disδ
-        np_areaδ = p_areaδ
 
-        np_τ += seg.τ
-        np_dis += seg.dis
-        np_area += muladd(real(p_dis), imag(seg.dis),
-                          muladd(-imag(p_dis), real(seg.dis), seg.area))
-        if need_cumdis
-            np_cumdis += muladd(p_dis, seg.τ, seg.cumdis)
+        if maskv.τ
+            np_τ = p_τ + seg.τ
         end
-        if need_area_mode
+        if maskv.dis
+            np_dis = p_dis + seg.dis
+        end
+        if maskv.area
+            np_area = p_area + muladd(real(p_dis), imag(seg.dis),
+                                      muladd(-imag(p_dis), real(seg.dis), seg.area))
+        end
+        if maskv.cumdis
+            np_cumdis = p_cumdis + muladd(p_dis, seg.τ, seg.cumdis)
+        end
+        if maskv.disδ
             real_disδ = buffer_disφ[i]
-            np_real_disδ += real_disδ
-            dis_b = buffer_dis_backward[i]
-            np_areaδ += muladd(real(p_dis) - real(dis_b), imag(real_disδ),
-                                muladd(imag(dis_b) - imag(p_dis), real(real_disδ),
-                                       seg.areaδ))
+            np_real_disδ = p_real_disδ + real_disδ
+            if maskv.areaδ
+                dis_b = buffer_dis_backward[i]
+                np_areaδ = muladd(real(p_dis) - real(dis_b), imag(real_disδ),
+                                   muladd(imag(dis_b) - imag(p_dis), real(real_disδ),
+                                          seg.areaδ)) + p_areaδ
+            end
         end
         @inline if need_grads
             seg_grad = seg_grads[i]
@@ -154,9 +239,11 @@ function compute_single_mode!(
             r_grad = result_grad[i]
             nvar = length(seg_grad)
 
-            dis_b = buffer_dis_backward[i]
-            disφ_b = need_area_mode ? buffer_disφ_backward[i] : complex(zero(T))
-            τ_b = need_cumdis ? buffer_τ_backward[i] : zero(T)
+            dis_b = (buffer_mask.dis_backward ?
+                buffer_dis_backward[i] : complex(zero(T)))
+            disφ_b = (buffer_mask.disφ_backward ?
+                buffer_disφ_backward[i] : complex(zero(T)))
+            τ_b = buffer_mask.τ_backward ? buffer_τ_backward[i] : zero(T)
 
             for j in 1:nvar
                 sg = seg_grad[j]
@@ -164,19 +251,27 @@ function compute_single_mode!(
                 τ_v = has_τ_grad ? sg.τ : Utils.Zero()
 
                 dis_v = sg.dis
-                area_v = muladd(real(p_dis) - real(dis_b), imag(dis_v),
-                                muladd(imag(dis_b) - imag(p_dis), real(dis_v),
-                                       sg.area))
+                if maskg.area
+                    area_v = muladd(real(p_dis) - real(dis_b), imag(dis_v),
+                                    muladd(imag(dis_b) - imag(p_dis), real(dis_v),
+                                           sg.area))
+                else
+                    area_v = nothing
+                end
 
-                if need_cumdis
+                if maskg.cumdis
                     cumdis_v = muladd(τ_v, p_dis, muladd(τ_b, dis_v, sg.cumdis))
                 else
                     cumdis_v = nothing
                 end
 
-                if need_area_mode
+                if maskg.disδ
                     disδ_v0 = muladd(Utils.mulim(dis_v), p_τ, sg.disδ)
                     disδ_v = muladd(Utils.mulim(dis_b), τ_v, disδ_v0)
+                else
+                    disδ_v = nothing
+                end
+                if maskg.areaδ
                     # Note that the expression below isn't simply the derivative
                     # of the areaδ. This is because disδ depends on the sum of τ's
                     # so areaδ actually contains a third summation
@@ -198,23 +293,22 @@ function compute_single_mode!(
                                                       real(p_real_disδ) - real(disφ_b),
                                                       sg.areaδ))))))
                 else
-                    disδ_v = nothing
                     areaδ_v = nothing
                 end
-                r_grad[j] = SD(has_τ_grad ? τ_v : zero(T),
-                               dis_v, area_v, cumdis_v, disδ_v, areaδ_v)
+                r_grad[j] = SDG(has_τ_grad ? τ_v : (maskg.τ ? zero(T) : nothing),
+                                dis_v, area_v, cumdis_v, disδ_v, areaδ_v)
             end
         end
 
-        p_τ = np_τ
-        p_dis = np_dis
-        p_area = np_area
-        p_cumdis = np_cumdis
-        p_real_disδ = np_real_disδ
-        p_areaδ = np_areaδ
+        maskv.τ && (p_τ = np_τ)
+        maskv.dis && (p_dis = np_dis)
+        maskv.area && (p_area = np_area)
+        maskv.cumdis && (p_cumdis = np_cumdis)
+        maskv.disδ && (p_real_disδ = np_real_disδ)
+        maskv.areaδ && (p_areaδ = np_areaδ)
     end
 
-    result.val = SD(p_τ, p_dis, p_area, p_cumdis, p_real_disδ, p_areaδ)
+    result.val = SDV(p_τ, p_dis, p_area, p_cumdis, p_real_disδ, p_areaδ)
     return
 end
 
@@ -224,37 +318,62 @@ end
 # by the user.
 # If we ever come to a point where there are multiple users we can try to combine them
 # together...
-mutable struct MultiModeResult{T,VCD,VDD,VAD}
-    τ::T
-    dis::Vector{Complex{T}}
-    area::T
-    cumdis::VCD # Vector
-    disδ::VDD # Vector
+mutable struct MultiModeResult{T,TT,VD,A,VCD,VDD,VAD,
+                               TTG,VDG,AG,VCDG,VDDG,VADG}
+    τ::TT
+    dis::VD
+    area::A
+    cumdis::VCD
+    disδ::VDD
     areaδ::VAD
 
-    τ_grad::Utils.JaggedMatrix{T}
-    dis_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
-    area_grad::Utils.JaggedMatrix{T}
-    cumdis_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
-    disδ_grad::Vector{Utils.JaggedMatrix{Complex{T}}}
-    areaδ_grad::Vector{Utils.JaggedMatrix{T}}
+    τ_grad::TTG
+    dis_grad::VDG
+    area_grad::AG
+    cumdis_grad::VCDG
+    disδ_grad::VDDG
+    areaδ_grad::VADG
 
-    function MultiModeResult{T}(::Val{need_cumdis},
-                                ::Val{need_area_mode}) where {T,need_cumdis,
-                                                              need_area_mode}
-        VCD = need_cumdis ? Vector{Complex{T}} : Nothing
-        VDD = need_area_mode ? Vector{Complex{T}} : Nothing
-        VAD = need_area_mode ? Vector{T} : Nothing
+    @inline function MultiModeResult{T}(::Val{maskv},
+                                        ::Val{maskg}) where {T,maskv,maskg}
+        CT = Complex{T}
+        VT = Vector{T}
+        VCT = Vector{CT}
+        JT = Utils.JaggedMatrix{T}
+        JCT = Utils.JaggedMatrix{CT}
 
-        return new{T,VCD,VDD,VAD}(zero(T), Complex{T}[], zero(T),
-                                  VCD(), VDD(), VAD(),
-                                  Utils.JaggedMatrix{T}(),
-                                  Utils.JaggedMatrix{Complex{T}}[],
-                                  Utils.JaggedMatrix{T}(),
-                                  Utils.JaggedMatrix{Complex{T}}[],
-                                  Utils.JaggedMatrix{Complex{T}}[],
-                                  Utils.JaggedMatrix{T}[])
+        TT = _stype(T, maskv.τ)
+        VD  = _stype(VCT, maskv.dis)
+        A  = _stype(T, maskv.area)
+        VCD  = _stype(VCT, maskv.cumdis)
+        VDD  = _stype(VCT, maskv.disδ)
+        VAD  = _stype(VT, maskv.areaδ)
+
+        TTG = _stype(JT, maskg.τ)
+        VDG = _stype(Vector{JCT}, maskg.dis)
+        AG = _stype(JT, maskg.area)
+        VCDG = _stype(Vector{JCT}, maskg.cumdis)
+        VDDG = _stype(Vector{JCT}, maskg.disδ)
+        VADG = _stype(Vector{JT}, maskg.areaδ)
+
+        return new{T,TT,VD,A,VCD,VDD,VAD,TTG,VDG,AG,VCDG,VDDG,VADG}(
+            _empty(TT),_empty(VD),_empty(A),_empty(VCD),_empty(VDD),_empty(VAD),
+            _empty(TTG),_empty(VDG),_empty(AG),_empty(VCDG),_empty(VDDG),_empty(VADG))
     end
 end
+
+@inline function value_mask(
+    ::Type{MultiModeResult{T,TT,VD,A,VCD,VDD,VAD,
+                           TTG,VDG,AG,VCDG,VDDG,VADG}}) where {
+                               T,TT,VD,A,VCD,VDD,VAD,
+                               TTG,VDG,AG,VCDG,VDDG,VADG}
+
+    maskv = ValueMask(TT !== Nothing, VD !== Nothing, A !== Nothing,
+                      VCD !== Nothing, VDD !== Nothing, VAD !== Nothing)
+    maskg = ValueMask(TTG !== Nothing, VDG !== Nothing, AG !== Nothing,
+                      VCDG !== Nothing, VDDG !== Nothing, VADG !== Nothing)
+    return maskv, maskg
+end
+@inline value_mask(res::MultiModeResult) = value_mask(typeof(res))
 
 end

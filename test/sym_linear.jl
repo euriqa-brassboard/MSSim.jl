@@ -9,6 +9,7 @@ using Setfield
 using MSSim
 const PN = MSSim.PureNumeric
 const SL = MSSim.SymLinear
+const SS = MSSim.SegSeq
 
 function get_Ω_θ_func(Ω, Ω′, φ, δ)
     return t->Ω + Ω′ * t, t->φ + δ * t
@@ -182,9 +183,11 @@ end
         for (need_cumdis, need_area_mode, need_grad) in
             Iterators.product((false, true), (false, true), (false, true))
 
-            d, grad = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(need_cumdis),
-                                               Val(need_area_mode),
-                                               Val(need_grad))
+            maskv = SS.ValueMask(true, true, true, need_cumdis,
+                                 need_area_mode, need_area_mode)
+            maskg = need_grad ? maskv : zero(SS.ValueMask)
+
+            d, grad = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(maskv), Val(maskg))
             @test d.dis ≈ v_dis atol=1e-10 rtol=1e-10
             @test d.area ≈ v_area atol=1e-10 rtol=1e-10
             if need_cumdis
@@ -283,14 +286,16 @@ end
 
 @testset "Random multi-mode sequence" begin
     T = Float64
-    sys = SL.System{T}(Val(true), Val(true), Val(true))
+    pmask = SL.ParamGradMask(true, true, true, true, true)
+    mask_full = SS.ValueMask(true, true, true, true, true, true)
+    sys = SL.System{T}(Val(mask_full), Val(mask_full), Val(pmask))
 
     all_params_array = [SL.Pulse{T}(τ, dΩ, Ω′, dφ, ω)
                         for (τ, dΩ, Ω′, dφ, ω) in all_params]
     all_modes_array = [SL.Mode{T}(ω, 0.5 + 0.5 * rand(),
                                   0.5 + 0.5 * rand()) for ω in δs]
 
-    sys′ = SL.System{T}(Val(true), Val(true), Val(false))
+    sys′ = SL.System{T}(Val(mask_full), Val(zero(SS.ValueMask)), Val(pmask))
     function eval_grad(sys, sys_cb, nh)
         function eval_wrapper(δ)
             resize!(sys′.modes, length(sys.modes))
