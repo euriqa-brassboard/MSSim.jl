@@ -6,6 +6,7 @@ using JuMP
 using NLopt
 using Setfield
 using StaticArrays
+using ForwardDiff
 
 struct IonInfo
     charge::Float64
@@ -31,6 +32,17 @@ function _register(model, potential::Function1D, name)
         register(model, name, 1, potential.f, autodiff=true)
     end
     return
+end
+
+function _derivative_2nd(f::Function1D, x)
+    if f.∇²f !== nothing
+        return f.∇²f(x)
+    elseif f.∇f !== nothing
+        return ForwardDiff.derivative(f.∇f, x)
+    else
+        ∇f = x->ForwardDiff.derivative(f.f, x)
+        return ForwardDiff.derivative(∇f, x)
+    end
 end
 
 function poly_function(::Val{N}) where N
@@ -173,6 +185,73 @@ function update_all_init_pos!(am::AxialModel)
         set_init_pos!(am, i, value(var))
     end
     return am
+end
+
+function axial_modes(ions, poses, dc::Function1D, rf::Union{Function1D,Nothing}=nothing)
+    nions = length(ions)
+    H = zeros(nions, nions)
+    for i in 1:nions
+        pos = poses[i]
+        ion = ions[i]
+        ∇²f = _derivative_2nd(dc, pos) * ion.charge
+        if rf !== nothing
+            ∇²f += _derivative_2nd(rf, pos) * (ion.charge / ion.mass)^2
+        end
+        H[i, i] = ∇²f / ion.mass
+    end
+    for i2 in 2:nions
+        pos2 = poses[i2]
+        ion2 = ions[i2]
+        for i1 in 1:i2 - 1
+            pos1 = poses[i1]
+            ion1 = ions[i1]
+            mass12 = sqrt(ion1.mass * ion2.mass)
+            term = 2 / (pos2 - pos1)^3 * ion1.charge * ion2.charge
+            H[i1, i1] += term / mass1
+            H[i2, i2] += term / mass2
+            H[i1, i2] -= term / mass12
+            H[i2, i1] -= term / mass12
+        end
+    end
+    evs, vecs = eigen(H)
+    return [ev >= 0 ? sqrt(ev) : -sqrt(-ev) for ev in evs], vecs
+end
+
+# Input function computes the second order derivative of the RF potential
+# This assumes that the good axis for radial motion does not depend on
+# the ion position, otherwise we need to solve all radial modes at the same time...
+function radial_modes(ions, poses, dc::Function1D,
+                      rf::Union{Function1D,Nothing}=nothing)
+    values = [value(ion.pos) for ion in model.ions]
+    nions = length(values)
+    H = zeros(nions, nions)
+    nions = length(ions)
+    H = zeros(nions, nions)
+    for i in 1:nions
+        pos = poses[i]
+        ion = ions[i]
+        ∇²f = dc.f(pos) * ion.charge
+        if rf !== nothing
+            ∇²f += rf.f(pos) * (ion.charge / ion.mass)^2
+        end
+        H[i, i] = ∇²f / ion.mass
+    end
+    for i2 in 2:nions
+        pos2 = poses[i2]
+        ion2 = ions[i2]
+        for i1 in 1:i2 - 1
+            pos1 = poses[i1]
+            ion1 = ions[i1]
+            mass12 = sqrt(ion1.mass * ion2.mass)
+            term = 1 / (pos2 - pos1)^3 * ion1.charge * ion2.charge
+            H[i1, i1] -= term / mass1
+            H[i2, i2] -= term / mass2
+            H[i1, i2] += term / mass12
+            H[i2, i1] += term / mass12
+        end
+    end
+    evs, vecs = eigen(H)
+    return [ev >= 0 ? sqrt(ev) : -sqrt(-ev) for ev in evs], vecs
 end
 
 end
