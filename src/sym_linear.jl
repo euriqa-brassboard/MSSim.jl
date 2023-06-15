@@ -369,6 +369,36 @@ struct ParamGradMask
     ω::Bool
 end
 
+@inline function grad_index(param_mask::ParamGradMask, name::Symbol)
+    idx = 1
+    if name === :τ
+        return param_mask.τ ? idx : 0
+    elseif param_mask.τ
+        idx += 1
+    end
+    if name === :dΩ
+        return param_mask.dΩ ? idx : 0
+    elseif param_mask.dΩ
+        idx += 1
+    end
+    if name === :Ω′
+        return param_mask.Ω′ ? idx : 0
+    elseif param_mask.Ω′
+        idx += 1
+    end
+    if name === :dφ
+        return param_mask.dφ ? idx : 0
+    elseif param_mask.dφ
+        idx += 1
+    end
+    if name === :ω
+        return param_mask.ω ? idx : 0
+    elseif param_mask.ω
+        idx += 1
+    end
+    return 0
+end
+
 # Segment parameter
 # We use the phase and amplitude jump instead of their absolute values
 # as the parameters since these are closer to what we actually want to control
