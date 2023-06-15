@@ -222,9 +222,6 @@ end
 # the ion position, otherwise we need to solve all radial modes at the same time...
 function radial_modes(ions, poses, dc::Function1D,
                       rf::Union{Function1D,Nothing}=nothing)
-    values = [value(ion.pos) for ion in model.ions]
-    nions = length(values)
-    H = zeros(nions, nions)
     nions = length(ions)
     H = zeros(nions, nions)
     for i in 1:nions
