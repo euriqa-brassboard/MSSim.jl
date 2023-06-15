@@ -220,14 +220,17 @@ end
 # Input function computes the second order derivative of the RF potential
 # This assumes that the good axis for radial motion does not depend on
 # the ion position, otherwise we need to solve all radial modes at the same time...
-function radial_modes(ions, poses, dc::Function1D,
+function radial_modes(ions, poses, dc::Union{Function1D,Nothing},
                       rf::Union{Function1D,Nothing}=nothing)
     nions = length(ions)
     H = zeros(nions, nions)
     for i in 1:nions
         pos = poses[i]
         ion = ions[i]
-        ∇²f = dc.f(pos) * ion.charge
+        ∇²f = 0.0
+        if dc !== nothing
+            ∇²f += dc.f(pos) * ion.charge
+        end
         if rf !== nothing
             ∇²f += rf.f(pos) * (ion.charge / ion.mass)^2
         end
