@@ -7,6 +7,7 @@ using NLopt
 using Setfield
 using StaticArrays
 using ForwardDiff
+using LinearAlgebra
 
 struct IonInfo
     charge::Float64
@@ -210,8 +211,8 @@ function axial_modes(ions, poses, dc::Function1D, rf::Union{Function1D,Nothing}=
             ion1 = ions[i1]
             mass12 = sqrt(ion1.mass * ion2.mass)
             term = 2 / (pos2 - pos1)^3 * ion1.charge * ion2.charge
-            H[i1, i1] += term / mass1
-            H[i2, i2] += term / mass2
+            H[i1, i1] += term / ion1.mass
+            H[i2, i2] += term / ion2.mass
             H[i1, i2] -= term / mass12
             H[i2, i1] -= term / mass12
         end
@@ -247,8 +248,8 @@ function radial_modes(ions, poses, dc::Union{Function1D,Nothing},
             ion1 = ions[i1]
             mass12 = sqrt(ion1.mass * ion2.mass)
             term = 1 / (pos2 - pos1)^3 * ion1.charge * ion2.charge
-            H[i1, i1] -= term / mass1
-            H[i2, i2] -= term / mass2
+            H[i1, i1] -= term / ion1.mass
+            H[i2, i2] -= term / ion2.mass
             H[i1, i2] += term / mass12
             H[i2, i1] += term / mass12
         end
