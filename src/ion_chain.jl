@@ -78,7 +78,10 @@ struct AxialModel
                         rf::Union{Function1D,Nothing}=nothing; model=nothing)
         if model === nothing
             model = Model(NLopt.Optimizer)
-            set_optimizer_attribute(model, "algorithm", :LD_SLSQP)
+            # LD_MMA is slower
+            # LD_SLSQP is slightly faster but gives wrong answer from time to time
+            # Other LD_ solvers does not accept the inequality constraints.
+            set_optimizer_attribute(model, "algorithm", :LD_CCSAQ)
         end
         nions = length(ions)
         vars = [@variable(model) for i in 1:nions]
