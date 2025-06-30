@@ -51,7 +51,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
             @test result′.val.dis == d.dis
             @test result′.val.area == d.area
             if need_cumdis
-                @test result′.val.cumdis == d.cumdis
+                @test result′.val.cumdis ≈ d.cumdis
             end
             if need_area_mode
                 @test result′.val.disδ == d.disδ

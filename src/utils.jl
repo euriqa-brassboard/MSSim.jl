@@ -167,7 +167,7 @@ end
 @inline Base.muladd(::Zero, ::Zero, ::Zero) = Zero()
 @inline Base.muladd(x, ::Zero, ::Zero) = Zero()
 @inline Base.muladd(::Zero, y, ::Zero) = Zero()
-@inline Base.muladd(x, y, ::Zero) = x * y
+@inline Base.muladd(x, y, ::Zero) = mul(x, y)
 @inline Base.muladd(::Zero, ::Zero, z) = z
 @inline Base.muladd(x, ::Zero, z) = z
 @inline Base.muladd(::Zero, y, z) = z
