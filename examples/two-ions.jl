@@ -31,7 +31,15 @@ set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 
 const modes = [MSSim.SymLinear.Mode{Float64}(ω, 1, 1)
                for ω in range(2.0, 2.5, length=2)]
-const opt = Opts.AvgDisOpt{Float64}(model, modes, 2, 0.2, 20)
-const opt_res = @btime Opts.optimize!(opt, fill(2.24, 10), min_ω=1, max_ω=3)
+const opt = Opts.AvgDisOpt{Float64}(model, modes, 2, 0.2, 10)
+opt_res = (fill(0.0, 5), 10.0)
+@time for i in 1:10000
+    global opt_res
+    new_res = Opts.optimize!(opt, rand(5) .* 2 .+ 1, min_ω=1, max_ω=3)
+    if new_res[2] < opt_res[2]
+        @show new_res
+        opt_res = new_res
+    end
+end
 @show opt_res
 @show opt.eval_count[]
