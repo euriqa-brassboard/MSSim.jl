@@ -363,9 +363,9 @@ import ..SegSeq
 
 struct ParamGradMask
     τ::Bool
-    dΩ::Bool
+    Ω::Bool
     Ω′::Bool
-    dφ::Bool
+    φ::Bool
     ω::Bool
 end
 
@@ -377,8 +377,8 @@ end
         idx += 1
     end
     if name === :dΩ
-        return param_mask.dΩ ? idx : 0
-    elseif param_mask.dΩ
+        return param_mask.Ω ? idx : 0
+    elseif param_mask.Ω
         idx += 1
     end
     if name === :Ω′
@@ -387,8 +387,8 @@ end
         idx += 1
     end
     if name === :dφ
-        return param_mask.dφ ? idx : 0
-    elseif param_mask.dφ
+        return param_mask.φ ? idx : 0
+    elseif param_mask.φ
         idx += 1
     end
     if name === :ω
@@ -453,18 +453,18 @@ end
 @inline function pindex_input(pmask::ParamGradMask)
     ngrad_in = 0
     idxs = (τ=pmask.τ ? (ngrad_in = ngrad_in + 1) : nothing,
-            Ω=(pmask.dΩ || pmask.Ω′) ? (ngrad_in = ngrad_in + 1) : nothing,
+            Ω=(pmask.Ω || pmask.Ω′) ? (ngrad_in = ngrad_in + 1) : nothing,
             Ω′=pmask.Ω′ ? (ngrad_in = ngrad_in + 1) : nothing,
-            φ=(pmask.dφ || pmask.ω) ? (ngrad_in = ngrad_in + 1) : nothing,
+            φ=(pmask.φ || pmask.ω) ? (ngrad_in = ngrad_in + 1) : nothing,
             δ=pmask.ω ? (ngrad_in = ngrad_in + 1) : nothing)
     return idxs, ngrad_in
 end
 @inline function pindex_output(pmask::ParamGradMask)
     ngrad_out = 0
     idxs = (τ=pmask.τ ? (ngrad_out = ngrad_out + 1) : nothing,
-            Ω=pmask.dΩ ? (ngrad_out = ngrad_out + 1) : nothing,
+            Ω=pmask.Ω ? (ngrad_out = ngrad_out + 1) : nothing,
             Ω′=pmask.Ω′ ? (ngrad_out = ngrad_out + 1) : nothing,
-            φ=pmask.dφ ? (ngrad_out = ngrad_out + 1) : nothing,
+            φ=pmask.φ ? (ngrad_out = ngrad_out + 1) : nothing,
             δ=pmask.ω ? (ngrad_out = ngrad_out + 1) : nothing)
     return idxs, ngrad_out
 end
@@ -500,9 +500,9 @@ end
             grad_buf = seg_grad_buf[i]
             gi, = pindex_input(pmask)
             pmask.τ && (grad_buf[gi.τ] = grad[1])
-            (pmask.dΩ || pmask.Ω′) && (grad_buf[gi.Ω] = grad[2])
+            (pmask.Ω || pmask.Ω′) && (grad_buf[gi.Ω] = grad[2])
             pmask.Ω′ && (grad_buf[gi.Ω′] = grad[3])
-            (pmask.dφ || pmask.ω) && (grad_buf[gi.φ] = grad[4])
+            (pmask.φ || pmask.ω) && (grad_buf[gi.φ] = grad[4])
             pmask.ω && (grad_buf[gi.δ] = grad[5])
         end
         φ = muladd(pulse.τ, δ, φ)
@@ -605,11 +605,11 @@ end
                                                                  sgrad[gi.τ].dis))
             end
             # Ω
-            if pmask.dΩ || pmask.Ω′
+            if pmask.Ω || pmask.Ω′
                 old_dis_dΩ = dis_dΩ
                 dis_dΩ = sgrad[gi.Ω].dis + dis_dΩ
             end
-            if pmask.dΩ
+            if pmask.Ω
                 res_dis_sgrad[go.Ω] = dis_scale * dis_dΩ
             end
             # Ω′
@@ -618,11 +618,11 @@ end
                                                             sgrad[gi.Ω′].dis)
             end
             # φ
-            if pmask.dφ || pmask.ω
+            if pmask.φ || pmask.ω
                 old_dis_dφ = dis_dφ
                 dis_dφ = sgrad[gi.φ].dis + dis_dφ
             end
-            if pmask.dφ
+            if pmask.φ
                 res_dis_sgrad[go.φ] = dis_scale * dis_dφ
             end
             # ω
@@ -643,11 +643,11 @@ end
                                                area_scale, res_area_sgrad[go.τ])
             end
             # Ω
-            if pmask.dΩ || pmask.Ω′
+            if pmask.Ω || pmask.Ω′
                 old_area_dΩ = area_dΩ
                 area_dΩ = sgrad[gi.Ω].area + area_dΩ
             end
-            if pmask.dΩ
+            if pmask.Ω
                 res_area_sgrad[go.Ω] = muladd(area_scale, area_dΩ,
                                                res_area_sgrad[go.Ω])
             end
@@ -659,11 +659,11 @@ end
                                                  res_area_sgrad[go.Ω′])
             end
             # φ
-            if pmask.dφ || pmask.ω
+            if pmask.φ || pmask.ω
                 old_area_dφ = area_dφ
                 area_dφ = sgrad[gi.φ].area + area_dφ
             end
-            if pmask.dφ
+            if pmask.φ
                 res_area_sgrad[go.φ] = muladd(area_scale, area_dφ,
                                                res_area_sgrad[go.φ])
             end
@@ -684,11 +684,11 @@ end
                     muladd(cumdis_dΩ, pulse.Ω′, sgrad[gi.τ].cumdis))
             end
             # Ω
-            if pmask.dΩ || pmask.Ω′
+            if pmask.Ω || pmask.Ω′
                 old_cumdis_dΩ = cumdis_dΩ
                 cumdis_dΩ = sgrad[gi.Ω].cumdis + cumdis_dΩ
             end
-            if pmask.dΩ
+            if pmask.Ω
                 res_cumdis_sgrad[go.Ω] = dis_scale * cumdis_dΩ
             end
             # Ω′
@@ -698,11 +698,11 @@ end
                                        sgrad[gi.Ω′].cumdis)
             end
             # φ
-            if pmask.dφ || pmask.ω
+            if pmask.φ || pmask.ω
                 old_cumdis_dφ = cumdis_dφ
                 cumdis_dφ = sgrad[gi.φ].cumdis + cumdis_dφ
             end
-            if pmask.dφ
+            if pmask.φ
                 res_cumdis_sgrad[go.φ] = dis_scale * cumdis_dφ
             end
             # ω
@@ -721,11 +721,11 @@ end
                     disδ_dφ, δ, muladd(disδ_dΩ, pulse.Ω′, sgrad[gi.τ].disδ))
             end
             # Ω
-            if pmask.dΩ || pmask.Ω′
+            if pmask.Ω || pmask.Ω′
                 old_disδ_dΩ = disδ_dΩ
                 disδ_dΩ = sgrad[gi.Ω].disδ + disδ_dΩ
             end
-            if pmask.dΩ
+            if pmask.Ω
                 res_disδ_sgrad[go.Ω] = dis_scale * disδ_dΩ
             end
             # Ω′
@@ -734,11 +734,11 @@ end
                                                               sgrad[gi.Ω′].disδ)
             end
             # φ
-            if pmask.dφ || pmask.ω
+            if pmask.φ || pmask.ω
                 old_disδ_dφ = disδ_dφ
                 disδ_dφ = sgrad[gi.φ].disδ + disδ_dφ
             end
-            if pmask.dφ
+            if pmask.φ
                 res_disδ_sgrad[go.φ] = dis_scale * disδ_dφ
             end
             # ω
@@ -758,11 +758,11 @@ end
                     muladd(areaδ_dΩ, pulse.Ω′, sgrad[gi.τ].areaδ))
             end
             # Ω
-            if pmask.dΩ || pmask.Ω′
+            if pmask.Ω || pmask.Ω′
                 old_areaδ_dΩ = areaδ_dΩ
                 areaδ_dΩ = sgrad[gi.Ω].areaδ + areaδ_dΩ
             end
-            if pmask.dΩ
+            if pmask.Ω
                 res_areaδ_sgrad[go.Ω] = area_scale * areaδ_dΩ
             end
             # Ω′
@@ -771,11 +771,11 @@ end
                                                                 sgrad[gi.Ω′].areaδ)
             end
             # φ
-            if pmask.dφ || pmask.ω
+            if pmask.φ || pmask.ω
                 old_areaδ_dφ = areaδ_dφ
                 areaδ_dφ = sgrad[gi.φ].areaδ + areaδ_dφ
             end
-            if pmask.dφ
+            if pmask.φ
                 res_areaδ_sgrad[go.φ] = area_scale * areaδ_dφ
             end
             # ω
@@ -833,5 +833,231 @@ function compute!(sys::System{T,SDV,SDG,MR,pmask}) where {T,SDV,SDG,MR,pmask}
     return
 end
 
+struct ComputeBuffer{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T}}
+    seg_buf::Vector{SDV}
+    seg_grad_buf::Utils.JaggedMatrix{SDG}
+    buffer::SegSeq.SeqComputeBuffer{T}
+
+    function ComputeBuffer{NSeg,T}(::Val{maskv}, ::Val{maskg}) where {NSeg,T,maskv,maskg}
+        SDV = SegSeq.SegData(T, maskv)
+        SDG = SegSeq.SegData(T, maskg)
+
+        seg_buf = Vector{SDV}(undef, NSeg)
+        seg_grad_buf = Utils.JaggedMatrix{SDG}()
+        buffer = SegSeq.SeqComputeBuffer{T}()
+        Utils.resize_uniform!(seg_grad_buf, NSeg, 5)
+        return new{NSeg,T,SDV,SDG}(seg_buf, seg_grad_buf, buffer)
+    end
+end
+
+mutable struct Kernel{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T},pmask,NArgs}
+    const buffer::ComputeBuffer{NSeg,T,SDV,SDG}
+    const result::SegSeq.SingleModeResult{T,SDV,SDG}
+    evaled::Bool
+    args::NTuple{NArgs,T}
+
+    function Kernel(buffer::ComputeBuffer{NSeg,T,SDV,SDG},
+                    ::Val{pmask}) where {NSeg,T,SDV,SDG,pmask}
+        maskv = SegSeq.value_mask(SDV)
+        maskg = SegSeq.value_mask(SDG)
+        result = SegSeq.SingleModeResult{T}(Val(maskv), Val(maskg))
+        Utils.resize_uniform!(result.grad, NSeg, 5)
+        return new{NSeg,T,SDV,SDG,pmask,NSeg*5}(buffer, result, false)
+    end
+end
+
+# Arguments
+# (τ, Ω, Ω′, φ, δ) * nseg
+function _update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs}) where {NSeg,T,SDV,SDG,pmask,NArgs}
+    buffer = kern.buffer
+    maskv = SegSeq.value_mask(SDV)
+    maskg = SegSeq.value_mask(SDG)
+    seg_buf = buffer.seg_buf
+    seg_grad_buf = buffer.seg_grad_buf
+    need_grad = maskg !== zero(SegSeq.ValueMask)
+    @inbounds for i in 1:NSeg
+        τ = kern.args[i * 5 - 4]
+        Ω = kern.args[i * 5 - 3]
+        Ω′ = kern.args[i * 5 - 2]
+        φ = kern.args[i * 5 - 1]
+        δ = kern.args[i * 5]
+        if Ω′ == 0
+            seg, grad = SegInt.compute_values(τ, Ω, Utils.Zero(), φ, δ,
+                                              Val(maskv), Val(maskg))
+        else
+            seg, grad = SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(maskv), Val(maskg))
+        end
+        seg_buf[i] = seg
+        if need_grad
+            grad_buf = seg_grad_buf[i]
+            pmask.τ && (grad_buf[1] = grad[1])
+            pmask.Ω && (grad_buf[2] = grad[2])
+            pmask.Ω′ && (grad_buf[3] = grad[3])
+            pmask.φ && (grad_buf[4] = grad[4])
+            pmask.ω && (grad_buf[5] = grad[5])
+        end
+    end
+    SegSeq.compute_single_mode!(kern.result, seg_buf, buffer.buffer,
+                                need_grad ? seg_grad_buf : nothing,
+                                Val(pmask.τ), Val(true))
+    return
+end
+
+@inline function update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs},
+                         args::NTuple{N}) where {NSeg,T,SDV,SDG,pmask,NArgs,N}
+    @assert N == NArgs
+    if args == kern.args && kern.evaled
+        return
+    end
+    kern.args = args
+    kern.evaled = false
+    _update!(kern)
+    kern.evaled = true
+    return
+end
+
+@inline function value_rdis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.dis
+    update!(kern, args)
+    return real(kern.result.val.dis)
+end
+
+@inline function grad_rdis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.dis
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = real(grad[i].dis)
+    end
+    return
+end
+
+@inline function value_idis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.dis
+    update!(kern, args)
+    return imag(kern.result.val.dis)
+end
+
+@inline function grad_idis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.dis
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = imag(grad[i].dis)
+    end
+    return
+end
+
+@inline function value_area(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.area
+    update!(kern, args)
+    return kern.result.val.area
+end
+
+@inline function grad_area(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.area
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = grad[i].area
+    end
+    return
+end
+
+@inline function value_rcumdis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.cumdis
+    update!(kern, args)
+    return real(kern.result.val.cumdis)
+end
+
+@inline function grad_rcumdis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.cumdis
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = real(grad[i].cumdis)
+    end
+    return
+end
+
+@inline function value_icumdis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.cumdis
+    update!(kern, args)
+    return imag(kern.result.val.cumdis)
+end
+
+@inline function grad_icumdis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.cumdis
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = imag(grad[i].cumdis)
+    end
+    return
+end
+
+@inline function value_rdisδ(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.disδ
+    update!(kern, args)
+    return real(kern.result.val.disδ)
+end
+
+@inline function grad_rdisδ(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.disδ
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = real(grad[i].disδ)
+    end
+    return
+end
+
+@inline function value_idisδ(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.disδ
+    update!(kern, args)
+    return imag(kern.result.val.disδ)
+end
+
+@inline function grad_idisδ(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.disδ
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = imag(grad[i].disδ)
+    end
+    return
+end
+
+@inline function value_areaδ(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskv = SegSeq.value_mask(SDV)
+    @assert maskv.areaδ
+    update!(kern, args)
+    return kern.result.val.areaδ
+end
+
+@inline function grad_areaδ(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
+    maskg = SegSeq.value_mask(SDG)
+    @assert maskg.areaδ
+    update!(kern, args)
+    grad = kern.result.grad.values
+    @inbounds for i in 1:NSeg * 5
+        g[i] = grad[i].areaδ
+    end
+    return
+end
 
 end

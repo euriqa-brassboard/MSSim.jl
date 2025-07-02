@@ -5,6 +5,7 @@ module SymLinear
 using Test
 using ForwardDiff
 using Setfield
+using Random
 
 using MSSim
 const PN = MSSim.PureNumeric
@@ -386,6 +387,102 @@ end
             test_nseg(20, nmode)
         end
     end
+end
+
+@testset "Random single-mode sequence" begin
+    function test_grad(grad1, grad2, τ, Ω, Ω′, φ, δ)
+        nargs = length(grad1)
+        for i in 1:5:nargs
+            if τ
+                @test grad1[i] ≈ grad2[i]
+            end
+            if Ω
+                @test grad1[i + 1] ≈ grad2[i + 1]
+            end
+            if Ω′
+                @test grad1[i + 2] ≈ grad2[i + 2]
+            end
+            if φ
+                @test grad1[i + 3] ≈ grad2[i + 3]
+            end
+            if δ
+                @test grad1[i + 4] ≈ grad2[i + 4]
+            end
+        end
+    end
+    function test_nseg(::Val{NSeg}) where NSeg
+        full_buf = SL.ComputeBuffer{NSeg,Float64}(
+            Val(SS.ValueMask(true, true, true, true, true, true)),
+            Val(SS.ValueMask(true, true, true, true, true, true)))
+        full_kern = SL.Kernel(
+            full_buf, Val(SL.ParamGradMask(true, true, true, true, true)))
+        args = Vector{Float64}(undef, NSeg * 5)
+        args2 = Vector{Float64}(undef, NSeg * 5)
+        grad_buff = Vector{Float64}(undef, NSeg * 5)
+        grad_buff2 = Vector{Float64}(undef, NSeg * 5)
+
+        function check_grad(valf, gradf)
+            nargs = NSeg * 5
+            args2 .= args
+            gradf(grad_buff, full_kern, args...)
+            h = 0.000005 / 4
+            hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
+            function eval_wrapper(i, d)
+                args2[i] = args[i] + d
+                return valf(full_kern, args2...)
+            end
+            for i in 1:nargs
+                results = eval_wrapper.(i, hs)
+                @test grad_buff[i] ≈ compute_grad(results..., h) rtol=1.5e-2 atol=5e-4
+            end
+        end
+
+        for _ in 1:100
+            rand!(args)
+            rdis = SL.value_rdis(full_kern, args...)
+            idis = SL.value_idis(full_kern, args...)
+            area = SL.value_area(full_kern, args...)
+            rcumdis = SL.value_rcumdis(full_kern, args...)
+            icumdis = SL.value_icumdis(full_kern, args...)
+            rdisδ = SL.value_rdisδ(full_kern, args...)
+            idisδ = SL.value_idisδ(full_kern, args...)
+            areaδ = SL.value_areaδ(full_kern, args...)
+
+            check_grad(SL.value_rdis, SL.grad_rdis)
+            check_grad(SL.value_idis, SL.grad_idis)
+            check_grad(SL.value_area, SL.grad_area)
+            check_grad(SL.value_rcumdis, SL.grad_rcumdis)
+            check_grad(SL.value_icumdis, SL.grad_icumdis)
+            check_grad(SL.value_rdisδ, SL.grad_rdisδ)
+            check_grad(SL.value_idisδ, SL.grad_idisδ)
+            check_grad(SL.value_areaδ, SL.grad_areaδ)
+
+            for (τ, Ω, Ω′, φ, δ) in Iterators.product((false, true), (false, true),
+                                                            (false, true), (false, true),
+                                                            (false, true))
+                kern = SL.Kernel(full_buf, Val(SL.ParamGradMask(τ, Ω, Ω′, φ, δ)))
+                function check_param(val, valf, gradf)
+                    @test valf(kern, args...) ≈ val
+                    gradf(grad_buff, full_kern, args...)
+                    gradf(grad_buff2, kern, args...)
+                    test_grad(grad_buff, grad_buff2, τ, Ω, Ω′, φ, δ)
+                end
+                check_param(rdis, SL.value_rdis, SL.grad_rdis)
+                check_param(idis, SL.value_idis, SL.grad_idis)
+                check_param(area, SL.value_area, SL.grad_area)
+                check_param(rcumdis, SL.value_rcumdis, SL.grad_rcumdis)
+                check_param(icumdis, SL.value_icumdis, SL.grad_icumdis)
+                check_param(rdisδ, SL.value_rdisδ, SL.grad_rdisδ)
+                check_param(idisδ, SL.value_idisδ, SL.grad_idisδ)
+                check_param(areaδ, SL.value_areaδ, SL.grad_areaδ)
+            end
+        end
+    end
+    test_nseg(Val(1))
+    test_nseg(Val(2))
+    test_nseg(Val(5))
+    test_nseg(Val(10))
+    test_nseg(Val(20))
 end
 
 end
