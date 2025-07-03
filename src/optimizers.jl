@@ -344,4 +344,21 @@ function gen_args(m::Model, nseg; freq=FreqSpec(), amp=AmpSpec())
     end
 end
 
+struct VarTracker
+    vars::Vector{Tuple{VariableRef,Float64,Float64}}
+end
+
+function Base.add!(tracker::VarTracker, var::VariableRef, lb, ub)
+    set_lower_bound(var, lb)
+    set_upper_bound(var, ub)
+    push!(tracker.vars, (var, lb, ub))
+    return
+end
+
+function init_vars(tracker::VarTracker)
+    for (var, lb, ub) in tracker.vars
+        set_start_value(var, lb + (ub - lb) * rand())
+    end
+end
+
 end
