@@ -7,6 +7,8 @@ using JuMP
 using BenchmarkTools
 
 const Opts = MSSim.Optimizers
+const SS = MSSim.SegSeq
+const SL = MSSim.SymLinear
 
 # using Ipopt
 # const model = Model(Ipopt.Optimizer)
@@ -21,25 +23,42 @@ const model = Model(NLopt.Optimizer)
 # set_optimizer_attribute(model, "algorithm", :LD_MMA)
 set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 
-# const modes = [MSSim.SymLinear.Mode{Float64}(ω, 1, 1)
-#                for ω in range(2.0, 2.5, length=31)]
+nseg = 30
 
-# const opt = Opts.AvgDisOpt{Float64}(model, modes, 2, 0.2, 400)
-# const opt_res = @btime Opts.optimize!(opt, fill(2.25, 200), min_ω=1, max_ω=3)
-# @show opt_res
-# @show opt.eval_count[]
+buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, true, true, true)),
+                                   Val(SS.ValueMask(true, true, true, true, true, true)));
+kern = SL.Kernel(buf, Val(SL.ParamGradMask(true, true, true, true, true)));
+args = Opts.gen_args(model, nseg, freq=Opts.FreqSpec(true))
+Opts.register_kernel_funcs(model, kern)
 
-const modes = [MSSim.SymLinear.Mode{Float64}(ω, 1, 1)
-               for ω in range(2.0, 2.5, length=2)]
-const opt = Opts.AvgDisOpt{Float64}(model, modes, 2, 0.2, 10)
-opt_res = (fill(0.0, 5), 10.0)
-@time for i in 1:10000
-    global opt_res
-    new_res = Opts.optimize!(opt, rand(5) .* 2 .+ 1, min_ω=1, max_ω=3)
-    if new_res[2] < opt_res[2]
-        @show new_res
-        opt_res = new_res
+modes = Opts.Modes()
+push!(modes, 2.5)
+
+dis = Opts.total_dis(model, args, modes)
+cdis = Opts.total_cumdis(model, args, modes)
+area = Opts.total_area(model, args, modes)
+disδ = Opts.total_disδ(model, args, modes)
+areaδ = Opts.total_areaδ(model, args, modes)
+all_areaδ = Opts.all_areaδ(model, args, modes)
+
+tracker = Opts.VarTracker()
+push!(tracker, args.τ, 1, 10)
+push!(tracker, args.Ωs.poly[1], 0.1, 1)
+for ω in args.ωs
+    push!(tracker, ω, 1.0, 4.0)
+end
+obj = @NLexpression(model, (dis + disδ + 1e-15) / abs(area)^2)
+@NLobjective(model, Min, obj)
+
+best_obj = 1.0
+best_params = nothing
+@time for _ in 1:1000
+    global best_obj, best_params
+    Opts.init_vars(tracker)
+    JuMP.optimize!(model)
+    if value(obj) < best_obj
+        @show value(dis), value(disδ), value(cdis), value(area), value(areaδ), value(all_areaδ)
+        best_obj = value(obj)
+        best_params = values.(all_variables(model))
     end
 end
-@show opt_res
-@show opt.eval_count[]
