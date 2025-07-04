@@ -161,7 +161,7 @@ function optimize!(opt::AvgDisOpt, init_ωs; min_ω=nothing, max_ω=nothing)
     return ωsv, objv
 end
 
-function register_kernel_funcs(model, kernel::SymLinear.Kernel{NSeg,T,SDV,SDG};
+function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
                                prefix="", suffix="") where {NSeg,T,SDV,SDG}
     maskv = SegSeq.value_mask(SDV)
     maskg = SegSeq.value_mask(SDG)
@@ -169,36 +169,44 @@ function register_kernel_funcs(model, kernel::SymLinear.Kernel{NSeg,T,SDV,SDG};
     if maskv.dis && maskg.dis
         register(model, Symbol("$(prefix)rdis$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_rdis(kern, args...)),
-                 @inline((g, args...)->grad_rdis(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_rdis(g, kern, args...)),
+                 autodiff=false)
         register(model, Symbol("$(prefix)idis$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_idis(kern, args...)),
-                 @inline((g, args...)->grad_idis(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_idis(g, kern, args...)),
+                 autodiff=false)
     end
     if maskv.area && maskg.area
         register(model, Symbol("$(prefix)area$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_area(kern, args...)),
-                 @inline((g, args...)->grad_area(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_area(g, kern, args...)),
+                 autodiff=false)
     end
     if maskv.cumdis && maskg.cumdis
         register(model, Symbol("$(prefix)rcumdis$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_rcumdis(kern, args...)),
-                 @inline((g, args...)->grad_rcumdis(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_rcumdis(g, kern, args...)),
+                 autodiff=false)
         register(model, Symbol("$(prefix)icumdis$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_icumdis(kern, args...)),
-                 @inline((g, args...)->grad_icumdis(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_icumdis(g, kern, args...)),
+                 autodiff=false)
     end
     if maskv.disδ && maskg.disδ
         register(model, Symbol("$(prefix)rdisδ$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_rdisδ(kern, args...)),
-                 @inline((g, args...)->grad_rdisδ(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_rdisδ(g, kern, args...)),
+                 autodiff=false)
         register(model, Symbol("$(prefix)idisδ$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_idisδ(kern, args...)),
-                 @inline((g, args...)->grad_idisδ(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_idisδ(g, kern, args...)),
+                 autodiff=false)
     end
     if maskv.areaδ && maskg.areaδ
         register(model, Symbol("$(prefix)areaδ$(suffix)"),
                  NSeg * 5, @inline((args...)->SymLinear.value_areaδ(kern, args...)),
-                 @inline((g, args...)->grad_areaδ(g, kern, args...)), autodiff=false)
+                 @inline((g, args...)->SymLinear.grad_areaδ(g, kern, args...)),
+                 autodiff=false)
     end
 end
 
@@ -326,29 +334,38 @@ function _gen_args(spec::FreqSpec, m::Model, nseg, τ)
     end
 end
 
+struct Args{T,A,F,CB}
+    τ::T
+    Ωs::A
+    ωs::F
+    getter::CB
+end
+
 function gen_args(m::Model, nseg; freq=FreqSpec(), amp=AmpSpec())
     τ = @variable(m, base_name="τ")
     Ω_params, Ωs, Ω′s = _gen_args(amp, m, nseg, τ)
     ω_params, getter = _gen_args(freq, m, nseg, τ)
-    return (τ=τ, Ωs=Ω_params, ωs=ω_params), function (ωm)
-        args = Vector{Any}(undef, nseg * 5)
-        φs, δs = getter(ωm)
-        for i in 1:nseg
-            args[i * 5 - 4] = τ
-            args[i * 5 - 3] = Ωs[i]
-            args[i * 5 - 2] = Ω′s[i]
-            args[i * 5 - 1] = φs[i]
-            args[i * 5] = δs[i]
-        end
-        return args
-    end
+    return Args(τ, Ω_params, ω_params,
+                function (ωm)
+                    args = Vector{Any}(undef, nseg * 5)
+                    φs, δs = getter(ωm)
+                    for i in 1:nseg
+                        args[i * 5 - 4] = τ
+                        args[i * 5 - 3] = Ωs[i]
+                        args[i * 5 - 2] = Ω′s[i]
+                        args[i * 5 - 1] = φs[i]
+                        args[i * 5] = δs[i]
+                    end
+                    return args
+                end)
 end
 
 struct VarTracker
     vars::Vector{Tuple{VariableRef,Float64,Float64}}
+    VarTracker() = new(Tuple{VariableRef,Float64,Float64}[])
 end
 
-function Base.add!(tracker::VarTracker, var::VariableRef, lb, ub)
+function Base.push!(tracker::VarTracker, var::VariableRef, lb, ub)
     set_lower_bound(var, lb)
     set_upper_bound(var, ub)
     push!(tracker.vars, (var, lb, ub))
@@ -359,6 +376,84 @@ function init_vars(tracker::VarTracker)
     for (var, lb, ub) in tracker.vars
         set_start_value(var, lb + (ub - lb) * rand())
     end
+end
+
+struct Modes
+    modes::Vector{Tuple{Float64,Float64}}
+    Modes() = new(Tuple{Float64,Float64}[])
+end
+
+function Base.push!(modes::Modes, ω, η=1.0)
+    push!(modes.modes, (ω, η))
+    return
+end
+
+get_args(args::Args, modes::Modes) = [args.getter(ω) for (ω, η) in modes.modes]
+
+function total_dis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
+    r_f = Symbol("$(prefix)rdis$(suffix)")
+    i_f = Symbol("$(prefix)idis$(suffix)")
+    res = 0
+    for kargs in get_args(args, modes)
+        r_ex = :($r_f($kargs...))
+        i_ex = :($i_f($kargs...))
+        res = @NLexpression(m, res + r_ex^2 + i_ex^2)
+    end
+    return res
+end
+
+function total_cumdis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
+    r_f = Symbol("$(prefix)rcumdis$(suffix)")
+    i_f = Symbol("$(prefix)icumdis$(suffix)")
+    res = 0
+    for kargs in get_args(args, modes)
+        r_ex = :($r_f($kargs...))
+        i_ex = :($i_f($kargs...))
+        res = @NLexpression(m, res + r_ex^2 + i_ex^2)
+    end
+    return res
+end
+
+function total_area(m::Model, args::Args, modes::Modes; prefix="", suffix="")
+    f = Symbol("$(prefix)area$(suffix)")
+    res = 0
+    for (kargs, (ω, η)) in zip(get_args(args, modes), modes.modes)
+        ex = :($f($kargs...))
+        res = @NLexpression(m, res + ex * η^2)
+    end
+    return res
+end
+
+function total_disδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
+    r_f = Symbol("$(prefix)rdisδ$(suffix)")
+    i_f = Symbol("$(prefix)idisδ$(suffix)")
+    res = 0
+    for kargs in get_args(args, modes)
+        r_ex = :($r_f($kargs...))
+        i_ex = :($i_f($kargs...))
+        res = @NLexpression(m, res + r_ex^2 + i_ex^2)
+    end
+    return res
+end
+
+function total_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
+    f = Symbol("$(prefix)areaδ$(suffix)")
+    res = 0
+    for (kargs, (ω, η)) in zip(get_args(args, modes), modes.modes)
+        ex = :($f($kargs...))
+        res = @NLexpression(m, res + ex * η^2)
+    end
+    return res
+end
+
+function all_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
+    f = Symbol("$(prefix)areaδ$(suffix)")
+    res = 0
+    for (kargs, (ω, η)) in zip(get_args(args, modes), modes.modes)
+        ex = :($f($kargs...))
+        res = @NLexpression(m, res + ex^2)
+    end
+    return res
 end
 
 end
