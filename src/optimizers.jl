@@ -383,12 +383,12 @@ struct Modes
     Modes() = new(Tuple{Float64,Float64}[])
 end
 
-function Base.push!(modes::Modes, ω, η=1.0)
-    push!(modes.modes, (ω, η))
+function Base.push!(modes::Modes, ω, weight=1.0)
+    push!(modes.modes, (ω, weight))
     return
 end
 
-get_args(args::Args, modes::Modes) = [args.getter(ω) for (ω, η) in modes.modes]
+get_args(args::Args, modes::Modes) = [args.getter(ω) for (ω, _) in modes.modes]
 
 function total_dis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
     r_f = Symbol("$(prefix)rdis$(suffix)")
@@ -417,9 +417,9 @@ end
 function total_area(m::Model, args::Args, modes::Modes; prefix="", suffix="")
     f = Symbol("$(prefix)area$(suffix)")
     res = 0
-    for (kargs, (ω, η)) in zip(get_args(args, modes), modes.modes)
+    for (kargs, (ω, weight)) in zip(get_args(args, modes), modes.modes)
         ex = :($f($kargs...))
-        res = @NLexpression(m, res + ex * η^2)
+        res = @NLexpression(m, res + ex * weight)
     end
     return res
 end
@@ -439,9 +439,9 @@ end
 function total_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
     f = Symbol("$(prefix)areaδ$(suffix)")
     res = 0
-    for (kargs, (ω, η)) in zip(get_args(args, modes), modes.modes)
+    for (kargs, (ω, weight)) in zip(get_args(args, modes), modes.modes)
         ex = :($f($kargs...))
-        res = @NLexpression(m, res + ex * η^2)
+        res = @NLexpression(m, res + ex * weight)
     end
     return res
 end
@@ -449,7 +449,7 @@ end
 function all_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
     f = Symbol("$(prefix)areaδ$(suffix)")
     res = 0
-    for (kargs, (ω, η)) in zip(get_args(args, modes), modes.modes)
+    for kargs in get_args(args, modes)
         ex = :($f($kargs...))
         res = @NLexpression(m, res + ex^2)
     end
