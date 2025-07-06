@@ -227,6 +227,27 @@ struct ArgsValue
     args::Vector{Float64}
 end
 
+function adjust(args::ArgsValue; tmax=Inf)
+    res = copy(args.args)
+    nargs = length(res)
+    @assert nargs % 5 == 0
+    nseg = nargs ÷ 5
+    totalt = 0.0
+    for i in 1:nseg
+        if totalt >= tmax
+            res[i * 5 - 4] = 0
+            continue
+        end
+        τ = res[i * 5 - 4]
+        dt = tmax - totalt
+        totalt += τ
+        if dt < τ
+            res[i * 5 - 4] = dt
+        end
+    end
+    return ArgsValue(res)
+end
+
 JuMP.value(args::Args) = ArgsValue(value.(args.getter(0.0)))
 function get_args(args::ArgsValue, ωm)
     res = copy(args.args)
