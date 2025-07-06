@@ -24,9 +24,7 @@ buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, false, t
 # buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, true, true, true)),
 #                                      Val(SS.ValueMask(true, true, true, true, true, true)))
 kern = SL.Kernel(buf, Val(SL.ParamGradMask(true, true, true, true, true)));
-args = Opts.gen_args(model, nseg,
-                     freq=Opts.FreqSpec(true, sym=false),
-                     amp=Opts.AmpSpec(sym=false, mid_order=40, end_order=2))
+args = Opts.gen_args(model, nseg, freq=Opts.FreqSpec(true, sym=false))
 Opts.register_kernel_funcs(model, kern)
 
 modes = Opts.Modes()
@@ -60,6 +58,7 @@ best_params = nothing
     if value(obj) < best_obj
         best_obj = value(obj)
         @show best_obj, value(dis), value(disδ), value(area), value(areaδ)
-        best_params = values.(all_variables(model))
+        best_params = value.(all_variables(model))
+        @show best_params
     end
 end
