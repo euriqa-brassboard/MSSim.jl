@@ -890,11 +890,11 @@ function _update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs}) where {NSeg,T,SDV,SD
         seg_buf[i] = seg
         if need_grad
             grad_buf = seg_grad_buf[i]
-            pmask.τ && (grad_buf[1] = grad[1])
-            pmask.Ω && (grad_buf[2] = grad[2])
-            pmask.Ω′ && (grad_buf[3] = grad[3])
-            pmask.φ && (grad_buf[4] = grad[4])
-            pmask.ω && (grad_buf[5] = grad[5])
+            grad_buf[1] = pmask.τ ? grad[1] : SDG()
+            grad_buf[2] = pmask.Ω ? grad[2] : SDG()
+            grad_buf[3] = pmask.Ω′ ? grad[3] : SDG()
+            grad_buf[4] = pmask.φ ? grad[4] : SDG()
+            grad_buf[5] = pmask.ω ? grad[5] : SDG()
         end
     end
     SegSeq.compute_single_mode!(kern.result, seg_buf, buffer.buffer,

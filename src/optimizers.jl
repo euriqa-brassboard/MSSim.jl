@@ -11,9 +11,13 @@ const mask_full = SegSeq.ValueMask(true, true, true, true, true, true)
 const mask_τ_avgdis = SegSeq.ValueMask(true, true, false, true, false, false)
 const mask_τ_area_avgdis = SegSeq.ValueMask(true, true, true, true, false, false)
 const mask_avgdis = SegSeq.ValueMask(false, true, false, true, false, false)
+const mask_allδ = SegSeq.ValueMask(true, true, true, false, true, true)
 
 const pmask_full = SymLinear.ParamGradMask(true, true, true, true, true)
-const pmask_δ = SymLinear.ParamGradMask(false, false, false, false, true)
+const pmask_fm = SymLinear.ParamGradMask(false, false, false, true, true)
+const pmask_tfm = SymLinear.ParamGradMask(true, false, false, true, true)
+const pmask_am = SymLinear.ParamGradMask(false, true, true, false, false)
+const pmask_tam = SymLinear.ParamGradMask(true, true, true, false, false)
 
 mutable struct ObjCache{T}
     obj::T
@@ -222,6 +226,26 @@ function gen_args(m::Model, nseg; freq=FreqSpec(), amp=AmpSpec())
                 end)
 end
 
+struct ArgsValue
+    args::Vector{Float64}
+end
+
+JuMP.value(args::Args) = ArgsValue(value.(args.getter(0.0)))
+function get_args(args::ArgsValue, ωm)
+    res = copy(args.args)
+    nargs = length(res)
+    @assert nargs % 5 == 0
+    nseg = nargs ÷ 5
+    φ = 0.0
+    for i in 1:nseg
+        τ = res[i * 5 - 4]
+        res[i * 5 - 1] -= φ
+        φ += ωm * τ
+        res[i * 5] -= ωm
+    end
+    return res
+end
+
 struct VarTracker
     vars::Vector{Tuple{VariableRef,Float64,Float64}}
     VarTracker() = new(Tuple{VariableRef,Float64,Float64}[])
@@ -251,6 +275,8 @@ function Base.push!(modes::Modes, ω, weight=1.0)
 end
 
 get_args(args::Args, modes::Modes) = [args.getter(ω) for (ω, _) in modes.modes]
+get_args(args::ArgsValue, modes::Modes; δ=0.0) =
+    [get_args(args, ω + δ) for (ω, _) in modes.modes]
 
 function total_dis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
     r_f = Symbol("$(prefix)rdis$(suffix)")
@@ -314,6 +340,57 @@ function all_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
     for kargs in get_args(args, modes)
         ex = :($f($kargs...))
         res = @NLexpression(m, res + ex^2)
+    end
+    return res
+end
+
+function total_dis(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
+    res = 0.0
+    for kargs in get_args(args, modes; δ=δ)
+        res += (SymLinear.value_rdis(kern, kargs...)^2 +
+            SymLinear.value_idis(kern, kargs...)^2)
+    end
+    return res
+end
+
+function total_cumdis(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
+    res = 0.0
+    for kargs in get_args(args, modes; δ=δ)
+        res += (SymLinear.value_rcumdis(kern, kargs...)^2 +
+            SymLinear.value_icumdis(kern, kargs...)^2)
+    end
+    return res
+end
+
+function total_area(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
+    res = 0.0
+    for (kargs, (ω, weight)) in zip(get_args(args, modes; δ=δ), modes.modes)
+        res += SymLinear.value_area(kern, kargs...) * weight
+    end
+    return res
+end
+
+function total_disδ(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
+    res = 0.0
+    for kargs in get_args(args, modes; δ=δ)
+        res += (SymLinear.value_rdisδ(kern, kargs...)^2 +
+            SymLinear.value_idisδ(kern, kargs...)^2)
+    end
+    return res
+end
+
+function total_areaδ(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
+    res = 0.0
+    for (kargs, (ω, weight)) in zip(get_args(args, modes; δ=δ), modes.modes)
+        res += SymLinear.value_areaδ(kern, kargs...) * weight
+    end
+    return res
+end
+
+function all_areaδ(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
+    res = 0.0
+    for kargs in get_args(args, modes; δ=δ)
+        res += SymLinear.value_areaδ(kern, kargs...)^2
     end
     return res
 end
