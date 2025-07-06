@@ -17,13 +17,10 @@ set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 
 nseg = 40
 
-# buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, false, true, false)),
-#                                    Val(SS.ValueMask(true, true, true, false, true, false)))
-# buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, false, true, true)),
-#                                      Val(SS.ValueMask(true, true, true, false, true, true)))
-buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, true, true, true)),
-                                     Val(SS.ValueMask(true, true, true, true, true, true)))
-kern = SL.Kernel(buf, Val(SL.ParamGradMask(true, true, true, true, true)));
+buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_allδ), Val(Opts.mask_allδ))
+# buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
+kern = SL.Kernel(buf, Val(Opts.pmask_tfm))
+# kern = SL.Kernel(buf, Val(Opts.pmask_full))
 args = Opts.gen_args(model, nseg, freq=Opts.FreqSpec(true))
 Opts.register_kernel_funcs(model, kern)
 
@@ -33,7 +30,7 @@ for i in 1:5
 end
 
 dis = Opts.total_dis(model, args, modes)
-cdis = Opts.total_cumdis(model, args, modes)
+# cdis = Opts.total_cumdis(model, args, modes)
 area = Opts.total_area(model, args, modes)
 disδ = Opts.total_disδ(model, args, modes)
 areaδ = Opts.total_areaδ(model, args, modes)
@@ -57,14 +54,14 @@ obj = @NLexpression(model, (dis + disδ + areaδ^2 + 1e-10) / area^2 * (args.τ 
 
 best_obj = 1.0
 best_params = nothing
-@time for i in 1:1000
+@time for i in 1:100
     global best_obj, best_params
     Opts.init_vars(tracker)
     @time JuMP.optimize!(model)
     if value(obj) < best_obj
         best_obj = value(obj)
         @show best_obj, value(dis), value(disδ), value(area), value(areaδ)
-        best_params = value.(all_variables(model))
+        best_params = value(args)
         @show best_params
     end
 end
