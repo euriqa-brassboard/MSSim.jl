@@ -15,13 +15,13 @@ const model = Model(NLopt.Optimizer)
 set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 # set_optimizer_attribute(model, "algorithm", :LD_SLSQP)
 
-nseg = 40
+nseg = 30
 
 buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_allδ), Val(Opts.mask_allδ))
 # buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
 kern = SL.Kernel(buf, Val(Opts.pmask_tfm))
 # kern = SL.Kernel(buf, Val(Opts.pmask_full))
-args = Opts.gen_args(model, nseg, freq=Opts.FreqSpec(true))
+args = Opts.gen_args(model, nseg, freq=Opts.FreqSpec(true, sym=false))
 Opts.register_kernel_funcs(model, kern)
 
 modes = Opts.Modes()
