@@ -48,14 +48,14 @@ end
 for ω in args.ωs
     push!(tracker, ω, 2π * 2.0, 2π * 3.0)
 end
-obj = @NLexpression(model, (dis + disδ + areaδ^2 + 1e-10) / area^2)
+obj = @NLexpression(model, (dis + disδ + areaδ^2 + 1e-10) / area^2 * (args.τ + 2))
 # obj = @NLexpression(model, (10 * dis + disδ + 1e-10) / (1 + abs(area)))
 # obj = @NLexpression(model, (cdis + 1e-10) / (1 + abs(area)))
 # obj = @NLexpression(model, cdis + 1e-10)
 # obj = @NLexpression(model, dis + disδ)
 @NLobjective(model, Min, obj)
 
-best_obj = 100.0
+best_obj = 1.0
 best_params = nothing
 @time for i in 1:1000
     global best_obj, best_params
