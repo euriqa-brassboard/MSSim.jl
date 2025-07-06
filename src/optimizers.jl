@@ -8,9 +8,6 @@ using ..SymLinear
 using JuMP
 
 const mask_full = SegSeq.ValueMask(true, true, true, true, true, true)
-const mask_τ_avgdis = SegSeq.ValueMask(true, true, false, true, false, false)
-const mask_τ_area_avgdis = SegSeq.ValueMask(true, true, true, true, false, false)
-const mask_avgdis = SegSeq.ValueMask(false, true, false, true, false, false)
 const mask_allδ = SegSeq.ValueMask(true, true, true, false, true, true)
 
 const pmask_full = SymLinear.ParamGradMask(true, true, true, true, true)
