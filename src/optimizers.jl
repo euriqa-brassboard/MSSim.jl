@@ -183,30 +183,82 @@ function _gen_args(spec::FreqSpec, m::Model, nseg, τ)
     end
 end
 
-struct Args{T,A,F,CB}
+struct Modes
+    modes::Vector{Tuple{Float64,Float64}}
+    Modes() = new(Tuple{Float64,Float64}[])
+end
+
+function Base.push!(modes::Modes, ω, weight=1.0)
+    push!(modes.modes, (ω, weight))
+    return
+end
+
+mutable struct ModeData
+    const ωm::Float64
+    const weight::Float64
+    const args::Vector{Any}
+    const kern::SymLinear.Kernel
+    const suffix::String
+    rdis
+    idis
+    dis2
+    area
+    rcumdis
+    icumdis
+    cumdis2
+    rdisδ
+    idisδ
+    disδ2
+    areaδ
+    ModeData(ωm, weight, args, kern, suffix::String) =
+        new(ωm, weight, args, kern, suffix)
+end
+function _get_val(mode_data::ModeData, m::Model, name::Symbol)
+    if !isdefined(mode_data, name)
+        setfield!(mode_data, name,
+                  m[Symbol("$name$(mode_data.suffix)")](mode_data.args...))
+    end
+    return getfield(mode_data, name)
+end
+
+struct MSModel{pmask,T,A,F,CB,Buf}
+    m::Model
     τ::T
     Ωs::A
     ωs::F
     getter::CB
+    buf::Buf
+    mode_data::Vector{ModeData}
+    MSModel{pmask}(m::Model, τ::T, Ωs::A, ωs::F, getter::CB, buf::Buf,
+                   mode_data::Vector{ModeData}) where {pmask,T,A,F,CB,Buf} =
+        new{pmask,T,A,F,CB,Buf}(m, τ, Ωs, ωs, getter, buf, mode_data)
 end
 
-function gen_args(m::Model, nseg; freq=FreqSpec(), amp=AmpSpec())
+function MSModel{pmask}(m::Model, modes::Modes, buf::SymLinear.ComputeBuffer{NSeg};
+                        freq=FreqSpec(), amp=AmpSpec()) where {NSeg,pmask}
     τ = @variable(m, base_name="τ")
-    Ω_params, Ωs, Ω′s = _gen_args(amp, m, nseg, τ)
-    ω_params, getter = _gen_args(freq, m, nseg, τ)
-    return Args(τ, Ω_params, ω_params,
-                function (ωm)
-                    args = Vector{Any}(undef, nseg * 5)
-                    φs, δs = getter(ωm)
-                    for i in 1:nseg
-                        args[i * 5 - 4] = τ
-                        args[i * 5 - 3] = Ωs[i]
-                        args[i * 5 - 2] = Ω′s[i]
-                        args[i * 5 - 1] = φs[i]
-                        args[i * 5] = δs[i]
-                    end
-                    return args
-                end)
+    Ω_params, Ωs, Ω′s = _gen_args(amp, m, NSeg, τ)
+    ω_params, ω_getter = _gen_args(freq, m, NSeg, τ)
+    function param_getter(ωm)
+        args = Vector{Any}(undef, NSeg * 5)
+        φs, δs = ω_getter(ωm)
+        for i in 1:NSeg
+            args[i * 5 - 4] = τ
+            args[i * 5 - 3] = Ωs[i]
+            args[i * 5 - 2] = Ω′s[i]
+            args[i * 5 - 1] = φs[i]
+            args[i * 5] = δs[i]
+        end
+        return args
+    end
+    mode_data = ModeData[]
+    for (modei, (ωm, weight)) in enumerate(modes.modes)
+        kern = SymLinear.Kernel(buf, Val(pmask))
+        suffix = "_m$modei"
+        register_kernel_funcs(m, kern, suffix=suffix)
+        push!(mode_data, ModeData(ωm, weight, param_getter(ωm), kern, suffix))
+    end
+    return MSModel{pmask}(m, τ, Ω_params, ω_params, param_getter, buf, mode_data)
 end
 
 struct ArgsValue
@@ -234,7 +286,7 @@ function adjust(args::ArgsValue; tmax=Inf)
     return ArgsValue(res)
 end
 
-JuMP.value(args::Args) = ArgsValue(value.(args.getter(0.0)))
+JuMP.value(args::MSModel) = ArgsValue(value.(args.getter(0.0)))
 function get_args(args::ArgsValue, ωm)
     res = copy(args.args)
     nargs = length(res)
@@ -268,79 +320,25 @@ function init_vars(tracker::VarTracker)
     end
 end
 
-struct Modes
-    modes::Vector{Tuple{Float64,Float64}}
-    Modes() = new(Tuple{Float64,Float64}[])
-end
-
-function Base.push!(modes::Modes, ω, weight=1.0)
-    push!(modes.modes, (ω, weight))
-    return
-end
-
-get_args(args::Args, modes::Modes) = [args.getter(ω) for (ω, _) in modes.modes]
 get_args(args::ArgsValue, modes::Modes; δ=0.0) =
     [get_args(args, ω + δ) for (ω, _) in modes.modes]
 
-function total_dis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = m[Symbol("$(prefix)dis2$(suffix)")]
-    res = 0
-    for kargs in get_args(args, modes)
-        ex = f(kargs...)
-        res = @expression(m, res + ex)
+for var in [:rdis, :idis, :dis2, :area, :rcumdis, :icumdis, :cumdis2,
+              :rdisδ, :idisδ, :disδ2, :areaδ]
+    @eval function $(Symbol("get_$var"))(model::MSModel, i)
+        return _get_val(model.mode_data[i], model.m, $(QuoteNode(var)))
     end
-    return res
 end
+nmodes(model::MSModel) = length(model.mode_data)
 
-function total_cumdis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = m[Symbol("$(prefix)cumdis2$(suffix)")]
-    res = 0
-    for kargs in get_args(args, modes)
-        ex = f(kargs...)
-        res = @expression(m, res + ex)
-    end
-    return res
-end
-
-function total_area(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = m[Symbol("$(prefix)area$(suffix)")]
-    res = 0
-    for (kargs, (ω, weight)) in zip(get_args(args, modes), modes.modes)
-        ex = f(kargs...)
-        res = @expression(m, res + ex * weight)
-    end
-    return res
-end
-
-function total_disδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = m[Symbol("$(prefix)disδ2$(suffix)")]
-    res = 0
-    for kargs in get_args(args, modes)
-        ex = f(kargs...)
-        res = @expression(m, res + ex)
-    end
-    return res
-end
-
-function total_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = m[Symbol("$(prefix)areaδ$(suffix)")]
-    res = 0
-    for (kargs, (ω, weight)) in zip(get_args(args, modes), modes.modes)
-        ex = f(kargs...)
-        res = @expression(m, res + ex * weight)
-    end
-    return res
-end
-
-function all_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = m[Symbol("$(prefix)areaδ$(suffix)")]
-    res = 0
-    for kargs in get_args(args, modes)
-        ex = f(kargs...)
-        res = @expression(m, res + ex^2)
-    end
-    return res
-end
+total_dis(model::MSModel) = sum(get_dis2(model, i) for i in 1:nmodes(model))
+total_cumdis(model::MSModel) = sum(get_cumdis2(model, i) for i in 1:nmodes(model))
+total_area(model::MSModel) = sum(get_area(model, i) * model.mode_data[i].weight
+                                 for i in 1:nmodes(model))
+total_disδ(model::MSModel) = sum(get_disδ2(model, i) for i in 1:nmodes(model))
+total_areaδ(model::MSModel) = sum(get_areaδ(model, i) * model.mode_data[i].weight
+                                   for i in 1:nmodes(model))
+all_areaδ(model::MSModel) = sum(get_areaδ(model, i)^2 for i in 1:nmodes(model))
 
 function total_dis(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
     res = 0.0

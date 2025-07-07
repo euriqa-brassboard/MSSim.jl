@@ -23,41 +23,42 @@ nseg = 30
 
 buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_allδ), Val(Opts.mask_allδ))
 # buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
-kern = SL.Kernel(buf, Val(Opts.pmask_tfm))
+# kern = SL.Kernel(buf, Val(Opts.pmask_tfm))
 # kern = SL.Kernel(buf, Val(Opts.pmask_full))
-args = Opts.gen_args(model, nseg, freq=Opts.FreqSpec(true, sym=false))
-Opts.register_kernel_funcs(model, kern)
 
 modes = Opts.Modes()
 for i in 1:5
     push!(modes, (2.1 + 0.1 * i) * 2π, (-1)^i)
 end
 
-dis = Opts.total_dis(model, args, modes)
-# cdis = Opts.total_cumdis(model, args, modes)
-area = Opts.total_area(model, args, modes)
-disδ = Opts.total_disδ(model, args, modes)
-areaδ = Opts.total_areaδ(model, args, modes)
-all_areaδ = Opts.all_areaδ(model, args, modes)
+msmod = Opts.MSModel{Opts.pmask_tfm}(model, modes, buf,
+                                     freq=Opts.FreqSpec(true, sym=false))
+
+dis = Opts.total_dis(msmod)
+# cdis = Opts.total_cumdis(msmod)
+area = Opts.total_area(msmod)
+disδ = Opts.total_disδ(msmod)
+areaδ = Opts.total_areaδ(msmod)
+all_areaδ = Opts.all_areaδ(msmod)
 
 tracker = Opts.VarTracker()
-push!(tracker, args.τ, 1, 6)
-for Ω in args.Ωs.poly
+push!(tracker, msmod.τ, 1, 6)
+for Ω in msmod.Ωs.poly
     fix(Ω, 0.5)
     # push!(tracker, Ω, 0.1, 0.5)
 end
-for ω in args.ωs
+for ω in msmod.ωs
     push!(tracker, ω, 2π * 2.0, 2π * 3.0)
 end
-obj = @expression(model, (dis + disδ + areaδ^2 + 1e-10) / area^2 * (args.τ + 2))
+obj = (dis + disδ + areaδ^2 + 1e-10) / area^2 * (msmod.τ + 2)
 # obj = @NLexpression(model, (10 * dis + disδ + 1e-10) / (1 + abs(area)))
 # obj = @NLexpression(model, (cdis + 1e-10) / (1 + abs(area)))
 # obj = @NLexpression(model, cdis + 1e-10)
 # obj = @NLexpression(model, dis + disδ)
 @objective(model, Min, obj)
 
-# using BenchmarkTools
-# @btime JuMP.optimize!(model)
+using BenchmarkTools
+@btime JuMP.optimize!(model)
 
 best_obj = 1.0
 best_params = nothing
@@ -68,7 +69,7 @@ best_params = nothing
     if value(obj) < best_obj
         best_obj = value(obj)
         @show best_obj, value(dis), value(disδ), value(area), value(areaδ)
-        best_params = value(args)
+        best_params = value(msmod)
         @show best_params
     end
 end
