@@ -116,6 +116,8 @@ function _gen_poly_args(spec::AmpSpec, m::Model, nseg, τ)
     if spec.end_order > 0
         xs = [(2 * i / (nseg + 2) - 1) for i in 1:nseg + 1]
         nodes .*= (xs .+ 1).^spec.end_order .+ (1 .- xs).^spec.end_order
+    elseif spec.mid_order == 0
+        return orders, nodes[1:nseg], zeros(nseg)
     end
     return orders, nodes[1:nseg], (nodes[2:end] .- nodes[1:nseg]) ./ τ
 end
