@@ -916,148 +916,170 @@ end
     return
 end
 
-@inline function value_rdis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.dis
+struct ValCb{name,Kern<:Kernel} <: Function
+    kern::Kern
+end
+ValCb{name}(kern::Kern) where {Kern<:Kernel,name} = ValCb{name,Kern}(kern)
+struct GradCb{name,Kern<:Kernel} <: Function
+    kern::Kern
+end
+GradCb{name}(kern::Kern) where {Kern<:Kernel,name} = GradCb{name,Kern}(kern)
+
+@inline _val_mask(kern::Kernel{NSeg,T,SDV,SDG}) where {NSeg,T,SDV,SDG} = SegSeq.value_mask(SDV)
+@inline _grad_mask(kern::Kernel{NSeg,T,SDV,SDG}) where {NSeg,T,SDV,SDG} = SegSeq.value_mask(SDG)
+@inline _nseg(kern::Kernel{NSeg}) where NSeg = NSeg
+
+@inline function (cb::ValCb{:rdis})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).dis
     update!(kern, args)
     return real(kern.result.val.dis)
 end
-
-@inline function grad_rdis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.dis
+@inline function (cb::GradCb{:rdis})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).dis
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = real(grad[i].dis)
     end
     return
 end
 
-@inline function value_idis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.dis
+@inline function (cb::ValCb{:idis})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).dis
     update!(kern, args)
     return imag(kern.result.val.dis)
 end
-
-@inline function grad_idis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.dis
+@inline function (cb::GradCb{:idis})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).dis
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = imag(grad[i].dis)
     end
     return
 end
 
-@inline function value_area(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.area
+@inline function (cb::ValCb{:area})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).area
     update!(kern, args)
     return kern.result.val.area
 end
-
-@inline function grad_area(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.area
+@inline function (cb::GradCb{:area})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).area
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = grad[i].area
     end
     return
 end
 
-@inline function value_rcumdis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.cumdis
+@inline function (cb::ValCb{:rcumdis})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).cumdis
     update!(kern, args)
     return real(kern.result.val.cumdis)
 end
-
-@inline function grad_rcumdis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.cumdis
+@inline function (cb::GradCb{:rcumdis})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).cumdis
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = real(grad[i].cumdis)
     end
     return
 end
 
-@inline function value_icumdis(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.cumdis
+@inline function (cb::ValCb{:icumdis})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).cumdis
     update!(kern, args)
     return imag(kern.result.val.cumdis)
 end
-
-@inline function grad_icumdis(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.cumdis
+@inline function (cb::GradCb{:icumdis})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).cumdis
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = imag(grad[i].cumdis)
     end
     return
 end
 
-@inline function value_rdisδ(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.disδ
+@inline function (cb::ValCb{:rdisδ})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).disδ
     update!(kern, args)
     return real(kern.result.val.disδ)
 end
-
-@inline function grad_rdisδ(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.disδ
+@inline function (cb::GradCb{:rdisδ})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).disδ
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = real(grad[i].disδ)
     end
     return
 end
 
-@inline function value_idisδ(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.disδ
+@inline function (cb::ValCb{:idisδ})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).disδ
     update!(kern, args)
     return imag(kern.result.val.disδ)
 end
-
-@inline function grad_idisδ(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.disδ
+@inline function (cb::GradCb{:idisδ})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).disδ
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = imag(grad[i].disδ)
     end
     return
 end
 
-@inline function value_areaδ(kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskv = SegSeq.value_mask(SDV)
-    @assert maskv.areaδ
+@inline function (cb::ValCb{:areaδ})(args...)
+    kern = cb.kern
+    @assert _val_mask(kern).areaδ
     update!(kern, args)
     return kern.result.val.areaδ
 end
-
-@inline function grad_areaδ(g, kern::Kernel{NSeg,T,SDV,SDG}, args...) where {NSeg,T,SDV,SDG}
-    maskg = SegSeq.value_mask(SDG)
-    @assert maskg.areaδ
+@inline function (cb::GradCb{:areaδ})(g, args...)
+    kern = cb.kern
+    @assert _grad_mask(kern).areaδ
     update!(kern, args)
     grad = kern.result.grad.values
-    @inbounds for i in 1:NSeg * 5
+    @inbounds for i in 1:_nseg(kern) * 5
         g[i] = grad[i].areaδ
     end
     return
 end
+
+@inline value_rdis(kern::Kernel, args...) = ValCb{:rdis}(kern)(args...)
+@inline grad_rdis(g, kern::Kernel, args...) = GradCb{:rdis}(kern)(g, args...)
+@inline value_idis(kern::Kernel, args...) = ValCb{:idis}(kern)(args...)
+@inline grad_idis(g, kern::Kernel, args...) = GradCb{:idis}(kern)(g, args...)
+@inline value_area(kern::Kernel, args...) = ValCb{:area}(kern)(args...)
+@inline grad_area(g, kern::Kernel, args...) = GradCb{:area}(kern)(g, args...)
+@inline value_rcumdis(kern::Kernel, args...) = ValCb{:rcumdis}(kern)(args...)
+@inline grad_rcumdis(g, kern::Kernel, args...) = GradCb{:rcumdis}(kern)(g, args...)
+@inline value_icumdis(kern::Kernel, args...) = ValCb{:icumdis}(kern)(args...)
+@inline grad_icumdis(g, kern::Kernel, args...) = GradCb{:icumdis}(kern)(g, args...)
+@inline value_rdisδ(kern::Kernel, args...) = ValCb{:rdisδ}(kern)(args...)
+@inline grad_rdisδ(g, kern::Kernel, args...) = GradCb{:rdisδ}(kern)(g, args...)
+@inline value_idisδ(kern::Kernel, args...) = ValCb{:idisδ}(kern)(args...)
+@inline grad_idisδ(g, kern::Kernel, args...) = GradCb{:idisδ}(kern)(g, args...)
+@inline value_areaδ(kern::Kernel, args...) = ValCb{:areaδ}(kern)(args...)
+@inline grad_areaδ(g, kern::Kernel, args...) = GradCb{:areaδ}(kern)(g, args...)
 
 end

@@ -24,43 +24,35 @@ mutable struct ObjCache{T}
     end
 end
 
-@inline function _value_cb(kern, ::Val{fval}) where fval
-    return @inline((args...)->@inline(fval(kern, args...)))
-end
-
-@inline function _grad_cb(kern, ::Val{fgrad}) where fgrad
-    return @inline((g, args...)->@inline(fgrad(g, kern, args...)))
-end
-
 function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
                                prefix="", suffix="") where {NSeg,T,SDV,SDG}
     maskv = SegSeq.value_mask(SDV)
     maskg = SegSeq.value_mask(SDG)
 
-    function reg_func(name, fval::FVal, fgrad::FGrad) where {FVal,FGrad}
-        name = Symbol("$(prefix)$(name)$(suffix)")
-        op = add_nonlinear_operator(model, NSeg * 5, _value_cb(kern, Val(fval)),
-                                    _grad_cb(kern, Val(fgrad)), name=name)
+    function reg_func(fname, fval::FVal, fgrad::FGrad) where {FVal,FGrad}
+        name = Symbol("$(prefix)$(fname)$(suffix)")
+        op = add_nonlinear_operator(model, NSeg * 5, SymLinear.ValCb{fname}(kern),
+                                    SymLinear.GradCb{fname}(kern), name=name)
         model[name] = op
     end
 
     if maskv.dis && maskg.dis
-        reg_func("rdis", SymLinear.value_rdis, SymLinear.grad_rdis)
-        reg_func("idis", SymLinear.value_idis, SymLinear.grad_idis)
+        reg_func(:rdis, SymLinear.value_rdis, SymLinear.grad_rdis)
+        reg_func(:idis, SymLinear.value_idis, SymLinear.grad_idis)
     end
     if maskv.area && maskg.area
-        reg_func("area", SymLinear.value_area, SymLinear.grad_area)
+        reg_func(:area, SymLinear.value_area, SymLinear.grad_area)
     end
     if maskv.cumdis && maskg.cumdis
-        reg_func("rcumdis", SymLinear.value_rcumdis, SymLinear.grad_rcumdis)
-        reg_func("icumdis", SymLinear.value_icumdis, SymLinear.grad_icumdis)
+        reg_func(:rcumdis, SymLinear.value_rcumdis, SymLinear.grad_rcumdis)
+        reg_func(:icumdis, SymLinear.value_icumdis, SymLinear.grad_icumdis)
     end
     if maskv.disδ && maskg.disδ
-        reg_func("rdisδ", SymLinear.value_rdisδ, SymLinear.grad_rdisδ)
-        reg_func("idisδ", SymLinear.value_idisδ, SymLinear.grad_idisδ)
+        reg_func(:rdisδ, SymLinear.value_rdisδ, SymLinear.grad_rdisδ)
+        reg_func(:idisδ, SymLinear.value_idisδ, SymLinear.grad_idisδ)
     end
     if maskv.areaδ && maskg.areaδ
-        reg_func("areaδ", SymLinear.value_areaδ, SymLinear.grad_areaδ)
+        reg_func(:areaδ, SymLinear.value_areaδ, SymLinear.grad_areaδ)
     end
 end
 
