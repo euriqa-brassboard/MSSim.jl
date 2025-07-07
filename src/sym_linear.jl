@@ -854,7 +854,7 @@ mutable struct Kernel{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T},pmask
     const buffer::ComputeBuffer{NSeg,T,SDV,SDG}
     const result::SegSeq.SingleModeResult{T,SDV,SDG}
     evaled::Bool
-    args::NTuple{NArgs,T}
+    const args::MVector{NArgs,T}
 
     function Kernel(buffer::ComputeBuffer{NSeg,T,SDV,SDG},
                     ::Val{pmask}) where {NSeg,T,SDV,SDG,pmask}
@@ -862,7 +862,8 @@ mutable struct Kernel{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T},pmask
         maskg = SegSeq.value_mask(SDG)
         result = SegSeq.SingleModeResult{T}(Val(maskv), Val(maskg))
         Utils.resize_uniform!(result.grad, NSeg, 5)
-        return new{NSeg,T,SDV,SDG,pmask,NSeg*5}(buffer, result, false)
+        return new{NSeg,T,SDV,SDG,pmask,NSeg*5}(buffer, result, false,
+                                                MVector{NSeg*5,T}(undef))
     end
 end
 
@@ -875,12 +876,13 @@ function _update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs}) where {NSeg,T,SDV,SD
     seg_buf = buffer.seg_buf
     seg_grad_buf = buffer.seg_grad_buf
     need_grad = maskg !== zero(SegSeq.ValueMask)
+    args = kern.args
     @inbounds for i in 1:NSeg
-        τ = kern.args[i * 5 - 4]
-        Ω = kern.args[i * 5 - 3]
-        Ω′ = kern.args[i * 5 - 2]
-        φ = kern.args[i * 5 - 1]
-        δ = kern.args[i * 5]
+        τ = args[i * 5 - 4]
+        Ω = args[i * 5 - 3]
+        Ω′ = args[i * 5 - 2]
+        φ = args[i * 5 - 1]
+        δ = args[i * 5]
         if Ω′ == 0
             seg, grad = SegInt.compute_values(τ, Ω, Utils.Zero(), φ, δ,
                                               Val(maskv), Val(maskg))
@@ -906,10 +908,16 @@ end
 @inline function update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs},
                          args::NTuple{N}) where {NSeg,T,SDV,SDG,pmask,NArgs,N}
     @assert N == NArgs
-    if args == kern.args && kern.evaled
+    same = true
+    kargs = kern.args
+    @inbounds @simd ivdep for i in 1:NArgs
+        arg = args[i]
+        same &= arg == kargs[i]
+        kargs[i] = arg
+    end
+    if same && kern.evaled
         return
     end
-    kern.args = args
     kern.evaled = false
     _update!(kern)
     kern.evaled = true
