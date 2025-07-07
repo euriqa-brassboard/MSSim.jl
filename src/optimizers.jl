@@ -24,52 +24,41 @@ mutable struct ObjCache{T}
     end
 end
 
+@inline function _value_cb(kern, ::Val{fval}) where fval
+    return @inline((args...)->fval(kern, args...))
+end
+
+@inline function _grad_cb(kern, ::Val{fgrad}) where fgrad
+    return @inline((g, args...)->fgrad(g, kern, args...))
+end
+
 function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
                                prefix="", suffix="") where {NSeg,T,SDV,SDG}
     maskv = SegSeq.value_mask(SDV)
     maskg = SegSeq.value_mask(SDG)
 
+    function reg_func(name, fval::FVal, fgrad::FGrad) where {FVal,FGrad}
+        register(model, Symbol("$(prefix)$(name)$(suffix)"), NSeg * 5,
+                 _value_cb(kern, Val(fval)), _grad_cb(kern, Val(fgrad)), autodiff=false)
+    end
+
     if maskv.dis && maskg.dis
-        register(model, Symbol("$(prefix)rdis$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_rdis(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_rdis(g, kern, args...)),
-                 autodiff=false)
-        register(model, Symbol("$(prefix)idis$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_idis(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_idis(g, kern, args...)),
-                 autodiff=false)
+        reg_func("rdis", SymLinear.value_rdis, SymLinear.grad_rdis)
+        reg_func("idis", SymLinear.value_idis, SymLinear.grad_idis)
     end
     if maskv.area && maskg.area
-        register(model, Symbol("$(prefix)area$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_area(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_area(g, kern, args...)),
-                 autodiff=false)
+        reg_func("area", SymLinear.value_area, SymLinear.grad_area)
     end
     if maskv.cumdis && maskg.cumdis
-        register(model, Symbol("$(prefix)rcumdis$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_rcumdis(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_rcumdis(g, kern, args...)),
-                 autodiff=false)
-        register(model, Symbol("$(prefix)icumdis$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_icumdis(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_icumdis(g, kern, args...)),
-                 autodiff=false)
+        reg_func("rcumdis", SymLinear.value_rcumdis, SymLinear.grad_rcumdis)
+        reg_func("icumdis", SymLinear.value_icumdis, SymLinear.grad_icumdis)
     end
     if maskv.disδ && maskg.disδ
-        register(model, Symbol("$(prefix)rdisδ$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_rdisδ(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_rdisδ(g, kern, args...)),
-                 autodiff=false)
-        register(model, Symbol("$(prefix)idisδ$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_idisδ(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_idisδ(g, kern, args...)),
-                 autodiff=false)
+        reg_func("rdisδ", SymLinear.value_rdisδ, SymLinear.grad_rdisδ)
+        reg_func("idisδ", SymLinear.value_idisδ, SymLinear.grad_idisδ)
     end
     if maskv.areaδ && maskg.areaδ
-        register(model, Symbol("$(prefix)areaδ$(suffix)"),
-                 NSeg * 5, @inline((args...)->SymLinear.value_areaδ(kern, args...)),
-                 @inline((g, args...)->SymLinear.grad_areaδ(g, kern, args...)),
-                 autodiff=false)
+        reg_func("areaδ", SymLinear.value_areaδ, SymLinear.grad_areaδ)
     end
 end
 
