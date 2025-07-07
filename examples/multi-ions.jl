@@ -11,6 +11,10 @@ const SS = MSSim.SegSeq
 const SL = MSSim.SymLinear
 
 using NLopt
+
+# https://github.com/jump-dev/NLopt.jl/pull/262
+Opts.check_nlopt(NLopt.Optimizer)
+
 const model = Model(NLopt.Optimizer)
 set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 # set_optimizer_attribute(model, "algorithm", :LD_SLSQP)
@@ -45,12 +49,15 @@ end
 for ω in args.ωs
     push!(tracker, ω, 2π * 2.0, 2π * 3.0)
 end
-obj = @NLexpression(model, (dis + disδ + areaδ^2 + 1e-10) / area^2 * (args.τ + 2))
+obj = @expression(model, (dis + disδ + areaδ^2 + 1e-10) / area^2 * (args.τ + 2))
 # obj = @NLexpression(model, (10 * dis + disδ + 1e-10) / (1 + abs(area)))
 # obj = @NLexpression(model, (cdis + 1e-10) / (1 + abs(area)))
 # obj = @NLexpression(model, cdis + 1e-10)
 # obj = @NLexpression(model, dis + disδ)
-@NLobjective(model, Min, obj)
+@objective(model, Min, obj)
+
+# using BenchmarkTools
+# @btime JuMP.optimize!(model)
 
 best_obj = 1.0
 best_params = nothing

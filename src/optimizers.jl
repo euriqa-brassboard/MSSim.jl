@@ -25,11 +25,11 @@ mutable struct ObjCache{T}
 end
 
 @inline function _value_cb(kern, ::Val{fval}) where fval
-    return @inline((args...)->fval(kern, args...))
+    return @inline((args...)->@inline(fval(kern, args...)))
 end
 
 @inline function _grad_cb(kern, ::Val{fgrad}) where fgrad
-    return @inline((g, args...)->fgrad(g, kern, args...))
+    return @inline((g, args...)->@inline(fgrad(g, kern, args...)))
 end
 
 function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
@@ -38,8 +38,10 @@ function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
     maskg = SegSeq.value_mask(SDG)
 
     function reg_func(name, fval::FVal, fgrad::FGrad) where {FVal,FGrad}
-        register(model, Symbol("$(prefix)$(name)$(suffix)"), NSeg * 5,
-                 _value_cb(kern, Val(fval)), _grad_cb(kern, Val(fgrad)), autodiff=false)
+        name = Symbol("$(prefix)$(name)$(suffix)")
+        op = add_nonlinear_operator(model, NSeg * 5, _value_cb(kern, Val(fval)),
+                                    _grad_cb(kern, Val(fgrad)), name=name)
+        model[name] = op
     end
 
     if maskv.dis && maskg.dis
@@ -286,67 +288,67 @@ get_args(args::ArgsValue, modes::Modes; δ=0.0) =
     [get_args(args, ω + δ) for (ω, _) in modes.modes]
 
 function total_dis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    r_f = Symbol("$(prefix)rdis$(suffix)")
-    i_f = Symbol("$(prefix)idis$(suffix)")
+    r_f = m[Symbol("$(prefix)rdis$(suffix)")]
+    i_f = m[Symbol("$(prefix)idis$(suffix)")]
     res = 0
     for kargs in get_args(args, modes)
-        r_ex = :($r_f($kargs...))
-        i_ex = :($i_f($kargs...))
-        res = @NLexpression(m, res + r_ex^2 + i_ex^2)
+        r_ex = r_f(kargs...)
+        i_ex = i_f(kargs...)
+        res = @expression(m, res + r_ex^2 + i_ex^2)
     end
     return res
 end
 
 function total_cumdis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    r_f = Symbol("$(prefix)rcumdis$(suffix)")
-    i_f = Symbol("$(prefix)icumdis$(suffix)")
+    r_f = m[Symbol("$(prefix)rcumdis$(suffix)")]
+    i_f = m[Symbol("$(prefix)icumdis$(suffix)")]
     res = 0
     for kargs in get_args(args, modes)
-        r_ex = :($r_f($kargs...))
-        i_ex = :($i_f($kargs...))
-        res = @NLexpression(m, res + r_ex^2 + i_ex^2)
+        r_ex = r_f(kargs...)
+        i_ex = i_f(kargs...)
+        res = @expression(m, res + r_ex^2 + i_ex^2)
     end
     return res
 end
 
 function total_area(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = Symbol("$(prefix)area$(suffix)")
+    f = m[Symbol("$(prefix)area$(suffix)")]
     res = 0
     for (kargs, (ω, weight)) in zip(get_args(args, modes), modes.modes)
-        ex = :($f($kargs...))
-        res = @NLexpression(m, res + ex * weight)
+        ex = f(kargs...)
+        res = @expression(m, res + ex * weight)
     end
     return res
 end
 
 function total_disδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    r_f = Symbol("$(prefix)rdisδ$(suffix)")
-    i_f = Symbol("$(prefix)idisδ$(suffix)")
+    r_f = m[Symbol("$(prefix)rdisδ$(suffix)")]
+    i_f = m[Symbol("$(prefix)idisδ$(suffix)")]
     res = 0
     for kargs in get_args(args, modes)
-        r_ex = :($r_f($kargs...))
-        i_ex = :($i_f($kargs...))
-        res = @NLexpression(m, res + r_ex^2 + i_ex^2)
+        r_ex = r_f(kargs...)
+        i_ex = i_f(kargs...)
+        res = @expression(m, res + r_ex^2 + i_ex^2)
     end
     return res
 end
 
 function total_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = Symbol("$(prefix)areaδ$(suffix)")
+    f = m[Symbol("$(prefix)areaδ$(suffix)")]
     res = 0
     for (kargs, (ω, weight)) in zip(get_args(args, modes), modes.modes)
-        ex = :($f($kargs...))
-        res = @NLexpression(m, res + ex * weight)
+        ex = f(kargs...)
+        res = @expression(m, res + ex * weight)
     end
     return res
 end
 
 function all_areaδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    f = Symbol("$(prefix)areaδ$(suffix)")
+    f = m[Symbol("$(prefix)areaδ$(suffix)")]
     res = 0
     for kargs in get_args(args, modes)
-        ex = :($f($kargs...))
-        res = @NLexpression(m, res + ex^2)
+        ex = f(kargs...)
+        res = @expression(m, res + ex^2)
     end
     return res
 end
@@ -400,6 +402,35 @@ function all_areaδ(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.
         res += SymLinear.value_areaδ(kern, kargs...)^2
     end
     return res
+end
+
+# Temporary function to patch NLopt to support new non-linear function interface
+import MathOptInterface as MOI
+function check_nlopt(Optimizer)
+    opt = Optimizer()
+    attr = MOI.UserDefinedFunction(:dummy, 2)
+    if MOI.supports(opt, attr)
+        return
+    end
+    M = Optimizer.name.module
+    @eval M begin
+        MOI.supports(model::Optimizer, ::MOI.UserDefinedFunction) = true
+        function MOI.set(model::Optimizer, attr::MOI.UserDefinedFunction, args)
+            _init_nlp_model(model)
+            MOI.Nonlinear.register_operator(
+                model.nlp_model,
+                attr.name,
+                attr.arity,
+                args...,
+            )
+            return
+        end
+
+        function MOI.get(model::Optimizer, attr::MOI.ListOfSupportedNonlinearOperators)
+            _init_nlp_model(model)
+            return MOI.get(model.nlp_model, attr)
+        end
+    end
 end
 
 end
