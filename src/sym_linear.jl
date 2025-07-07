@@ -929,157 +929,102 @@ GradCb{name}(kern::Kern) where {Kern<:Kernel,name} = GradCb{name,Kern}(kern)
 @inline _grad_mask(kern::Kernel{NSeg,T,SDV,SDG}) where {NSeg,T,SDV,SDG} = SegSeq.value_mask(SDG)
 @inline _nseg(kern::Kernel{NSeg}) where NSeg = NSeg
 
-@inline function (cb::ValCb{:rdis})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).dis
-    update!(kern, args)
-    return real(kern.result.val.dis)
-end
-@inline function (cb::GradCb{:rdis})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).dis
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = real(grad[i].dis)
+for var in [:dis, :cumdis, :disδ]
+    rvar = Symbol("r$var")
+    ivar = Symbol("i$var")
+    var2 = Symbol("$(var)2")
+    @eval begin
+        @inline function (cb::$(ValCb{rvar}))(args...)
+            kern = cb.kern
+            @assert _val_mask(kern).$var
+            update!(kern, args)
+            return real(kern.result.val.$var)
+        end
+        @inline function (cb::$(GradCb{rvar}))(g, args...)
+            kern = cb.kern
+            @assert _grad_mask(kern).$var
+            update!(kern, args)
+            grad = kern.result.grad.values
+            @inbounds for i in 1:_nseg(kern) * 5
+                g[i] = real(grad[i].$var)
+            end
+            return
+        end
+
+        @inline function (cb::$(ValCb{ivar}))(args...)
+            kern = cb.kern
+            @assert _val_mask(kern).$var
+            update!(kern, args)
+            return imag(kern.result.val.$var)
+        end
+        @inline function (cb::$(GradCb{ivar}))(g, args...)
+            kern = cb.kern
+            @assert _grad_mask(kern).$var
+            update!(kern, args)
+            grad = kern.result.grad.values
+            @inbounds for i in 1:_nseg(kern) * 5
+                g[i] = imag(grad[i].$var)
+            end
+            return
+        end
+
+        @inline function (cb::$(ValCb{var2}))(args...)
+            kern = cb.kern
+            @assert _val_mask(kern).$var
+            update!(kern, args)
+            return abs2(kern.result.val.$var)
+        end
+        @inline function (cb::$(GradCb{var2}))(g, args...)
+            kern = cb.kern
+            @assert _grad_mask(kern).$var
+            update!(kern, args)
+            grad = kern.result.grad.values
+            v2 = 2 * kern.result.val.$var
+            @inbounds for i in 1:_nseg(kern) * 5
+                gv = grad[i].$var
+                g[i] = muladd(real(v2), real(gv), imag(v2) * imag(gv))
+            end
+            return
+        end
+
+        @inline $(Symbol("value_$rvar"))(kern::Kernel, args...) =
+            $(ValCb{rvar})(kern)(args...)
+        @inline $(Symbol("grad_$rvar"))(g, kern::Kernel, args...) =
+            $(GradCb{rvar})(kern)(g, args...)
+        @inline $(Symbol("value_$ivar"))(kern::Kernel, args...) =
+            $(ValCb{ivar})(kern)(args...)
+        @inline $(Symbol("grad_$ivar"))(g, kern::Kernel, args...) =
+            $(GradCb{ivar})(kern)(g, args...)
+        @inline $(Symbol("value_$var2"))(kern::Kernel, args...) =
+            $(ValCb{var2})(kern)(args...)
+        @inline $(Symbol("grad_$var2"))(g, kern::Kernel, args...) =
+            $(GradCb{var2})(kern)(g, args...)
     end
-    return
 end
 
-@inline function (cb::ValCb{:idis})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).dis
-    update!(kern, args)
-    return imag(kern.result.val.dis)
-end
-@inline function (cb::GradCb{:idis})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).dis
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = imag(grad[i].dis)
+for var in [:area, :areaδ]
+    @eval begin
+        @inline function (cb::$(ValCb{var}))(args...)
+            kern = cb.kern
+            @assert _val_mask(kern).$var
+            update!(kern, args)
+            return kern.result.val.$var
+        end
+        @inline function (cb::$(GradCb{var}))(g, args...)
+            kern = cb.kern
+            @assert _grad_mask(kern).$var
+            update!(kern, args)
+            grad = kern.result.grad.values
+            @inbounds for i in 1:_nseg(kern) * 5
+                g[i] = grad[i].$var
+            end
+            return
+        end
+        @inline $(Symbol("value_$var"))(kern::Kernel, args...) =
+            $(ValCb{var})(kern)(args...)
+        @inline $(Symbol("grad_$var"))(g, kern::Kernel, args...) =
+            $(GradCb{var})(kern)(g, args...)
     end
-    return
 end
-
-@inline function (cb::ValCb{:area})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).area
-    update!(kern, args)
-    return kern.result.val.area
-end
-@inline function (cb::GradCb{:area})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).area
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = grad[i].area
-    end
-    return
-end
-
-@inline function (cb::ValCb{:rcumdis})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).cumdis
-    update!(kern, args)
-    return real(kern.result.val.cumdis)
-end
-@inline function (cb::GradCb{:rcumdis})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).cumdis
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = real(grad[i].cumdis)
-    end
-    return
-end
-
-@inline function (cb::ValCb{:icumdis})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).cumdis
-    update!(kern, args)
-    return imag(kern.result.val.cumdis)
-end
-@inline function (cb::GradCb{:icumdis})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).cumdis
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = imag(grad[i].cumdis)
-    end
-    return
-end
-
-@inline function (cb::ValCb{:rdisδ})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).disδ
-    update!(kern, args)
-    return real(kern.result.val.disδ)
-end
-@inline function (cb::GradCb{:rdisδ})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).disδ
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = real(grad[i].disδ)
-    end
-    return
-end
-
-@inline function (cb::ValCb{:idisδ})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).disδ
-    update!(kern, args)
-    return imag(kern.result.val.disδ)
-end
-@inline function (cb::GradCb{:idisδ})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).disδ
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = imag(grad[i].disδ)
-    end
-    return
-end
-
-@inline function (cb::ValCb{:areaδ})(args...)
-    kern = cb.kern
-    @assert _val_mask(kern).areaδ
-    update!(kern, args)
-    return kern.result.val.areaδ
-end
-@inline function (cb::GradCb{:areaδ})(g, args...)
-    kern = cb.kern
-    @assert _grad_mask(kern).areaδ
-    update!(kern, args)
-    grad = kern.result.grad.values
-    @inbounds for i in 1:_nseg(kern) * 5
-        g[i] = grad[i].areaδ
-    end
-    return
-end
-
-@inline value_rdis(kern::Kernel, args...) = ValCb{:rdis}(kern)(args...)
-@inline grad_rdis(g, kern::Kernel, args...) = GradCb{:rdis}(kern)(g, args...)
-@inline value_idis(kern::Kernel, args...) = ValCb{:idis}(kern)(args...)
-@inline grad_idis(g, kern::Kernel, args...) = GradCb{:idis}(kern)(g, args...)
-@inline value_area(kern::Kernel, args...) = ValCb{:area}(kern)(args...)
-@inline grad_area(g, kern::Kernel, args...) = GradCb{:area}(kern)(g, args...)
-@inline value_rcumdis(kern::Kernel, args...) = ValCb{:rcumdis}(kern)(args...)
-@inline grad_rcumdis(g, kern::Kernel, args...) = GradCb{:rcumdis}(kern)(g, args...)
-@inline value_icumdis(kern::Kernel, args...) = ValCb{:icumdis}(kern)(args...)
-@inline grad_icumdis(g, kern::Kernel, args...) = GradCb{:icumdis}(kern)(g, args...)
-@inline value_rdisδ(kern::Kernel, args...) = ValCb{:rdisδ}(kern)(args...)
-@inline grad_rdisδ(g, kern::Kernel, args...) = GradCb{:rdisδ}(kern)(g, args...)
-@inline value_idisδ(kern::Kernel, args...) = ValCb{:idisδ}(kern)(args...)
-@inline grad_idisδ(g, kern::Kernel, args...) = GradCb{:idisδ}(kern)(g, args...)
-@inline value_areaδ(kern::Kernel, args...) = ValCb{:areaδ}(kern)(args...)
-@inline grad_areaδ(g, kern::Kernel, args...) = GradCb{:areaδ}(kern)(g, args...)
 
 end

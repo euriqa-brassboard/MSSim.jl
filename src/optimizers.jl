@@ -29,7 +29,7 @@ function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
     maskv = SegSeq.value_mask(SDV)
     maskg = SegSeq.value_mask(SDG)
 
-    function reg_func(fname, fval::FVal, fgrad::FGrad) where {FVal,FGrad}
+    function reg_func(fname)
         name = Symbol("$(prefix)$(fname)$(suffix)")
         op = add_nonlinear_operator(model, NSeg * 5, SymLinear.ValCb{fname}(kern),
                                     SymLinear.GradCb{fname}(kern), name=name)
@@ -37,22 +37,25 @@ function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
     end
 
     if maskv.dis && maskg.dis
-        reg_func(:rdis, SymLinear.value_rdis, SymLinear.grad_rdis)
-        reg_func(:idis, SymLinear.value_idis, SymLinear.grad_idis)
+        reg_func(:rdis)
+        reg_func(:idis)
+        reg_func(:dis2)
     end
     if maskv.area && maskg.area
-        reg_func(:area, SymLinear.value_area, SymLinear.grad_area)
+        reg_func(:area)
     end
     if maskv.cumdis && maskg.cumdis
-        reg_func(:rcumdis, SymLinear.value_rcumdis, SymLinear.grad_rcumdis)
-        reg_func(:icumdis, SymLinear.value_icumdis, SymLinear.grad_icumdis)
+        reg_func(:rcumdis)
+        reg_func(:icumdis)
+        reg_func(:cumdis2)
     end
     if maskv.disδ && maskg.disδ
-        reg_func(:rdisδ, SymLinear.value_rdisδ, SymLinear.grad_rdisδ)
-        reg_func(:idisδ, SymLinear.value_idisδ, SymLinear.grad_idisδ)
+        reg_func(:rdisδ)
+        reg_func(:idisδ)
+        reg_func(:disδ2)
     end
     if maskv.areaδ && maskg.areaδ
-        reg_func(:areaδ, SymLinear.value_areaδ, SymLinear.grad_areaδ)
+        reg_func(:areaδ)
     end
 end
 
@@ -280,25 +283,21 @@ get_args(args::ArgsValue, modes::Modes; δ=0.0) =
     [get_args(args, ω + δ) for (ω, _) in modes.modes]
 
 function total_dis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    r_f = m[Symbol("$(prefix)rdis$(suffix)")]
-    i_f = m[Symbol("$(prefix)idis$(suffix)")]
+    f = m[Symbol("$(prefix)dis2$(suffix)")]
     res = 0
     for kargs in get_args(args, modes)
-        r_ex = r_f(kargs...)
-        i_ex = i_f(kargs...)
-        res = @expression(m, res + r_ex^2 + i_ex^2)
+        ex = f(kargs...)
+        res = @expression(m, res + ex)
     end
     return res
 end
 
 function total_cumdis(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    r_f = m[Symbol("$(prefix)rcumdis$(suffix)")]
-    i_f = m[Symbol("$(prefix)icumdis$(suffix)")]
+    f = m[Symbol("$(prefix)cumdis2$(suffix)")]
     res = 0
     for kargs in get_args(args, modes)
-        r_ex = r_f(kargs...)
-        i_ex = i_f(kargs...)
-        res = @expression(m, res + r_ex^2 + i_ex^2)
+        ex = f(kargs...)
+        res = @expression(m, res + ex)
     end
     return res
 end
@@ -314,13 +313,11 @@ function total_area(m::Model, args::Args, modes::Modes; prefix="", suffix="")
 end
 
 function total_disδ(m::Model, args::Args, modes::Modes; prefix="", suffix="")
-    r_f = m[Symbol("$(prefix)rdisδ$(suffix)")]
-    i_f = m[Symbol("$(prefix)idisδ$(suffix)")]
+    f = m[Symbol("$(prefix)disδ2$(suffix)")]
     res = 0
     for kargs in get_args(args, modes)
-        r_ex = r_f(kargs...)
-        i_ex = i_f(kargs...)
-        res = @expression(m, res + r_ex^2 + i_ex^2)
+        ex = f(kargs...)
+        res = @expression(m, res + ex)
     end
     return res
 end
@@ -348,8 +345,7 @@ end
 function total_dis(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
     res = 0.0
     for kargs in get_args(args, modes; δ=δ)
-        res += (SymLinear.value_rdis(kern, kargs...)^2 +
-            SymLinear.value_idis(kern, kargs...)^2)
+        res += SymLinear.value_dis2(kern, kargs...)
     end
     return res
 end
@@ -357,8 +353,7 @@ end
 function total_cumdis(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
     res = 0.0
     for kargs in get_args(args, modes; δ=δ)
-        res += (SymLinear.value_rcumdis(kern, kargs...)^2 +
-            SymLinear.value_icumdis(kern, kargs...)^2)
+        res += SymLinear.value_cumdis2(kern, kargs...)
     end
     return res
 end
@@ -374,8 +369,7 @@ end
 function total_disδ(kern::SymLinear.Kernel, args::ArgsValue, modes::Modes; δ=0.0)
     res = 0.0
     for kargs in get_args(args, modes; δ=δ)
-        res += (SymLinear.value_rdisδ(kern, kargs...)^2 +
-            SymLinear.value_idisδ(kern, kargs...)^2)
+        res += SymLinear.value_disδ2(kern, kargs...)
     end
     return res
 end
