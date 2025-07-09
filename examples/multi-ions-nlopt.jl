@@ -73,9 +73,11 @@ const nlmodel = Opts.MSNLModel{Opts.pmask_full,
                                     objfunc, modes, buf, freq=Opts.FreqSpec(true, sym=false))
 const nargs = Opts.nparams(nlmodel)
 
-# opt = NLopt.Opt(:LN_COBYLA, nargs)
-# opt = NLopt.Opt(:LD_LBFGS, nargs)
-opt = NLopt.Opt(:LD_SLSQP, nargs)
+opt = NLopt.Opt(:LD_LBFGS, nargs) # 50 ms
+# opt = NLopt.Opt(:LD_SLSQP, nargs) # 13 ms
+# opt = NLopt.Opt(:LD_VAR1, nargs) # 80 ms
+# opt = NLopt.Opt(:LD_VAR2, nargs) # 50 ms
+# opt = NLopt.Opt(:LD_TNEWTON_PRECOND_RESTART, nargs) # 148 ms
 NLopt.lower_bounds!(opt, [1; 0.5; fill(2π * 2.0, nargs - 2)])
 NLopt.upper_bounds!(opt, [6; 0.5; fill(2π * 3.0, nargs - 2)])
 NLopt.xtol_rel!(opt, 1e-7)
@@ -95,7 +97,6 @@ best_params = nothing
     if getfield(NLopt, ret) < 0
         continue
     end
-    @show obj, ret
     if obj < best_obj
         best_obj = obj
         @show best_obj
