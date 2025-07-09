@@ -419,4 +419,156 @@ function check_nlopt(Optimizer)
     end
 end
 
+# Parameter interface
+function nparams end
+function transform_argument end
+function transform_gradient end
+
+struct MSParams{NSeg,NAmp,Sym,FM}
+    # amp0::Vector{Float64}
+    amps::NTuple{NAmp,Vector{Float64}}
+end
+
+function MSParams{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
+    amp_vals = Vector{Float64}[]
+    if amp.cb !== nothing
+        Ωbase = Vector{Float64}(undef, NSeg + 1)
+        if amp.sym
+            nmax = NSeg ÷ 2 + 1
+            for i in 1:nmax
+                Ωbase = amp.cb(i)
+                Ωbase[i] = Ωbase
+                Ωbase[NSeg + 1 - i] = Ωbase
+            end
+        else
+            nmax = NSeg + 1
+            for i in 1:nmax
+                Ωbase[i] = amp.cb(i)
+            end
+        end
+        push!(amp_vals, Ωbase)
+    end
+    if amp.mid_order >= 0
+        xs = [(2 * i / (NSeg + 2) - 1) for i in 1:NSeg + 1]
+        if amp.end_order > 0
+            Ωend = (xs .+ 1).^amp.end_order .+ (1 .- xs).^amp.end_order
+        else
+            Ωend = ones(NSeg + 1)
+        end
+        step = amp.sym ? 2 : 1
+        for order in 0:step:amp.mid_order
+            push!(amp_vals, xs.^order .* Ωend)
+        end
+    else
+        @assert amp.end_order <= 0
+    end
+    NAmp = length(amp_vals)
+    return MSParams{NSeg,NAmp,freq.sym,freq.modulate}((amp_vals...,))
+end
+
+function nparams(params::MSParams{NSeg,NAmp,Sym,FM}) where {NSeg,NAmp,Sym,FM}
+    return 1 + NAmp + (FM ? (Sym ? (NSeg + 1) ÷ 2 : NSeg) : 1)
+end
+
+@inline function transform_argument(params::MSParams{NSeg,NAmp,Sym,FM},
+                                    args_raw, args_user) where {NSeg,NAmp,Sym,FM}
+    # τ, amps..., freqs...
+    @assert length(args_user) == 1 + NAmp + (FM ? (Sym ? (NSeg + 1) ÷ 2 : NSeg) : 1)
+    @assert length(args_raw) == NSeg * 5
+    @inbounds τ = args_user[1]
+    # @inbounds prev_Ω = params.amp0[1]
+    prev_Ω = 0.0
+    @inbounds for ai in 1:NAmp
+        prev_Ω = muladd(params.amps[ai][1], args_user[ai + 1], prev_Ω)
+    end
+    φ = 0.0
+    invτ = 1 / τ
+    @inbounds for i in 1:NSeg
+        # Ω = params.amp0[i + 1]
+        Ω = 0.0
+        for ai in 1:NAmp
+            Ω = muladd(params.amps[ai][i + 1], args_user[ai + 1], Ω)
+        end
+        args_raw[i * 5 - 4] = τ
+        args_raw[i * 5 - 3] = prev_Ω
+        args_raw[i * 5 - 2] = (Ω - prev_Ω) * invτ
+        args_raw[i * 5 - 1] = φ
+        if !FM
+            ω = args_user[NAmp + 2]
+        elseif !Sym || i <= (NSeg + 1) ÷ 2
+            ω = args_user[NAmp + 1 + i]
+        else
+            ω = args_user[NAmp + 1 + (NSeg + 1 - i)]
+        end
+        args_raw[i * 5] = ω
+        φ = muladd(ω, τ, φ)
+        prev_Ω = Ω
+    end
+    return τ * NSeg
+end
+@inline function transform_gradient(params::MSParams{NSeg,NAmp,Sym,FM},
+                                    grads_user, grads_raw,
+                                    args_raw, args_user) where {NSeg,NAmp,Sym,FM}
+    @assert length(grads_raw) == NSeg * 5
+    # τ, amps..., freqs...
+    @assert length(grads_user) == 1 + NAmp + (FM ? (Sym ? (NSeg + 1) ÷ 2 : NSeg) : 1)
+
+    @inbounds τ = args_user[1]
+    invτ = 1 / τ
+
+    gradτ = 0.0
+    @inbounds for ai in 1:NAmp
+        grads_user[ai + 1] = 0
+    end
+    if !FM
+        grads_user[NAmp + 2] = 0
+    end
+
+    sumω = 0.0
+    @inbounds for i in 1:NSeg
+        grτ = grads_raw[i * 5 - 4]
+        grΩ = grads_raw[i * 5 - 3]
+        grΩ′ = grads_raw[i * 5 - 2]
+        grφ = grads_raw[i * 5 - 1]
+        grω = grads_raw[i * 5]
+
+        Ω′ = args_raw[i * 5 - 2]
+        ω = args_raw[i * 5]
+
+        grΩ′_τ = grΩ′ * invτ
+
+        gradτ += muladd(grΩ′_τ, -Ω′, muladd(grφ, sumω, grτ))
+
+        for ai in 1:NAmp
+            grads_user[ai + 1] = muladd(params.amps[ai][i], grΩ - grΩ′_τ,
+                                        muladd(params.amps[ai][i + 1], grΩ′_τ,
+                                               grads_user[ai + 1]))
+        end
+
+        if !FM
+            grads_user[NAmp + 2] += grω
+        elseif !Sym || i <= (NSeg + 1) ÷ 2
+            grads_user[NAmp + 1 + i] = grω
+        else
+            grads_user[NAmp + 1 + (NSeg + 1 - i)] += grω
+        end
+
+        sumω += ω
+    end
+    @inbounds grads_user[1] = gradτ
+    sumgrφ = 0.0
+    @inbounds for i in NSeg:-1:1
+        if !FM
+            idx = NAmp + 2
+        elseif !Sym || i <= (NSeg + 1) ÷ 2
+            idx = NAmp + 1 + i
+        else
+            idx = NAmp + 1 + (NSeg + 1 - i)
+        end
+        grads_user[idx] = muladd(sumgrφ, τ, grads_user[idx])
+        sumgrφ += grads_raw[i * 5 - 1]
+    end
+    return
+end
+
 end
