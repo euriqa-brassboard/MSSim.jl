@@ -869,7 +869,7 @@ end
 
 # Arguments
 # (τ, Ω, Ω′, φ, δ) * nseg
-function _update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs}) where {NSeg,T,SDV,SDG,pmask,NArgs}
+function force_update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs}) where {NSeg,T,SDV,SDG,pmask,NArgs}
     buffer = kern.buffer
     maskv = SegSeq.value_mask(SDV)
     maskg = SegSeq.value_mask(SDG)
@@ -919,7 +919,7 @@ end
         return
     end
     kern.evaled = false
-    _update!(kern)
+    force_update!(kern)
     kern.evaled = true
     return
 end
