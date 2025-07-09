@@ -167,8 +167,9 @@ end
             Opts.transform_argument(param0, args_raw, args_user)
             args_value = Opts.ArgsValue(args_raw)
             function eval_model1(name, idx)
-                model = Opts.MSNLModel{Opts.pmask_full, ((name, idx),)}(
-                    objfunc1, modes1, buf, freq=freq_spec, amp=amp_spec)
+                model = Opts.MSObjective(Opts.pmask_full, ((name, idx),),
+                                         objfunc1, modes1, buf,
+                                         freq=freq_spec, amp=amp_spec)
                 grads = similar(args_user)
                 res = model(args_user, grads)
                 @test res == value_record[]
@@ -237,8 +238,9 @@ end
             key_combs = collect(Combinatorics.combinations(val_keys, 3))
 
             function eval_model3(key1, key2, key3)
-                model = Opts.MSNLModel{Opts.pmask_full,(key1, key2, key3)}(
-                    objfunc3, modes3, buf, freq=freq_spec, amp=amp_spec)
+                model = Opts.MSObjective(Opts.pmask_full, (key1, key2, key3),
+                                         objfunc3, modes3, buf,
+                                         freq=freq_spec, amp=amp_spec)
                 grads = similar(args_user)
                 res = model(args_user, grads)
                 @test res ≈ val_map[key1] * 0.9 - val_map[key2] * 0.2 + val_map[key3]^2

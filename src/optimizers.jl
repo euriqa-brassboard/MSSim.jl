@@ -578,7 +578,7 @@ struct ModeInfo{Kern}
     weight::Float64
 end
 
-struct MSNLModel{pmask,ObjArg,NSeg,Param,Obj,Modes<:Tuple,NArgs,NObjArgs} <: Function
+struct MSObjective{pmask,ObjArg,NSeg,Param,Obj,Modes<:Tuple,NArgs,NObjArgs} <: Function
     modes::Modes
     param::Param
     obj::Obj
@@ -588,11 +588,11 @@ struct MSNLModel{pmask,ObjArg,NSeg,Param,Obj,Modes<:Tuple,NArgs,NObjArgs} <: Fun
     objgrads::MVector{NObjArgs,Float64}
 end
 
-nparams(m::MSNLModel) = nparams(m.param)
+nparams(m::MSObjective) = nparams(m.param)
 
-function MSNLModel{pmask,ObjArg}(obj::Obj, modes::Modes,
-                                 buf::SymLinear.ComputeBuffer{NSeg};
-                                 freq=FreqSpec(), amp=AmpSpec()) where {NSeg,pmask,ObjArg,Obj}
+function MSObjective(pmask, ObjArg, obj::Obj, modes::Modes,
+                     buf::SymLinear.ComputeBuffer{NSeg};
+                     freq=FreqSpec(), amp=AmpSpec()) where {NSeg,Obj}
     modes_array = []
     for (modei, (ωm, weight)) in enumerate(modes.modes)
         kern = SymLinear.Kernel(buf, Val(pmask))
@@ -602,11 +602,11 @@ function MSNLModel{pmask,ObjArg}(obj::Obj, modes::Modes,
     param = MSParams{NSeg}(freq=freq, amp=amp)
     NArgs = NSeg * 5
     NObjArgs = length(ObjArg)
-    return MSNLModel{pmask,ObjArg,NSeg,typeof(param),Obj,typeof(modes),NArgs,
-                     NObjArgs}(modes, param, obj, MVector{NArgs,Float64}(undef),
-                               MVector{NArgs,Float64}(undef),
-                               MVector{NObjArgs,Float64}(undef),
-                               MVector{NObjArgs,Float64}(undef))
+    return MSObjective{pmask,ObjArg,NSeg,typeof(param),Obj,typeof(modes),NArgs,
+                       NObjArgs}(modes, param, obj, MVector{NArgs,Float64}(undef),
+                                 MVector{NArgs,Float64}(undef),
+                                 MVector{NObjArgs,Float64}(undef),
+                                 MVector{NObjArgs,Float64}(undef))
 end
 
 function _opt_muladd(@nospecialize(ex))
@@ -921,7 +921,7 @@ function _generate_nlobj(ObjArg, NSeg, Modes)
     return func_ex
 end
 
-@generated function (m::MSNLModel{pmask,ObjArg,NSeg,Param,Obj,Modes})(x, grads_out) where {pmask,ObjArg,NSeg,Param,Obj,Modes}
+@generated function (m::MSObjective{pmask,ObjArg,NSeg,Param,Obj,Modes})(x, grads_out) where {pmask,ObjArg,NSeg,Param,Obj,Modes}
     return _generate_nlobj(ObjArg, NSeg, Modes)
 end
 

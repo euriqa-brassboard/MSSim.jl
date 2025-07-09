@@ -67,10 +67,11 @@ function objfunc(vals, grads)
     return res
 end
 
-const nlmodel = Opts.MSNLModel{Opts.pmask_full,
-                               ((:dis2, 0), (:disδ2, 0), (:area, 0),
-                                (:areaδ, 0), (:τ, 0))}(
-                                    objfunc, modes, buf, freq=Opts.FreqSpec(true, sym=false))
+const nlmodel = Opts.MSObjective(Opts.pmask_full,
+                                 ((:dis2, 0), (:disδ2, 0), (:area, 0),
+                                  (:areaδ, 0), (:τ, 0)),
+                                 objfunc, modes, buf,
+                                 freq=Opts.FreqSpec(true, sym=false))
 const nargs = Opts.nparams(nlmodel)
 
 opt = NLopt.Opt(:LD_LBFGS, nargs) # 50 ms
@@ -84,8 +85,9 @@ NLopt.xtol_rel!(opt, 1e-7)
 NLopt.ftol_rel!(opt, 1e-7)
 NLopt.min_objective!(opt, nlmodel)
 
-NLopt.optimize(opt, [rand() * 5 + 1; 0.5;
-                     [(rand() * 0.5 + 2) * 2π for _ in 1:nargs - 2]])
+args_init = [1; 0.5; fill(2π * 2.0, nargs - 2)]
+using BenchmarkTools
+@btime NLopt.optimize($opt, $args_init)
 
 best_obj = 1.0
 best_params = nothing
