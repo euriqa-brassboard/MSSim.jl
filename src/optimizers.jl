@@ -6,6 +6,7 @@ using ..SegSeq
 using ..SymLinear
 
 using JuMP
+using StaticArrays
 
 const mask_full = SegSeq.ValueMask(true, true, true, true, true, true)
 const mask_allδ = SegSeq.ValueMask(true, true, true, false, true, true)
@@ -569,6 +570,359 @@ end
         sumgrφ += grads_raw[i * 5 - 1]
     end
     return
+end
+
+struct ModeInfo{Kern}
+    kern::Kern
+    ωm::Float64
+    weight::Float64
+end
+
+struct MSNLModel{pmask,ObjArg,NSeg,Param,Obj,Modes<:Tuple,NArgs,NObjArgs} <: Function
+    modes::Modes
+    param::Param
+    obj::Obj
+    args::MVector{NArgs,Float64}
+    grads::MVector{NArgs,Float64}
+    objargs::MVector{NObjArgs,Float64}
+    objgrads::MVector{NObjArgs,Float64}
+end
+
+nparams(m::MSNLModel) = nparams(m.param)
+
+function MSNLModel{pmask,ObjArg}(obj::Obj, modes::Modes,
+                                 buf::SymLinear.ComputeBuffer{NSeg};
+                                 freq=FreqSpec(), amp=AmpSpec()) where {NSeg,pmask,ObjArg,Obj}
+    modes_array = []
+    for (modei, (ωm, weight)) in enumerate(modes.modes)
+        kern = SymLinear.Kernel(buf, Val(pmask))
+        push!(modes_array, ModeInfo(kern, ωm, weight))
+    end
+    modes = (modes_array...,)
+    param = MSParams{NSeg}(freq=freq, amp=amp)
+    NArgs = NSeg * 5
+    NObjArgs = length(ObjArg)
+    return MSNLModel{pmask,ObjArg,NSeg,typeof(param),Obj,typeof(modes),NArgs,
+                     NObjArgs}(modes, param, obj, MVector{NArgs,Float64}(undef),
+                               MVector{NArgs,Float64}(undef),
+                               MVector{NObjArgs,Float64}(undef),
+                               MVector{NObjArgs,Float64}(undef))
+end
+
+function _opt_muladd(@nospecialize(ex))
+    if !Meta.isexpr(ex, :call)
+        return ex
+    end
+    ex.args[2:end] = _opt_muladd.(ex.args[2:end])
+    if ex.args[1] === :(+)
+        if length(ex.args) == 2
+            return ex.args[2]
+        end
+        mul_args = []
+        other_args = []
+        for arg in ex.args[2:end]
+            if Meta.isexpr(arg, :call) && length(arg.args) >= 3 && arg.args[1] === :(*)
+                push!(mul_args, arg)
+            else
+                push!(other_args, arg)
+            end
+        end
+        if isempty(mul_args)
+            return ex
+        end
+        if isempty(other_args)
+            v = pop!(mul_args)
+        elseif length(other_args) == 1
+            v = other_args[1]
+        else
+            v = :(+($(other_args...),))
+        end
+        for mul_arg in mul_args
+            m1 = mul_arg.args[2]
+            if length(mul_arg.args) > 3
+                m2 = :(*($(mul_arg.args[3:end]...),))
+            else
+                m2 = mul_arg.args[3]
+            end
+            v = :(muladd($m1, $m2, $v))
+        end
+        return v
+    end
+    return ex
+end
+
+function _generate_nlobj(ObjArg, NSeg, Modes)
+    nmodes = length(Modes.parameters)
+
+    # 1. Forward propagation of values
+    # input parameter -> pulse parameter
+    func_ex = quote
+        args = m.args
+        grads = m.grads
+        objargs = m.objargs
+        objgrads = m.objgrads
+        total_τ = transform_argument(m.param, args, x)
+    end
+    mode_vars = []
+    # pulse parameter -> pulse parameter for each mode
+    # -> compute all values for each modes
+    for i in 1:nmodes
+        mode_var = (mode=gensym(:mode),
+                    ωm=gensym(:ωm),
+                    weight=gensym(:weight),
+                    kern=gensym(:kern),
+                    args=gensym(:kargs),
+                    res=gensym(:sres),
+                    resval=gensym(:resval),
+                    resgrad=gensym(:resgrad))
+        push!(mode_vars, mode_var)
+        push!(func_ex.args, quote
+                  $(mode_var.mode) = m.modes[$i]
+                  $(mode_var.ωm) = $(mode_var.mode).ωm
+                  $(mode_var.weight) = $(mode_var.mode).weight
+                  $(mode_var.kern) = $(mode_var.mode).kern
+                  $(mode_var.args) = $(mode_var.kern).args
+                  φ = 0.0
+                  @inbounds for j in 1:$NSeg
+                      τ = args[j * 5 - 4]
+                      $(mode_var.args)[j * 5 - 4] = τ
+                      $(mode_var.args)[j * 5 - 3] = args[j * 5 - 3]
+                      $(mode_var.args)[j * 5 - 2] = args[j * 5 - 2]
+                      $(mode_var.args)[j * 5 - 1] = args[j * 5 - 1] - φ
+                      δ = args[j * 5]
+                      $(mode_var.args)[j * 5] = δ - $(mode_var.ωm)
+                      φ = muladd($(mode_var.ωm), τ, φ)
+                  end
+                  SymLinear.force_update!($(mode_var.kern))
+                  $(mode_var.res) = $(mode_var.kern).result
+                  $(mode_var.resval) = $(mode_var.res).val
+                  $(mode_var.resgrad) = $(mode_var.res).grad.values
+              end)
+    end
+    var_map = Dict{Tuple{Symbol,Int},Symbol}()
+    get_vars(name) = (get_var(name, i) for i in 1:nmodes)
+    function get_var(name, idx)
+        key = (name, idx)
+        if haskey(var_map, key)
+            return var_map[key]
+        end
+        vval = gensym("$(name)_$(idx)")
+        var_map[key] = vval
+        ex = if idx != 0
+            mode_var = mode_vars[idx]
+            if name === :rdis
+                :(real($(mode_var.resval).dis))
+            elseif name === :idis
+                :(imag($(mode_var.resval).dis))
+            elseif name === :dis2
+                iv = get_var(:idis, idx)
+                rv = get_var(:rdis, idx)
+                :(muladd($iv, $iv, $rv^2))
+            elseif name === :area
+                :($(mode_var.resval).area)
+            elseif name === :rdisδ
+                :(real($(mode_var.resval).disδ))
+            elseif name === :idisδ
+                :(imag($(mode_var.resval).disδ))
+            elseif name === :disδ2
+                iv = get_var(:idisδ, idx)
+                rv = get_var(:rdisδ, idx)
+                :(muladd($iv, $iv, $rv^2))
+            elseif name === :areaδ
+                :($(mode_var.resval).areaδ)
+            elseif name === :areaδ2
+                :($(get_var(:areaδ, idx))^2)
+            elseif name === :rcumdis
+                :(real($(mode_var.resval).cumdis))
+            elseif name === :icumdis
+                :(imag($(mode_var.resval).cumdis))
+            elseif name === :cumdis2
+                iv = get_var(:icumdis, idx)
+                rv = get_var(:rcumdis, idx)
+                :(muladd($iv, $iv, $rv^2))
+            end
+        elseif name === :dis2
+            :(+($(get_vars(:dis2)...),))
+        elseif name === :cumdis2
+            :(+($(get_vars(:cumdis2)...),))
+        elseif name === :disδ2
+            :(+($(get_vars(:disδ2)...),))
+        elseif name === :area
+            _opt_muladd(:(+($((:($(mode_vars[i].weight) * $v)
+                               for (i, v) in enumerate(get_vars(:area)))...),)))
+        elseif name === :areaδ
+            _opt_muladd(:(+($((:($(mode_vars[i].weight) * $v)
+                               for (i, v) in enumerate(get_vars(:areaδ)))...),)))
+        elseif name === :areaδ2
+            :(+($(get_vars(:areaδ2)...),))
+        elseif name === :τ
+            :total_τ
+        end
+        push!(func_ex.args, :($vval = $ex))
+        return vval
+    end
+    # Compute cost function input parameters
+    for (i, (name, idx)) in enumerate(ObjArg)
+        push!(func_ex.args, :(@inbounds objargs[$i] = $(get_var(name, idx))))
+    end
+    # Compute cost function with gradients
+    push!(func_ex.args, quote
+              resval = m.obj(objargs, objgrads)
+              if isempty(grads_out)
+                  return resval
+              end
+          end)
+
+    # 2. Backward propagation of gradients
+    # Load cost function gradients
+    objgrad_vars = Symbol[]
+    for i in 1:length(ObjArg)
+        @gensym objgrad
+        push!(objgrad_vars, objgrad)
+        push!(func_ex.args, :(@inbounds $objgrad = objgrads[$i]))
+    end
+
+    # Now we need to compute the gradient wrt each of the basic parameters
+    # of the cost function (i.e. [ri]dis, [ri]cumdis, [ri]disδ, area, areaδ for each mode)
+
+    # First, breakdown to single mode arguments
+    grad_map1 = Dict{Tuple{Symbol,Int},Vector{Any}}()
+    τ_grad_var = nothing
+    for (i, (name, idx)) in enumerate(ObjArg)
+        objgrad_var = objgrad_vars[i]
+        if idx != 0
+            push!(get!(grad_map1, (name, idx), []), objgrad_var)
+            continue
+        end
+        if name === :dis2 || name === :cumdis2 || name === :disδ2 || name === :areaδ2
+            for idx in 1:nmodes
+                push!(get!(grad_map1, (name, idx), []), objgrad_var)
+            end
+        elseif name === :τ
+            @assert τ_grad_var === nothing
+            τ_grad_var = objgrad_var
+        else
+            @assert name === :area || name === :areaδ
+            for idx in 1:nmodes
+                push!(get!(grad_map1, (name, idx), []),
+                      :($objgrad_var * $(mode_vars[idx].weight)))
+            end
+        end
+    end
+    comb_terms(terms) = length(terms) == 1 ? terms[1] : _opt_muladd(:(+($(terms...),)))
+
+    grad_map2 = Dict{Tuple{Symbol,Int},Vector{Any}}()
+    # Then back propagate to the basic parameters (i.e. get rid of the *2 parameters)
+    for ((name, idx), terms) in grad_map1
+        @assert idx != 0
+        old_term = comb_terms(terms)
+        @gensym val
+        if name === :dis2
+            push!(get!(grad_map2, (:rdis, idx), []),
+                  :(2 * $(var_map[(:rdis, idx)]) * $val))
+            push!(get!(grad_map2, (:idis, idx), []),
+                  :(2 * $(var_map[(:idis, idx)]) * $val))
+        elseif name === :cumdis2
+            push!(get!(grad_map2, (:rcumdis, idx), []),
+                  :(2 * $(var_map[(:rcumdis, idx)]) * $val))
+            push!(get!(grad_map2, (:icumdis, idx), []),
+                  :(2 * $(var_map[(:icumdis, idx)]) * $val))
+        elseif name === :disδ2
+            push!(get!(grad_map2, (:rdisδ, idx), []),
+                  :(2 * $(var_map[(:rdisδ, idx)]) * $val))
+            push!(get!(grad_map2, (:idisδ, idx), []),
+                  :(2 * $(var_map[(:idisδ, idx)]) * $val))
+        elseif name === :areaδ2
+            push!(get!(grad_map2, (:areaδ, idx), []),
+                  :(2 * $(var_map[(:areaδ, idx)]) * $val))
+        else
+            append!(get!(grad_map2, (name, idx), []), terms)
+            continue
+        end
+        push!(func_ex.args, :($val = $old_term))
+    end
+
+    # For each mode, back propagate the gradients to the pulse parameters,
+    # including the adjustments for mode frequencies
+    for i in 1:nmodes
+        mode_var = mode_vars[i]
+        get_term(name) = if haskey(grad_map2, (name, i))
+            @gensym s
+            push!(func_ex.args, :($s = $(comb_terms(grad_map2[(name, i)]))))
+            return s
+        end
+        rdis_scale = get_term(:rdis)
+        idis_scale = get_term(:idis)
+        area_scale = get_term(:area)
+        rcumdis_scale = get_term(:rcumdis)
+        icumdis_scale = get_term(:icumdis)
+        rdisδ_scale = get_term(:rdisδ)
+        idisδ_scale = get_term(:idisδ)
+        areaδ_scale = get_term(:areaδ)
+
+        set_grad(v, offset) = if i == 1
+            :(grads[j * 5 - $offset] = $v)
+        else
+            :(grads[j * 5 - $offset] += $v)
+        end
+        function comb_grad_terms(vin)
+            terms = []
+            rdis_scale !== nothing && push!(terms, :(real($(vin).dis) * $rdis_scale))
+            idis_scale !== nothing && push!(terms, :(imag($(vin).dis) * $idis_scale))
+            area_scale !== nothing && push!(terms, :($(vin).area * $area_scale))
+            rcumdis_scale !== nothing &&
+                push!(terms, :(real($(vin).cumdis) * $rcumdis_scale))
+            icumdis_scale !== nothing &&
+                push!(terms, :(imag($(vin).cumdis) * $icumdis_scale))
+            rdisδ_scale !== nothing && push!(terms, :(real($(vin).disδ) * $rdisδ_scale))
+            idisδ_scale !== nothing && push!(terms, :(imag($(vin).disδ) * $idisδ_scale))
+            areaδ_scale !== nothing && push!(terms, :($(vin).areaδ * $areaδ_scale))
+            if isempty(terms)
+                return 0.0
+            else
+                return comb_terms(terms)
+            end
+        end
+        push!(func_ex.args, quote
+                  gradτ_cum = 0.0
+                  @inbounds for j in $NSeg:-1:1
+                      g0τ = $(mode_var.resgrad)[j * 5 - 4]
+                      g0Ω = $(mode_var.resgrad)[j * 5 - 3]
+                      g0Ω′ = $(mode_var.resgrad)[j * 5 - 2]
+                      g0φ = $(mode_var.resgrad)[j * 5 - 1]
+                      g0ω = $(mode_var.resgrad)[j * 5]
+                      g1τ = $(comb_grad_terms(:g0τ)) - gradτ_cum
+                      g1Ω = $(comb_grad_terms(:g0Ω))
+                      g1Ω′ = $(comb_grad_terms(:g0Ω′))
+                      g1φ = $(comb_grad_terms(:g0φ))
+                      g1ω = $(comb_grad_terms(:g0ω))
+                      $(set_grad(:g1τ, 4))
+                      $(set_grad(:g1Ω, 3))
+                      $(set_grad(:g1Ω′, 2))
+                      $(set_grad(:g1φ, 1))
+                      $(set_grad(:g1ω, 0))
+                      gradτ_cum = muladd(g1φ, $(mode_var.ωm), gradτ_cum)
+                  end
+              end)
+    end
+
+    if τ_grad_var !== nothing
+        push!(func_ex.args, quote
+                  @inbounds for j in 1:$NSeg
+                      grads[j * 5 - 4] += $τ_grad_var
+                  end
+              end)
+    end
+
+    push!(func_ex.args, quote
+              transform_gradient(m.param, grads_out, grads, args, x)
+              return resval
+          end)
+    return func_ex
+end
+
+@generated function (m::MSNLModel{pmask,ObjArg,NSeg,Param,Obj,Modes})(x, grads_out) where {pmask,ObjArg,NSeg,Param,Obj,Modes}
+    return _generate_nlobj(ObjArg, NSeg, Modes)
 end
 
 end
