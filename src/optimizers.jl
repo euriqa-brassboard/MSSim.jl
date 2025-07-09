@@ -651,7 +651,7 @@ function _opt_muladd(@nospecialize(ex))
     return ex
 end
 
-function _generate_nlobj(ObjArg, NSeg, Modes)
+function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var)
     nmodes = length(Modes.parameters)
 
     # 1. Forward propagation of values
@@ -766,9 +766,15 @@ function _generate_nlobj(ObjArg, NSeg, Modes)
         push!(func_ex.args, :(@inbounds objargs[$i] = $(get_var(name, idx))))
     end
     # Compute cost function with gradients
+    if grads_out_var === nothing
+        push!(func_ex.args, quote
+                  return $(obj_ex)(objargs, objgrads)
+              end)
+        return func_ex
+    end
     push!(func_ex.args, quote
-              resval = m.obj(objargs, objgrads)
-              if isempty(grads_out)
+              resval = $(obj_ex)(objargs, objgrads)
+              if isempty($grads_out_var)
                   return resval
               end
           end)
@@ -915,14 +921,28 @@ function _generate_nlobj(ObjArg, NSeg, Modes)
     end
 
     push!(func_ex.args, quote
-              transform_gradient(m.param, grads_out, grads, args, x)
+              transform_gradient(m.param, $grads_out_var, grads, args, x)
               return resval
           end)
     return func_ex
 end
 
 @generated function (m::MSObjective{pmask,ObjArg,NSeg,Param,Obj,Modes})(x, grads_out) where {pmask,ObjArg,NSeg,Param,Obj,Modes}
-    return _generate_nlobj(ObjArg, NSeg, Modes)
+    return _generate_nlobj(ObjArg, NSeg, Modes, :(m.obj), :grads_out)
+end
+
+function get_args(m::MSObjective{pmask,ObjArg,NSeg}, x) where {pmask,ObjArg,NSeg}
+    res = Vector{Float64}(undef, NSeg * 5)
+    transform_argument(m.param, res, x)
+    return res
+end
+
+function _dummy_obj(x, grad)
+    return x[1]
+end
+
+@generated function (m::MSObjective{pmask,ObjArg,NSeg,Param,Obj,Modes})(::Val{ObjArg2}, x) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
+    return _generate_nlobj((ObjArg2,), NSeg, Modes, :_dummy_obj, nothing)
 end
 
 end

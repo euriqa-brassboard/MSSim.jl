@@ -166,6 +166,7 @@ end
             args_user2 = similar(args_user)
             Opts.transform_argument(param0, args_raw, args_user)
             args_value = Opts.ArgsValue(args_raw)
+            SL.update!(kern, (Opts.get_args(args_value, modes1)[1]...,))
             function eval_model1(name, idx)
                 model = Opts.MSObjective(Opts.pmask_full, ((name, idx),),
                                          objfunc1, modes1, buf,
@@ -174,6 +175,28 @@ end
                 res = model(args_user, grads)
                 @test res == value_record[]
                 @test model.args == args_raw
+                @test Opts.get_args(model, args_user) == args_raw
+
+                @test model(Val((:rdis, 1)), args_user) ≈ real(kern.result.val.dis)
+                @test model(Val((:idis, 1)), args_user) ≈ imag(kern.result.val.dis)
+                @test model(Val((:dis2, 1)), args_user) ≈ abs2(kern.result.val.dis)
+                @test model(Val((:area, 1)), args_user) ≈ kern.result.val.area
+                @test model(Val((:rdisδ, 1)), args_user) ≈ real(kern.result.val.disδ)
+                @test model(Val((:idisδ, 1)), args_user) ≈ imag(kern.result.val.disδ)
+                @test model(Val((:disδ2, 1)), args_user) ≈ abs2(kern.result.val.disδ)
+                @test model(Val((:areaδ, 1)), args_user) ≈ kern.result.val.areaδ
+                @test model(Val((:areaδ2, 1)), args_user) ≈ abs2(kern.result.val.areaδ)
+                @test model(Val((:rcumdis, 1)), args_user) ≈ real(kern.result.val.cumdis)
+                @test model(Val((:icumdis, 1)), args_user) ≈ imag(kern.result.val.cumdis)
+                @test model(Val((:cumdis2, 1)), args_user) ≈ abs2(kern.result.val.cumdis)
+
+                @test model(Val((:dis2, 0)), args_user) ≈ abs2(kern.result.val.dis)
+                @test model(Val((:area, 0)), args_user) ≈ kern.result.val.area * 0.5
+                @test model(Val((:disδ2, 0)), args_user) ≈ abs2(kern.result.val.disδ)
+                @test model(Val((:areaδ, 0)), args_user) ≈ kern.result.val.areaδ * 0.5
+                @test model(Val((:areaδ2, 0)), args_user) ≈ abs2(kern.result.val.areaδ)
+                @test model(Val((:cumdis2, 0)), args_user) ≈ abs2(kern.result.val.cumdis)
+                @test model(Val((:τ, 0)), args_user) ≈ nseg * args_user[1]
 
                 for ai in 1:length(args_user)
                     args_user2 .= args_user
@@ -188,7 +211,6 @@ end
                 end
                 return res
             end
-            SL.update!(kern, (Opts.get_args(args_value, modes1)[1]...,))
             @test eval_model1(:rdis, 1) ≈ real(kern.result.val.dis)
             @test eval_model1(:idis, 1) ≈ imag(kern.result.val.dis)
             @test eval_model1(:dis2, 1) ≈ abs2(kern.result.val.dis)
@@ -241,6 +263,7 @@ end
                 model = Opts.MSObjective(Opts.pmask_full, (key1, key2, key3),
                                          objfunc3, modes3, buf,
                                          freq=freq_spec, amp=amp_spec)
+                @test Opts.get_args(model, args_user) == args_raw
                 grads = similar(args_user)
                 res = model(args_user, grads)
                 @test res ≈ val_map[key1] * 0.9 - val_map[key2] * 0.2 + val_map[key3]^2
