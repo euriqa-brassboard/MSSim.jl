@@ -21,18 +21,18 @@ set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 
 nseg = 30
 
-buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_allδ), Val(Opts.mask_allδ))
-# buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
-# kern = SL.Kernel(buf, Val(Opts.pmask_tfm))
-# kern = SL.Kernel(buf, Val(Opts.pmask_full))
+buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_allδ), Val(SS.mask_allδ))
+# buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
+# kern = SL.Kernel(buf, Val(SL.pmask_tfm))
+# kern = SL.Kernel(buf, Val(SL.pmask_full))
 
 modes = Opts.Modes()
 for i in 1:5
     push!(modes, (2.1 + 0.1 * i) * 2π, (-1)^i)
 end
 
-msmod = Opts.MSModel{Opts.pmask_tfm}(model, modes, buf,
-                                     freq=Opts.FreqSpec(true, sym=false))
+msmod = Opts.MSModel{SL.pmask_tfm}(model, modes, buf,
+                                   freq=Opts.FreqSpec(true, sym=false))
 
 dis = Opts.total_dis(msmod)
 # cdis = Opts.total_cumdis(msmod)

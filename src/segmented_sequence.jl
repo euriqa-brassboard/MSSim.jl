@@ -21,6 +21,8 @@ struct ValueMask
     areaδ::Bool
 end
 Base.zero(::Type{ValueMask}) = ValueMask(false, false, false, false, false, false)
+const mask_full = ValueMask(true, true, true, true, true, true)
+const mask_allδ = ValueMask(true, true, true, false, true, true)
 
 # Sequence segment representation
 struct SegData{T,TT,D,A,CD,DG,AG}

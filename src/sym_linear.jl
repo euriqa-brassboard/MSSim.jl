@@ -368,6 +368,11 @@ struct ParamGradMask
     φ::Bool
     ω::Bool
 end
+const pmask_full = ParamGradMask(true, true, true, true, true)
+const pmask_fm = ParamGradMask(false, false, false, true, true)
+const pmask_tfm = ParamGradMask(true, false, false, true, true)
+const pmask_am = ParamGradMask(false, true, true, false, false)
+const pmask_tam = ParamGradMask(true, true, true, false, false)
 
 struct ComputeBuffer{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T}}
     seg_buf::Vector{SDV}

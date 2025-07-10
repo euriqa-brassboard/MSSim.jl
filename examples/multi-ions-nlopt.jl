@@ -12,8 +12,8 @@ const SL = MSSim.SymLinear
 using NLopt
 
 nseg = 30
-buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_allδ), Val(Opts.mask_allδ))
-# buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
+buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_allδ), Val(SS.mask_allδ))
+# buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
 modes = Opts.Modes()
 for i in 1:5
     push!(modes, (2.1 + 0.1 * i) * 2π, (-1)^i)
@@ -67,7 +67,7 @@ function objfunc(vals, grads)
     return res
 end
 
-const nlmodel = Opts.MSObjective(Opts.pmask_tfm,
+const nlmodel = Opts.MSObjective(SL.pmask_tfm,
                                  ((:dis2, 0), (:disδ2, 0), (:area, 0),
                                   (:areaδ, 0), (:τ, 0)),
                                  objfunc, modes, buf,

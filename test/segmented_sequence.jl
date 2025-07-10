@@ -22,14 +22,13 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
 
 @testset "Single Segment" begin
     T = Float64
-    mask_full = SS.ValueMask(true, true, true, true, true, true)
     mask_none = zero(SS.ValueMask)
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T}(Val(mask_full), Val(mask_none))
+    result = SS.SingleModeResult{T}(Val(SS.mask_full), Val(mask_none))
 
     for (τ, Ω, Ω′, φ, δ) in all_params
-        d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(mask_full), Val(mask_none))
+        d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(SS.mask_full), Val(mask_none))
         SS.compute_single_mode!(result, [d], buffer)
         @test result.val.τ == τ
         @test result.val.dis == d.dis
@@ -63,16 +62,15 @@ end
 
 @testset "Trivial Segment" begin
     T = Float64
-    mask_full = SS.ValueMask(true, true, true, true, true, true)
     mask_none = zero(SS.ValueMask)
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T}(Val(mask_full), Val(mask_none))
+    result = SS.SingleModeResult{T}(Val(SS.mask_full), Val(mask_none))
 
     for (τ, Ω, Ω′, φ, δ) in all_params
-        d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(mask_full), Val(mask_none))
+        d, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(SS.mask_full), Val(mask_none))
         nd, = SL.SegInt.compute_values(τ, Ω + Ω′ * τ, -Ω′, φ + δ * τ + π, -δ,
-                                       Val(mask_full), Val(mask_none))
+                                       Val(SS.mask_full), Val(mask_none))
         @test nd.τ == d.τ
         @test nd.dis ≈ -d.dis
         @test nd.area ≈ -d.area
@@ -120,7 +118,7 @@ end
 
         for τ′ in τs
             d0, = SL.SegInt.compute_values(τ′, 0.0, 0.0, 0.0, 0.0,
-                                           Val(mask_full), Val(mask_none))
+                                           Val(SS.mask_full), Val(mask_none))
             SS.compute_single_mode!(result, [d0, d], buffer)
             @test result.val.τ ≈ τ + τ′
             @test result.val.dis == d.dis
@@ -166,11 +164,10 @@ end
 
 @testset "Average zero" begin
     T = Float64
-    mask_full = SS.ValueMask(true, true, true, true, true, true)
     mask_none = zero(SS.ValueMask)
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T}(Val(mask_full), Val(mask_none))
+    result = SS.SingleModeResult{T}(Val(SS.mask_full), Val(mask_none))
 
     p0 = 0
     p1 = 1 + 1im
@@ -185,13 +182,13 @@ end
 
     for (τ, Ω, φ) in Iterators.product(τs, Ωs, φs)
         d1, = SL.SegInt.compute_values(τ, Ω * abs(l1), 0, φ + angle(l1), 0,
-                                       Val(mask_full), Val(mask_none))
+                                       Val(SS.mask_full), Val(mask_none))
         d2, = SL.SegInt.compute_values(τ, Ω * abs(l2), 0, φ + angle(l2), 0,
-                                       Val(mask_full), Val(mask_none))
+                                       Val(SS.mask_full), Val(mask_none))
         d3, = SL.SegInt.compute_values(τ, Ω * abs(l3), 0, φ + angle(l3), 0,
-                                       Val(mask_full), Val(mask_none))
+                                       Val(SS.mask_full), Val(mask_none))
         d4, = SL.SegInt.compute_values(τ, Ω * abs(l4), 0, φ + angle(l4), 0,
-                                       Val(mask_full), Val(mask_none))
+                                       Val(SS.mask_full), Val(mask_none))
 
         SS.compute_single_mode!(result, [d1, d2, d3, d4], buffer)
         @test result.val.τ == 4 * τ
@@ -241,11 +238,10 @@ function get_Ω_θ_func(params::AbstractVector{SegParam{T}}) where T
 end
 
 function get_seg_data(params::AbstractVector{SegParam{T}}) where T
-    mask_full = SS.ValueMask(true, true, true, true, true, true)
-    grads = U.JaggedMatrix{SS.SegData(T, mask_full)}()
+    grads = U.JaggedMatrix{SS.SegData(T, SS.mask_full)}()
     function compute_values(param)
         res, grad = SL.SegInt.compute_values(param.τ, param.Ω, param.Ω′, param.φ,
-                                             param.δ, Val(mask_full), Val(mask_full))
+                                             param.δ, Val(SS.mask_full), Val(SS.mask_full))
         push!(grads, grad)
         return res
     end
@@ -254,11 +250,10 @@ end
 
 @testset "Random sequence" begin
     T = Float64
-    mask_full = SS.ValueMask(true, true, true, true, true, true)
     mask_none = zero(SS.ValueMask)
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T}(Val(mask_full), Val(mask_none))
+    result = SS.SingleModeResult{T}(Val(SS.mask_full), Val(mask_none))
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
@@ -321,11 +316,10 @@ end
 
 @testset "Random sequence gradients" begin
     T = Float64
-    mask_full = SS.ValueMask(true, true, true, true, true, true)
     mask_none = zero(SS.ValueMask)
 
     buffer = SS.SeqComputeBuffer{T}()
-    result = SS.SingleModeResult{T}(Val(mask_full), Val(mask_full))
+    result = SS.SingleModeResult{T}(Val(SS.mask_full), Val(SS.mask_full))
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
@@ -337,7 +331,7 @@ end
         return
     end
 
-    result′ = SS.SingleModeResult{T}(Val(mask_full), Val(mask_none))
+    result′ = SS.SingleModeResult{T}(Val(SS.mask_full), Val(mask_none))
     function eval_grad(param_cb, nh)
         function eval_wrapper(params)
             eval_params(result′, params, false)

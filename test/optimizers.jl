@@ -154,8 +154,8 @@ end
     end
 
     for (nseg, amp_order) in Iterators.product((1, 2, 5, 10), (0, 2, 5))
-        buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
-        kern = SL.Kernel(buf, Val(Opts.pmask_full))
+        buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
+        kern = SL.Kernel(buf, Val(SL.pmask_full))
         freq_spec = Opts.FreqSpec(true, sym=false)
         amp_spec = Opts.AmpSpec(mid_order=amp_order, sym=false)
         param0 = Opts.MSParams{nseg}(freq=freq_spec, amp=amp_spec)
@@ -168,7 +168,7 @@ end
             args_value = Opts.ArgsValue(args_raw)
             SL.update!(kern, (Opts.get_args(args_value, modes1)[1]...,))
             function eval_model1(name, idx)
-                model = Opts.MSObjective(Opts.pmask_full, ((name, idx),),
+                model = Opts.MSObjective(SL.pmask_full, ((name, idx),),
                                          objfunc1, modes1, buf,
                                          freq=freq_spec, amp=amp_spec)
                 grads = similar(args_user)
@@ -260,7 +260,7 @@ end
             key_combs = collect(Combinatorics.combinations(val_keys, 3))
 
             function eval_model3(key1, key2, key3)
-                model = Opts.MSObjective(Opts.pmask_full, (key1, key2, key3),
+                model = Opts.MSObjective(SL.pmask_full, (key1, key2, key3),
                                          objfunc3, modes3, buf,
                                          freq=freq_spec, amp=amp_spec)
                 @test Opts.get_args(model, args_user) == args_raw

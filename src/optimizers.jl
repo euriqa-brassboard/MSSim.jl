@@ -8,15 +8,6 @@ using ..SymLinear
 using JuMP
 using StaticArrays
 
-const mask_full = SegSeq.ValueMask(true, true, true, true, true, true)
-const mask_allδ = SegSeq.ValueMask(true, true, true, false, true, true)
-
-const pmask_full = SymLinear.ParamGradMask(true, true, true, true, true)
-const pmask_fm = SymLinear.ParamGradMask(false, false, false, true, true)
-const pmask_tfm = SymLinear.ParamGradMask(true, false, false, true, true)
-const pmask_am = SymLinear.ParamGradMask(false, true, true, false, false)
-const pmask_tam = SymLinear.ParamGradMask(true, true, true, false, false)
-
 function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
                                prefix="", suffix="") where {NSeg,T,SDV,SDG}
     maskv = SegSeq.value_mask(SDV)
