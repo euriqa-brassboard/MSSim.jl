@@ -751,6 +751,8 @@ function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var)
                 iv = get_var(:icumdis, idx)
                 rv = get_var(:rcumdis, idx)
                 :(muladd($iv, $iv, $rv^2))
+            else
+                :(error("Invalid objective argument ", $(QuoteNode(key))))
             end
         elseif name === :dis2
             :(+($(get_vars(:dis2)...),))
@@ -768,6 +770,8 @@ function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var)
             :(+($(get_vars(:areaδ2)...),))
         elseif name === :τ
             :total_τ
+        else
+            :(error("Invalid objective argument ", $(QuoteNode(key))))
         end
         push!(func_ex.args, :($vval = $ex))
         return vval
