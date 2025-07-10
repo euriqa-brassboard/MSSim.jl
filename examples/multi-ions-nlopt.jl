@@ -73,28 +73,34 @@ const nlmodel = Opts.MSObjective(Opts.pmask_tfm,
                                  objfunc, modes, buf,
                                  freq=Opts.FreqSpec(true, sym=false))
 const nargs = Opts.nparams(nlmodel)
+const tracker = Opts.NLVarTracker(nargs)
+Opts.set_bound!(tracker, nlmodel.param.τ, 1, 6)
+for Ω in nlmodel.param.Ωpoly
+    Opts.set_bound!(tracker, Ω, 0.5, 0.5)
+    # Opts.set_bound!(tracker, Ω, 0.1, 0.5)
+end
+for ω in nlmodel.param.ωs
+    Opts.set_bound!(tracker, ω, 2π * 2.0, 2π * 3.0)
+end
 
 opt = NLopt.Opt(:LD_LBFGS, nargs) # 50 ms
 # opt = NLopt.Opt(:LD_SLSQP, nargs) # 13 ms
 # opt = NLopt.Opt(:LD_VAR1, nargs) # 80 ms
 # opt = NLopt.Opt(:LD_VAR2, nargs) # 50 ms
 # opt = NLopt.Opt(:LD_TNEWTON_PRECOND_RESTART, nargs) # 148 ms
-NLopt.lower_bounds!(opt, [1; 0.5; fill(2π * 2.0, nargs - 2)])
-NLopt.upper_bounds!(opt, [6; 0.5; fill(2π * 3.0, nargs - 2)])
 NLopt.xtol_rel!(opt, 1e-7)
 NLopt.ftol_rel!(opt, 1e-7)
 NLopt.min_objective!(opt, nlmodel)
+NLopt.lower_bounds!(opt, Opts.lower_bounds(tracker))
+NLopt.upper_bounds!(opt, Opts.upper_bounds(tracker))
 
-args_init = [1; 0.5; fill(2π * 2.0, nargs - 2)]
-@btime NLopt.optimize($opt, $args_init)
+@btime NLopt.optimize($opt, $(Opts.lower_bounds(tracker)))
 
 best_obj = 1.0
 best_params = nothing
 @time for i in 1:100
     global best_obj, best_params
-    obj, params, ret = NLopt.optimize(opt, [rand() * 5 + 1; 0.5;
-                                            [(rand() + 2) * 2π
-                                             for _ in 1:nargs - 2]])
+    obj, params, ret = NLopt.optimize(opt, Opts.init_vars!(tracker))
     if getfield(NLopt, ret) < 0
         continue
     end
