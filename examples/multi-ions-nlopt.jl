@@ -12,8 +12,8 @@ const SL = MSSim.SymLinear
 using NLopt
 
 nseg = 30
-# buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_allδ), Val(Opts.mask_allδ))
-buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
+buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_allδ), Val(Opts.mask_allδ))
+# buf = SL.ComputeBuffer{nseg,Float64}(Val(Opts.mask_full), Val(Opts.mask_full))
 modes = Opts.Modes()
 for i in 1:5
     push!(modes, (2.1 + 0.1 * i) * 2π, (-1)^i)
@@ -67,7 +67,7 @@ function objfunc(vals, grads)
     return res
 end
 
-const nlmodel = Opts.MSObjective(Opts.pmask_full,
+const nlmodel = Opts.MSObjective(Opts.pmask_tfm,
                                  ((:dis2, 0), (:disδ2, 0), (:area, 0),
                                   (:areaδ, 0), (:τ, 0)),
                                  objfunc, modes, buf,
@@ -86,23 +86,27 @@ NLopt.ftol_rel!(opt, 1e-7)
 NLopt.min_objective!(opt, nlmodel)
 
 args_init = [1; 0.5; fill(2π * 2.0, nargs - 2)]
-using BenchmarkTools
 @btime NLopt.optimize($opt, $args_init)
 
 best_obj = 1.0
 best_params = nothing
 @time for i in 1:100
     global best_obj, best_params
-    obj, params, ret = @time NLopt.optimize(opt, [rand() * 5 + 1; 0.5;
-                                                  [(rand() + 2) * 2π
-                                                   for _ in 1:nargs - 2]])
+    obj, params, ret = NLopt.optimize(opt, [rand() * 5 + 1; 0.5;
+                                            [(rand() + 2) * 2π
+                                             for _ in 1:nargs - 2]])
     if getfield(NLopt, ret) < 0
         continue
     end
     if obj < best_obj
         best_obj = obj
-        @show best_obj
+        dis = nlmodel(Val((:dis2, 0)), params)
+        disδ = nlmodel(Val((:disδ2, 0)), params)
+        area = nlmodel(Val((:area, 0)), params)
+        areaδ = nlmodel(Val((:areaδ, 0)), params)
+        @show best_obj, dis, disδ, area, areaδ
         best_params = params
-        @show best_params
     end
 end
+@show best_params
+@show Opts.get_args(nlmodel, best_params)
