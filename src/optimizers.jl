@@ -425,15 +425,20 @@ function nparams end
 function transform_argument end
 function transform_gradient end
 
-struct MSParams{NSeg,NAmp,Sym,FM}
+struct MSParams{NSeg,NAmp,Sym,FM,NAmpNode}
     # amp0::Vector{Float64}
-    amps::NTuple{NAmp,Vector{Float64}}
+    amps::NTuple{NAmp,MVector{NAmpNode,Float64}}
+    τ::Int
+    Ωbase::Union{Int,Nothing}
+    Ωpoly::Union{Vector{Int},Nothing}
+    ωs::Vector{Int}
 end
 
 function MSParams{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
     amp_vals = Vector{Float64}[]
+    base = nothing
     if amp.cb !== nothing
-        Ωbase = Vector{Float64}(undef, NSeg + 1)
+        Ωbase = MVector{NSeg + 1,Float64}(undef)
         if amp.sym
             nmax = NSeg ÷ 2 + 1
             for i in 1:nmax
@@ -448,7 +453,9 @@ function MSParams{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
             end
         end
         push!(amp_vals, Ωbase)
+        base = 2
     end
+    poly = nothing
     if amp.mid_order >= 0
         xs = [(2 * i / (NSeg + 2) - 1) for i in 1:NSeg + 1]
         if amp.end_order > 0
@@ -457,14 +464,18 @@ function MSParams{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
             Ωend = ones(NSeg + 1)
         end
         step = amp.sym ? 2 : 1
+        poly = Int[]
         for order in 0:step:amp.mid_order
-            push!(amp_vals, xs.^order .* Ωend)
+            push!(amp_vals, MVector{NSeg + 1,Float64}(xs.^order .* Ωend))
+            push!(poly, length(amp_vals) + 1)
         end
     else
         @assert amp.end_order <= 0
     end
     NAmp = length(amp_vals)
-    return MSParams{NSeg,NAmp,freq.sym,freq.modulate}((amp_vals...,))
+    NFreq = (freq.modulate ? (freq.sym ? (NSeg + 1) ÷ 2 : NSeg) : 1)
+    return MSParams{NSeg,NAmp,freq.sym,freq.modulate,NSeg + 1}(
+        (amp_vals...,), 1, base, poly, (1:NFreq) .+ (1 + NAmp))
 end
 
 function nparams(params::MSParams{NSeg,NAmp,Sym,FM}) where {NSeg,NAmp,Sym,FM}
