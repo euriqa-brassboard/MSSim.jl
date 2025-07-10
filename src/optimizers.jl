@@ -956,4 +956,39 @@ end
     return _generate_nlobj((ObjArg2,), NSeg, Modes, :_dummy_obj, nothing)
 end
 
+struct NLVarTracker
+    vars::Vector{Tuple{Float64,Float64}}
+    NLVarTracker(nargs) = new(fill((-Inf, Inf), nargs))
+end
+
+function set_bound!(tracker::NLVarTracker, idx, lb, ub)
+    tracker.vars[idx] = (lb, ub)
+    return
+end
+
+lower_bounds(tracker::NLVarTracker) = [lb for (lb, ub) in tracker.vars]
+upper_bounds(tracker::NLVarTracker) = [ub for (lb, ub) in tracker.vars]
+
+function init_vars!(tracker::NLVarTracker, vars=nothing)
+    nvars = length(tracker.vars)
+    if vars === nothing
+        vars = Vector{Float64}(undef, nvars)
+    end
+    for vi in 1:nvars
+        lb, ub = tracker.vars[vi]
+        if isfinite(lb)
+            if isfinite(ub)
+                vars[vi] = lb + (ub - lb) * rand()
+            else
+                vars[vi] = lb + rand()
+            end
+        elseif isfinite(ub)
+            vars[vi] = ub - rand()
+        else
+            vars[vi] = rand()
+        end
+    end
+    return vars
+end
+
 end
