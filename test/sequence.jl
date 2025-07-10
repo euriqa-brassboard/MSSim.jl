@@ -1,12 +1,12 @@
 #!/usr/bin/julia
 
-module TestOptimizers
+module TestSequence
 
 using MSSim
 const U = MSSim.Utils
 const SL = MSSim.SymLinear
 const SS = MSSim.SegSeq
-const Opts = MSSim.Optimizers
+const Seq = MSSim.Sequence
 
 using Test
 using Random
@@ -18,8 +18,8 @@ function compute_grad(v₋₄, v₋₃, v₋₂, v₋₁, v₁, v₂, v₃, v₄
             - (v₂ - v₋₂) / 5 + 4 * (v₁ - v₋₁) / 5) / h
 end
 
-function test_msparams_grad(params::Opts.MSParams{NSeg}, nrounds) where NSeg
-    nuser = Opts.nparams(params)
+function test_msparams_grad(params::Seq.ModSpec{NSeg}, nrounds) where NSeg
+    nuser = Seq.nparams(params)
     nraw = NSeg * 5
 
     grads_raw = Vector{Float64}(undef, nraw)
@@ -32,14 +32,14 @@ function test_msparams_grad(params::Opts.MSParams{NSeg}, nrounds) where NSeg
         rand!(grads_raw)
         rand!(args_user)
         args_user[1] += 0.1
-        Opts.transform_argument(params, args_raw, args_user)
+        Seq.transform_argument(params, args_raw, args_user)
         v0 = dot(args_raw, grads_raw)
-        Opts.transform_gradient(params, grads_user, grads_raw, args_raw, args_user)
+        Seq.transform_gradient(params, grads_user, grads_raw, args_raw, args_user)
         for ai in 1:nuser
             args_user2 .= args_user
             function eval_at(x)
                 args_user2[ai] = args_user[ai] + x
-                Opts.transform_argument(params, args_raw, args_user2)
+                Seq.transform_argument(params, args_raw, args_user2)
                 return dot(args_raw, grads_raw)
             end
             h = 0.0001 / 4
@@ -50,9 +50,9 @@ function test_msparams_grad(params::Opts.MSParams{NSeg}, nrounds) where NSeg
     end
 end
 
-function test_msparams_args(params::Opts.MSParams{NSeg,NAmp},
+function test_msparams_args(params::Seq.ModSpec{NSeg,NAmp},
                             args_raw, args_user) where {NSeg,NAmp}
-    total_t = Opts.transform_argument(params, args_raw, args_user)
+    total_t = Seq.transform_argument(params, args_raw, args_user)
     τ = args_user[1]
     @test total_t ≈ NSeg * τ
     amps = [begin
@@ -79,9 +79,9 @@ end
         for namp in (1, 2, 5)
             for _ in 1:100
                 # No FM
-                params = Opts.MSParams{nseg,namp,false,false,nseg+1}(
+                params = Seq.ModSpec{nseg,namp,false,false,nseg+1}(
                     ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
-                nuser = Opts.nparams(params)
+                nuser = Seq.nparams(params)
                 @test nuser == 2 + namp
 
                 args_user = rand(nuser)
@@ -96,9 +96,9 @@ end
                 test_msparams_grad(params, 100)
 
                 # FM
-                params = Opts.MSParams{nseg,namp,false,true,nseg+1}(
+                params = Seq.ModSpec{nseg,namp,false,true,nseg+1}(
                     ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
-                nuser = Opts.nparams(params)
+                nuser = Seq.nparams(params)
                 @test nuser == 1 + namp + nseg
 
                 args_user = rand(nuser)
@@ -112,9 +112,9 @@ end
                 test_msparams_grad(params, 100)
 
                 # Symmetric FM
-                params = Opts.MSParams{nseg,namp,true,true,nseg+1}(
+                params = Seq.ModSpec{nseg,namp,true,true,nseg+1}(
                     ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
-                nuser = Opts.nparams(params)
+                nuser = Seq.nparams(params)
                 @test nuser == 1 + namp + (nseg + 1) ÷ 2
 
                 args_user = rand(nuser)
@@ -132,8 +132,8 @@ end
     end
 end
 
-@testset "NL model" begin
-    modes1 = Opts.Modes()
+@testset "Objective" begin
+    modes1 = Seq.Modes()
     push!(modes1, 2.5, 0.5)
     value_record = Ref(0.0)
     function objfunc1(vals, grads)
@@ -142,7 +142,7 @@ end
         return vals[1]
     end
 
-    modes3 = Opts.Modes()
+    modes3 = Seq.Modes()
     push!(modes3, 2.1, -0.3)
     push!(modes3, 2.5, 0.5)
     push!(modes3, 2.9, 2.0)
@@ -156,26 +156,26 @@ end
     for (nseg, amp_order) in Iterators.product((1, 2, 5, 10), (0, 2, 5))
         buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
         kern = SL.Kernel(buf, Val(SL.pmask_full))
-        freq_spec = Opts.FreqSpec(true, sym=false)
-        amp_spec = Opts.AmpSpec(mid_order=amp_order, sym=false)
-        param0 = Opts.MSParams{nseg}(freq=freq_spec, amp=amp_spec)
+        freq_spec = Seq.FreqSpec(true, sym=false)
+        amp_spec = Seq.AmpSpec(mid_order=amp_order, sym=false)
+        param0 = Seq.ModSpec{nseg}(freq=freq_spec, amp=amp_spec)
         args_raw = Vector{Float64}(undef, nseg * 5)
         for _ in 1:100
-            args_user = rand(Opts.nparams(param0))
+            args_user = rand(Seq.nparams(param0))
             args_user[1] += 0.1 # τ
             args_user2 = similar(args_user)
-            Opts.transform_argument(param0, args_raw, args_user)
-            args_value = Opts.ArgsValue(args_raw)
-            SL.update!(kern, (Opts.get_args(args_value, modes1)[1]...,))
+            Seq.transform_argument(param0, args_raw, args_user)
+            raw_params = Seq.RawParams(args_raw)
+            SL.update!(kern, (get(raw_params; ωm=modes1[1][1])...,))
             function eval_model1(name, idx)
-                model = Opts.MSObjective(SL.pmask_full, ((name, idx),),
-                                         objfunc1, modes1, buf,
-                                         freq=freq_spec, amp=amp_spec)
+                model = Seq.Objective(SL.pmask_full, ((name, idx),),
+                                      objfunc1, modes1, buf,
+                                      freq=freq_spec, amp=amp_spec)
                 grads = similar(args_user)
                 res = model(args_user, grads)
                 @test res == value_record[]
                 @test model.args == args_raw
-                @test Opts.get_args(model, args_user) == args_raw
+                @test Seq.RawParams(model, args_user).args == args_raw
 
                 @test model(Val((:rdis, 1)), args_user) ≈ real(kern.result.val.dis)
                 @test model(Val((:idis, 1)), args_user) ≈ imag(kern.result.val.dis)
@@ -234,7 +234,7 @@ end
 
             val_map = Dict{Tuple{Symbol,Int},Float64}()
             for idx in 1:3
-                SL.update!(kern, (Opts.get_args(args_value, modes3)[idx]...,))
+                SL.update!(kern, (get(raw_params; ωm=modes3[idx][1])...,))
                 val_map[(:rdis, idx)] = real(kern.result.val.dis)
                 val_map[(:idis, idx)] = imag(kern.result.val.dis)
                 val_map[(:dis2, idx)] = abs2(kern.result.val.dis)
@@ -248,22 +248,22 @@ end
                 val_map[(:icumdis, idx)] = imag(kern.result.val.cumdis)
                 val_map[(:cumdis2, idx)] = abs2(kern.result.val.cumdis)
             end
-            val_map[(:dis2, 0)] = Opts.total_dis(kern, args_value, modes3)
-            val_map[(:area, 0)] = Opts.total_area(kern, args_value, modes3)
-            val_map[(:disδ2, 0)] = Opts.total_disδ(kern, args_value, modes3)
-            val_map[(:areaδ, 0)] = Opts.total_areaδ(kern, args_value, modes3)
-            val_map[(:areaδ2, 0)] = Opts.all_areaδ(kern, args_value, modes3)
-            val_map[(:cumdis2, 0)] = Opts.total_cumdis(kern, args_value, modes3)
+            val_map[(:dis2, 0)] = Seq.total_dis(kern, raw_params, modes3)
+            val_map[(:area, 0)] = Seq.total_area(kern, raw_params, modes3)
+            val_map[(:disδ2, 0)] = Seq.total_disδ(kern, raw_params, modes3)
+            val_map[(:areaδ, 0)] = Seq.total_areaδ(kern, raw_params, modes3)
+            val_map[(:areaδ2, 0)] = Seq.all_areaδ(kern, raw_params, modes3)
+            val_map[(:cumdis2, 0)] = Seq.total_cumdis(kern, raw_params, modes3)
             val_map[(:τ, 0)] = nseg * args_user[1]
 
             val_keys = collect(keys(val_map))
             key_combs = collect(Combinatorics.combinations(val_keys, 3))
 
             function eval_model3(key1, key2, key3)
-                model = Opts.MSObjective(SL.pmask_full, (key1, key2, key3),
-                                         objfunc3, modes3, buf,
-                                         freq=freq_spec, amp=amp_spec)
-                @test Opts.get_args(model, args_user) == args_raw
+                model = Seq.Objective(SL.pmask_full, (key1, key2, key3),
+                                      objfunc3, modes3, buf,
+                                      freq=freq_spec, amp=amp_spec)
+                @test Seq.RawParams(model, args_user).args == args_raw
                 grads = similar(args_user)
                 res = model(args_user, grads)
                 @test res ≈ val_map[key1] * 0.9 - val_map[key2] * 0.2 + val_map[key3]^2

@@ -9,6 +9,7 @@ using BenchmarkTools
 const Opts = MSSim.Optimizers
 const SS = MSSim.SegSeq
 const SL = MSSim.SymLinear
+const Seq = MSSim.Sequence
 
 using NLopt
 const model = Model(NLopt.Optimizer)
@@ -24,10 +25,10 @@ buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, false, t
 # buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.ValueMask(true, true, true, true, true, true)),
 #                                      Val(SS.ValueMask(true, true, true, true, true, true)))
 kern = SL.Kernel(buf, Val(SL.ParamGradMask(true, true, true, true, true)));
-args = Opts.gen_args(model, nseg, freq=Opts.FreqSpec(true, sym=false))
+args = Opts.gen_args(model, nseg, freq=Seq.FreqSpec(true, sym=false))
 Opts.register_kernel_funcs(model, kern)
 
-modes = Opts.Modes()
+modes = Seq.Modes()
 push!(modes, 2.3, 1)
 push!(modes, 2.7, -1)
 

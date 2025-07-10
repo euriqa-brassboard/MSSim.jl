@@ -8,13 +8,14 @@ using BenchmarkTools
 const Opts = MSSim.Optimizers
 const SS = MSSim.SegSeq
 const SL = MSSim.SymLinear
+const Seq = MSSim.Sequence
 
 using NLopt
 
 nseg = 30
 buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_allδ), Val(SS.mask_allδ))
 # buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
-modes = Opts.Modes()
+modes = Seq.Modes()
 for i in 1:5
     push!(modes, (2.1 + 0.1 * i) * 2π, (-1)^i)
 end
@@ -67,12 +68,12 @@ function objfunc(vals, grads)
     return res
 end
 
-const nlmodel = Opts.MSObjective(SL.pmask_tfm,
-                                 ((:dis2, 0), (:disδ2, 0), (:area, 0),
-                                  (:areaδ, 0), (:τ, 0)),
-                                 objfunc, modes, buf,
-                                 freq=Opts.FreqSpec(true, sym=false))
-const nargs = Opts.nparams(nlmodel)
+const nlmodel = Seq.Objective(SL.pmask_tfm,
+                              ((:dis2, 0), (:disδ2, 0), (:area, 0),
+                               (:areaδ, 0), (:τ, 0)),
+                              objfunc, modes, buf,
+                              freq=Seq.FreqSpec(true, sym=false))
+const nargs = Seq.nparams(nlmodel)
 const tracker = Opts.NLVarTracker(nargs)
 Opts.set_bound!(tracker, nlmodel.param.τ, 1, 6)
 for Ω in nlmodel.param.Ωpoly
@@ -115,4 +116,4 @@ best_params = nothing
     end
 end
 @show best_params
-@show Opts.get_args(nlmodel, best_params)
+@show Seq.RawParams(nlmodel, best_params)

@@ -9,6 +9,7 @@ using BenchmarkTools
 const Opts = MSSim.Optimizers
 const SS = MSSim.SegSeq
 const SL = MSSim.SymLinear
+const Seq = MSSim.Sequence
 
 using NLopt
 
@@ -26,13 +27,13 @@ buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_allδ), Val(SS.mask_allδ))
 # kern = SL.Kernel(buf, Val(SL.pmask_tfm))
 # kern = SL.Kernel(buf, Val(SL.pmask_full))
 
-modes = Opts.Modes()
+modes = Seq.Modes()
 for i in 1:5
     push!(modes, (2.1 + 0.1 * i) * 2π, (-1)^i)
 end
 
 msmod = Opts.MSModel{SL.pmask_tfm}(model, modes, buf,
-                                   freq=Opts.FreqSpec(true, sym=false))
+                                   freq=Seq.FreqSpec(true, sym=false))
 
 dis = Opts.total_dis(msmod)
 # cdis = Opts.total_cumdis(msmod)
