@@ -9,7 +9,6 @@ import ..Sequence as Seq
 import ..Sequence: total_dis, total_cumdis, total_area, total_disδ, total_areaδ, all_areaδ
 
 using JuMP
-using StaticArrays
 
 function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
                                prefix="", suffix="") where {NSeg,T,SDV,SDG}
@@ -254,35 +253,6 @@ total_disδ(model::MSModel) = sum(get_disδ2(model, i) for i in 1:nmodes(model))
 total_areaδ(model::MSModel) = sum(get_areaδ(model, i) * model.mode_data[i].weight
                                    for i in 1:nmodes(model))
 all_areaδ(model::MSModel) = sum(get_areaδ(model, i)^2 for i in 1:nmodes(model))
-
-# Temporary function to patch NLopt to support new non-linear function interface
-import MathOptInterface as MOI
-function check_nlopt(Optimizer)
-    opt = Optimizer()
-    attr = MOI.UserDefinedFunction(:dummy, 2)
-    if MOI.supports(opt, attr)
-        return
-    end
-    M = Optimizer.name.module
-    @eval M begin
-        MOI.supports(model::Optimizer, ::MOI.UserDefinedFunction) = true
-        function MOI.set(model::Optimizer, attr::MOI.UserDefinedFunction, args)
-            _init_nlp_model(model)
-            MOI.Nonlinear.register_operator(
-                model.nlp_model,
-                attr.name,
-                attr.arity,
-                args...,
-            )
-            return
-        end
-
-        function MOI.get(model::Optimizer, attr::MOI.ListOfSupportedNonlinearOperators)
-            _init_nlp_model(model)
-            return MOI.get(model.nlp_model, attr)
-        end
-    end
-end
 
 struct NLVarTracker
     vars::Vector{Tuple{Float64,Float64}}

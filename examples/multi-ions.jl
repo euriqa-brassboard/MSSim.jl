@@ -12,10 +12,6 @@ const SL = MSSim.SymLinear
 const Seq = MSSim.Sequence
 
 using NLopt
-
-# https://github.com/jump-dev/NLopt.jl/pull/262
-Opts.check_nlopt(NLopt.Optimizer)
-
 const model = Model(NLopt.Optimizer)
 set_optimizer_attribute(model, "algorithm", :LD_LBFGS)
 # set_optimizer_attribute(model, "algorithm", :LD_SLSQP)
