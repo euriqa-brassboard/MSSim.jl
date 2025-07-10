@@ -17,14 +17,6 @@ const pmask_tfm = SymLinear.ParamGradMask(true, false, false, true, true)
 const pmask_am = SymLinear.ParamGradMask(false, true, true, false, false)
 const pmask_tam = SymLinear.ParamGradMask(true, true, true, false, false)
 
-mutable struct ObjCache{T}
-    obj::T
-    const grad::Vector{T}
-    function ObjCache{T}(nvars=0) where {T}
-        return new(zero(T), Vector{T}(undef, nvars))
-    end
-end
-
 function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
                                prefix="", suffix="") where {NSeg,T,SDV,SDG}
     maskv = SegSeq.value_mask(SDV)
