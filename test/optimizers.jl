@@ -79,8 +79,8 @@ end
         for namp in (1, 2, 5)
             for _ in 1:100
                 # No FM
-                params = Opts.MSParams{nseg,namp,false,false}(
-                    ntuple(_->rand(nseg + 1), namp))
+                params = Opts.MSParams{nseg,namp,false,false,nseg+1}(
+                    ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
                 nuser = Opts.nparams(params)
                 @test nuser == 2 + namp
 
@@ -96,8 +96,8 @@ end
                 test_msparams_grad(params, 100)
 
                 # FM
-                params = Opts.MSParams{nseg,namp,false,true}(
-                    ntuple(_->rand(nseg + 1), namp))
+                params = Opts.MSParams{nseg,namp,false,true,nseg+1}(
+                    ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
                 nuser = Opts.nparams(params)
                 @test nuser == 1 + namp + nseg
 
@@ -112,8 +112,8 @@ end
                 test_msparams_grad(params, 100)
 
                 # Symmetric FM
-                params = Opts.MSParams{nseg,namp,true,true}(
-                    ntuple(_->rand(nseg + 1), namp))
+                params = Opts.MSParams{nseg,namp,true,true,nseg+1}(
+                    ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
                 nuser = Opts.nparams(params)
                 @test nuser == 1 + namp + (nseg + 1) ÷ 2
 
