@@ -53,14 +53,14 @@ function _gen_base_args(spec::Seq.AmpSpec, m::Model, nseg, τ)
     if spec.sym
         nmax = nseg ÷ 2 + 1
         for i in 1:nmax
-            Ωbase = spec.cb(i)
+            Ωbase = spec.cb((i - 1) / (nseg / 2) - 1)
             Ωnodes_base[i] = Ωbase
             Ωnodes_base[nseg + 1 - i] = Ωbase
         end
     else
         nmax = nseg + 1
         for i in 1:nmax
-            Ωnodes_base[i] = spec.cb(i)
+            Ωnodes_base[i] = spec.cb((i - 1) / (nseg / 2) - 1)
         end
     end
     scale = @variable(m, base_name="Ωscale")

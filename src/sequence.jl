@@ -67,16 +67,14 @@ function ModSpec{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
     if amp.cb !== nothing
         Ωbase = MVector{NSeg + 1,Float64}(undef)
         if amp.sym
-            nmax = NSeg ÷ 2 + 1
-            for i in 1:nmax
-                Ωbase = amp.cb(i)
+            for i in 1:NSeg ÷ 2 + 1
+                Ωbase = amp.cb((i - 1) / (NSeg / 2) - 1)
                 Ωbase[i] = Ωbase
                 Ωbase[NSeg + 1 - i] = Ωbase
             end
         else
-            nmax = NSeg + 1
-            for i in 1:nmax
-                Ωbase[i] = amp.cb(i)
+            for i in 1:NSeg + 1
+                Ωbase[i] = amp.cb((i - 1) / (NSeg / 2) - 1)
             end
         end
         push!(amp_vals, Ωbase)
