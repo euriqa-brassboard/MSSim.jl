@@ -9,6 +9,7 @@ import ..Sequence as Seq
 import ..Sequence: total_dis, total_cumdis, total_area, total_disδ, total_areaδ, all_areaδ
 
 using JuMP
+import ForwardDiff
 
 function register_kernel_funcs(model, kern::SymLinear.Kernel{NSeg,T,SDV,SDG};
                                prefix="", suffix="") where {NSeg,T,SDV,SDG}
@@ -287,6 +288,17 @@ function init_vars!(tracker::NLVarTracker, vars=nothing)
         end
     end
     return vars
+end
+
+function autodiff(f::F) where F
+    function fn_with_diff(x, grad)
+        if !isempty(grad)
+            # Use ForwardDiff to compute the gradient. Replace with your
+            # favorite Julia automatic differentiation package.
+            ForwardDiff.gradient!(grad, f, x)
+        end
+        return f(x)
+    end
 end
 
 end
