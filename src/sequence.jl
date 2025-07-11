@@ -12,7 +12,7 @@ struct AmpSpec{CB}
     mid_order::Int
     end_order::Int
     function AmpSpec(; cb::CB=nothing, sym=true, mid_order=0, end_order=0) where CB
-        if end_order >= 0
+        if end_order > 0
             mid_order = max(0, mid_order)
         end
         @assert cb !== nothing || mid_order >= 0
@@ -68,9 +68,9 @@ function ModSpec{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
         Ωbase = MVector{NSeg + 1,Float64}(undef)
         if amp.sym
             for i in 1:NSeg ÷ 2 + 1
-                Ωbase = amp.cb((i - 1) / (NSeg / 2) - 1)
-                Ωbase[i] = Ωbase
-                Ωbase[NSeg + 1 - i] = Ωbase
+                Ω = amp.cb((i - 1) / (NSeg / 2) - 1)
+                Ωbase[i] = Ω
+                Ωbase[NSeg + 1 - i] = Ω
             end
         else
             for i in 1:NSeg + 1
