@@ -254,6 +254,52 @@ _each_mode_arg(args::RawParams, modes::Modes; δ=0.0) =
 
 adjust(args::RawParams; kws...) = RawParams(get(args; kws...))
 
+function get_trajectory(params::RawParams, npoints; kws...)
+    args = get(params; kws...)
+    nargs = length(args)
+    @assert nargs % 5 == 0
+    nseg = nargs ÷ 5
+    total_time = 0.0
+    total_dis = 0.0im
+    dis_offsets = ComplexF64[]
+    for i in 1:nseg
+        τ = args[i * 5 - 4]
+        total_time += τ
+        push!(dis_offsets, total_dis)
+        total_dis += SL.SegInt.displacement(τ, args[i * 5 - 3], args[i * 5 - 2],
+                                            args[i * 5 - 1], args[i * 5])
+    end
+    ts = range(0, total_time, npoints)
+    xs = Vector{Float64}(undef, npoints)
+    ys = Vector{Float64}(undef, npoints)
+    ti = 1
+    total_time = 0.0
+    for i in 1:nseg
+        time_offset = total_time
+        τ = args[i * 5 - 4]
+        total_time += τ
+        dis_offset = dis_offsets[i]
+        Ω = args[i * 5 - 3]
+        Ω′ = args[i * 5 - 2]
+        φ = args[i * 5 - 1]
+        δ = args[i * 5]
+        while ti <= npoints && ts[ti] <= total_time
+            dis = dis_offset + SL.SegInt.displacement(ts[ti] - time_offset, Ω, Ω′, φ, δ)
+            xs[ti] = real(dis)
+            ys[ti] = imag(dis)
+            ti += 1
+        end
+        if ti > npoints
+            break
+        end
+    end
+    if ti <= npoints
+        xs[ti:end] .= real(total_dis)
+        ys[ti:end] .= imag(total_dis)
+    end
+    return ts, xs, ys
+end
+
 function total_dis(kern::SL.Kernel, args::RawParams, modes::Modes; δ=0.0)
     res = 0.0
     for kargs in _each_mode_arg(args, modes; δ=δ)
@@ -300,6 +346,74 @@ function all_areaδ(kern::SL.Kernel, args::RawParams, modes::Modes; δ=0.0)
         res += SL.value_areaδ(kern, kargs...)^2
     end
     return res
+end
+
+function get_Ωs(args::RawParams)
+    nargs = length(args.args)
+    @assert nargs % 5 == 0
+    nseg = nargs ÷ 5
+
+    ts = Float64[]
+    Ωs = Float64[]
+    t = 0.0
+    for i in 1:nseg
+        τ = args.args[i * 5 - 4]
+        Ω = args.args[i * 5 - 3]
+        Ω′ = args.args[i * 5 - 2]
+
+        push!(ts, t)
+        push!(Ωs, Ω)
+
+        t += τ
+        push!(ts, t)
+        push!(Ωs, Ω + Ω′ * τ)
+    end
+    return ts, Ωs
+end
+
+function get_φs(args::RawParams; δ=0.0)
+    nargs = length(args.args)
+    @assert nargs % 5 == 0
+    nseg = nargs ÷ 5
+
+    ts = Float64[]
+    φs = Float64[]
+    t = 0.0
+    for i in 1:nseg
+        τ = args.args[i * 5 - 4]
+        φ = args.args[i * 5 - 1]
+        ω = args.args[i * 5]
+
+        push!(ts, t)
+        push!(φs, φ + δ * t)
+
+        t += τ
+        push!(ts, t)
+        push!(φs, φ + ω * τ + δ * t)
+    end
+    return ts, φs
+end
+
+function get_ωs(args::RawParams)
+    nargs = length(args.args)
+    @assert nargs % 5 == 0
+    nseg = nargs ÷ 5
+
+    ts = Float64[]
+    ωs = Float64[]
+    t = 0.0
+    for i in 1:nseg
+        τ = args.args[i * 5 - 4]
+        ω = args.args[i * 5]
+
+        push!(ts, t)
+        push!(ωs, ω)
+
+        t += τ
+        push!(ts, t)
+        push!(ωs, ω)
+    end
+    return ts, ωs
 end
 
 struct ModeInfo{Kern}
