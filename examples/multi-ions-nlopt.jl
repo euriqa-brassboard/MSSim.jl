@@ -12,7 +12,7 @@ const Seq = MSSim.Sequence
 
 using NLopt
 
-nseg = 100
+nseg = 120
 buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_allδ), Val(SS.mask_allδ))
 # buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
 
@@ -32,37 +32,20 @@ const ion2 = 6
 const modes = Seq.Modes()
 for i in 1:7
     f = fs[i]
-    push!(modes, 2π * f, bij[ion1] * bij[ion2] * η_Yb171(f))
+    push!(modes, 2π * f, bij[ion1, i] * bij[ion2, i] * η_Yb171(f)^2)
 end
 @show modes
-
-import ForwardDiff
-function autodiff(f::F) where F
-    function fn_with_diff(x, grad)
-        if !isempty(grad)
-            # Use ForwardDiff to compute the gradient. Replace with your
-            # favorite Julia automatic differentiation package.
-            ForwardDiff.gradient!(grad, f, x)
-        end
-        return f(x)
-    end
-end
 
 function _objfunc(vals)
     dis = vals[1]
     disδ = vals[2]
     area = vals[3]
     areaδ = vals[4]
-    τ = vals[5] / 30
+    τ = vals[5]
 
-    t1 = (dis + disδ + 1e-10)
-    # t1 = (dis + disδ + areaδ^2 + 1e-10)
-    t2 = (τ + 1)
-    t3 = area^2
-
-    return t1 * t2 / t3
+    return (5 * dis + disδ / 100 + (abs(area) - π / 2)^2 * 100 + (areaδ / 1e4)^2)
 end
-const objfunc = autodiff(_objfunc)
+const objfunc = Opts.autodiff(_objfunc)
 
 # function objfunc(vals, grads)
 #     dis = vals[1]
@@ -85,19 +68,40 @@ const objfunc = autodiff(_objfunc)
 #     return res
 # end
 
-const nlmodel = Seq.Objective(SL.pmask_tfm,
+blackman(x) = 0.42 + 0.5 * cospi(x) + 0.08 * cospi(2 * x)
+
+function blackman_start_end(x)
+    if -0.5 <= x <= 0.5
+        return 1.0
+    elseif x < 0
+        x = (x + 0.5) * 2
+    else
+        x = (x - 0.5) * 2
+    end
+    return 0.42 + 0.5 * cospi(x) + 0.08 * cospi(2 * x)
+end
+
+const nlmodel = Seq.Objective(SL.pmask_full,
                               ((:dis2, 0), (:disδ2, 0), (:area, 0),
                                (:areaδ, 0), (:τ, 0)),
                               objfunc, modes, buf,
-                              freq=Seq.FreqSpec(true, sym=false))
+                              freq=Seq.FreqSpec(true, sym=false),
+                              amp=Seq.AmpSpec(cb=blackman_start_end, mid_order=-1))
+# const nlmodel = Seq.Objective(SL.pmask_tfm,
+#                               ((:dis2, 0), (:disδ2, 0), (:area, 0),
+#                                (:areaδ, 0), (:τ, 0)),
+#                               objfunc, modes, buf,
+#                               freq=Seq.FreqSpec(true, sym=false),
+#                               amp=Seq.AmpSpec(cb=blackman, mid_order=-1))
 const nargs = Seq.nparams(nlmodel)
 const tracker = Opts.NLVarTracker(nargs)
-Opts.set_bound!(tracker, nlmodel.param.τ, 0.5, 3)
-for Ω in nlmodel.param.Ωpoly
-    Opts.set_bound!(tracker, Ω, 0.7, 0.7)
-end
+Opts.set_bound!(tracker, nlmodel.param.τ, 0.1, 2)
+Opts.set_bound!(tracker, nlmodel.param.Ωbase, 0.5, 0.75)
+# for Ω in nlmodel.param.Ωpoly
+#     Opts.set_bound!(tracker, Ω, 0.7, 0.7)
+# end
 for ω in nlmodel.param.ωs
-    Opts.set_bound!(tracker, ω, 2π * 2.2, 2π * 2.5)
+    Opts.set_bound!(tracker, ω, 2π * 2.0, 2π * 2.4)
 end
 
 # opt = NLopt.Opt(:LD_LBFGS, nargs) # 50 ms
@@ -111,9 +115,9 @@ NLopt.min_objective!(opt, nlmodel)
 NLopt.lower_bounds!(opt, Opts.lower_bounds(tracker))
 NLopt.upper_bounds!(opt, Opts.upper_bounds(tracker))
 
-@btime NLopt.optimize($opt, $(Opts.lower_bounds(tracker)))
+# @btime NLopt.optimize($opt, $(Opts.lower_bounds(tracker)))
 
-best_obj = 1.0
+best_obj = 100.0
 best_params = nothing
 @time for i in 1:1000
     global best_obj, best_params
@@ -128,7 +132,7 @@ best_params = nothing
         disδ = nlmodel(Val((:disδ2, 0)), params)
         area = nlmodel(Val((:area, 0)), params)
         areaδ = nlmodel(Val((:areaδ, 0)), params)
-        @show best_obj, dis, disδ, area, areaδ, total_t
+        @show best_obj, dis, disδ, abs(area) - π / 2, areaδ, total_t, params[nlmodel.param.Ωbase]
         best_params = params
     end
 end
