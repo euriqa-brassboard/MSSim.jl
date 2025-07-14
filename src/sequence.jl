@@ -616,7 +616,7 @@ function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var)
     # Compute cost function with gradients
     if grads_out_var === nothing
         push!(func_ex.args, quote
-                  return $(obj_ex)(objargs, objgrads)
+                  return $(obj_ex)(objargs)
               end)
         return func_ex
     end
@@ -775,7 +775,11 @@ function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var)
     return func_ex
 end
 
-@generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(x, grads_out) where {pmask,ObjArg,NSeg,Param,Obj,Modes}
+const _VecOrTup = Union{AbstractVector,Tuple}
+const _VecOrTup0 = Union{AbstractVector,Tuple{}}
+
+@generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(
+    x::_VecOrTup, grads_out::_VecOrTup0) where {pmask,ObjArg,NSeg,Param,Obj,Modes}
     return _generate_nlobj(ObjArg, NSeg, Modes, :(m.obj), :grads_out)
 end
 
@@ -785,10 +789,25 @@ function RawParams(m::Objective{pmask,ObjArg,NSeg}, x) where {pmask,ObjArg,NSeg}
     return RawParams(res)
 end
 
-@inline _dummy_obj(x, grad) = x[1]
+@inline _dummy_obj(x) = x[1]
 
-@generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(::Val{ObjArg2}, x) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
-    return _generate_nlobj((ObjArg2,), NSeg, Modes, :_dummy_obj, nothing)
+function _process_objarg(ObjArg::Tuple)
+    if ObjArg === () || isa(ObjArg[1], Tuple)
+        return ObjArg
+    end
+    return (ObjArg,)
+end
+
+@generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(
+    ::Val{ObjArg2}, x::_VecOrTup) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
+    ObjArg2 = _process_objarg(ObjArg2)
+    @assert length(ObjArg2)
+    return _generate_nlobj(ObjArg2, NSeg, Modes, :_dummy_obj, nothing)
+end
+
+@generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(
+    cb, ::Val{ObjArg2}, x::_VecOrTup) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
+    return _generate_nlobj(_process_objarg(ObjArg2), NSeg, Modes, :cb, nothing)
 end
 
 end
