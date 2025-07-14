@@ -801,7 +801,7 @@ end
 @generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(
     ::Val{ObjArg2}, x::_VecOrTup) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
     ObjArg2 = _process_objarg(ObjArg2)
-    @assert length(ObjArg2)
+    @assert length(ObjArg2) == 1
     return _generate_nlobj(ObjArg2, NSeg, Modes, :_dummy_obj, nothing)
 end
 
