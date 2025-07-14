@@ -116,8 +116,8 @@ end
 function PreOptimizer(preobj::Obj) where Obj
     nargs = Seq.nparams(preobj)
     tracker = Opts.NLVarTracker(nargs)
-    Opts.set_bound!(tracker, preobj.param.τ, 0.1, 2)
-    Opts.set_bound!(tracker, preobj.param.Ωbase, 0.7, 0.7)
+    Opts.set_bound!(tracker, preobj.param.τ, 0.1, 3)
+    Opts.set_bound!(tracker, preobj.param.Ωbase, 0.4, 0.4)
     for ω in preobj.param.ωs
         Opts.set_bound!(tracker, ω, 2π * 2.39, 2π * 2.52)
     end
@@ -250,8 +250,8 @@ function optimize_pairs(kernel, obj, preopt)
 
     nargs = Seq.nparams(obj)
     tracker = Opts.NLVarTracker(nargs)
-    Opts.set_bound!(tracker, obj.param.τ, 0.1, 2)
-    Opts.set_bound!(tracker, obj.param.Ωbase, 0.01, 0.71)
+    Opts.set_bound!(tracker, obj.param.τ, 0.1, 3)
+    Opts.set_bound!(tracker, obj.param.Ωbase, 0.01, 0.41)
     for ω in obj.param.ωs
         Opts.set_bound!(tracker, ω, 2π * 2.39, 2π * 2.52)
     end
