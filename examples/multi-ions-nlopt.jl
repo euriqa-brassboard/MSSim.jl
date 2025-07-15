@@ -35,9 +35,6 @@ function mode_weight!(weights, ion1, ion2)
     end
 end
 
-const ion1 = 2
-const ion2 = 6
-
 const modes = Seq.Modes()
 for i in 1:7
     f = fs[i]
@@ -113,23 +110,30 @@ struct PreOptimizer{Obj}
     tracker::Opts.NLVarTracker
     opt::NLopt.Opt
 end
-function PreOptimizer(preobj::Obj) where Obj
+function PreOptimizer(preobj::Obj;
+                      τmin=0.1, τmax=3, Ω=0.4, ωmin=2π * 2.39, ωmax=2π * 2.52) where Obj
     nargs = Seq.nparams(preobj)
     tracker = Opts.NLVarTracker(nargs)
-    Opts.set_bound!(tracker, preobj.param.τ, 0.1, 3)
-    Opts.set_bound!(tracker, preobj.param.Ωbase, 0.4, 0.4)
+    Opts.set_bound!(tracker, preobj.param.τ, τmin, τmax)
+    Opts.set_bound!(tracker, preobj.param.Ωbase, Ω, Ω)
     for ω in preobj.param.ωs
-        Opts.set_bound!(tracker, ω, 2π * 2.39, 2π * 2.52)
+        Opts.set_bound!(tracker, ω, ωmin, ωmax)
     end
 
     opt = NLopt.Opt(:LD_LBFGS, nargs)
     NLopt.min_objective!(opt, preobj)
-    NLopt.lower_bounds!(opt, Opts.lower_bounds(tracker))
-    NLopt.upper_bounds!(opt, Opts.upper_bounds(tracker))
     NLopt.maxeval!(opt, 2000)
 
-    return PreOptimizer{Obj}(preobj, tracker, opt)
+    o = PreOptimizer{Obj}(preobj, tracker, opt)
+    update_bounds!(o)
+    return o
 end
+
+function update_bounds!(o::PreOptimizer)
+    NLopt.lower_bounds!(o.opt, Opts.lower_bounds(o.tracker))
+    NLopt.upper_bounds!(o.opt, Opts.upper_bounds(o.tracker))
+end
+
 function compute_one(o::PreOptimizer)
     obj, params, ret = NLopt.optimize(o.opt, Opts.init_vars!(o.tracker))
     if getfield(NLopt, ret) < 0
@@ -154,9 +158,9 @@ end
 
 const preopt = PreOptimizer(preobj)
 
-function pre_optimize!(preopt, nrounds, candidates=Vector{Float64}[])
+function pre_optimize!(o::PreOptimizer, nrounds, candidates=Vector{Float64}[])
     for i in 1:nrounds
-        params = compute_one(preopt)
+        params = compute_one(o)
         if params !== nothing
             push!(candidates, params)
         end
