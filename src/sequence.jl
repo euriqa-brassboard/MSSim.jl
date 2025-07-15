@@ -495,7 +495,7 @@ function _opt_muladd(@nospecialize(ex))
     return ex
 end
 
-function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var)
+function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var, objargs_ex, objgrads_ex)
     nmodes = length(Modes.parameters)
 
     # 1. Forward propagation of values
@@ -503,8 +503,8 @@ function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var)
     func_ex = quote
         args = m.args
         grads = m.grads
-        objargs = m.objargs
-        objgrads = m.objgrads
+        objargs = $objargs_ex
+        objgrads = $objgrads_ex
         total_τ = transform_argument(m.param, args, x)
     end
     mode_vars = []
@@ -780,7 +780,8 @@ const _VecOrTup0 = Union{AbstractVector,Tuple{}}
 
 @generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(
     x::_VecOrTup, grads_out::_VecOrTup0) where {pmask,ObjArg,NSeg,Param,Obj,Modes}
-    return _generate_nlobj(ObjArg, NSeg, Modes, :(m.obj), :grads_out)
+    return _generate_nlobj(ObjArg, NSeg, Modes, :(m.obj), :grads_out,
+                           :(m.objargs), :(m.objgrads))
 end
 
 function RawParams(m::Objective{pmask,ObjArg,NSeg}, x) where {pmask,ObjArg,NSeg}
@@ -802,12 +803,14 @@ end
     ::Val{ObjArg2}, x::_VecOrTup) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
     ObjArg2 = _process_objarg(ObjArg2)
     @assert length(ObjArg2) == 1
-    return _generate_nlobj(ObjArg2, NSeg, Modes, :_dummy_obj, nothing)
+    return _generate_nlobj(ObjArg2, NSeg, Modes, :_dummy_obj, nothing,
+                           :(MVector{$(length(ObjArg2)),Float64}(undef)), nothing)
 end
 
 @generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(
     cb, ::Val{ObjArg2}, x::_VecOrTup) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
-    return _generate_nlobj(_process_objarg(ObjArg2), NSeg, Modes, :cb, nothing)
+    return _generate_nlobj(_process_objarg(ObjArg2), NSeg, Modes, :cb, nothing,
+                           :(MVector{$(length(ObjArg2)),Float64}(undef)), nothing)
 end
 
 end
