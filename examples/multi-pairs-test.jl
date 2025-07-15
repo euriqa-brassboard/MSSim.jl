@@ -202,6 +202,18 @@ function todict(sol::TimeRangeSolution)
     )
 end
 
+struct NSegSolution
+    nseg::Int
+    solutions::Vector{TimeRangeSolution}
+end
+
+function todict(sol::NSegSolution)
+    return Dict(
+        "nseg"=>sol.nseg,
+        "solutions"=>[todict(s) for s in sol.solutions]
+    )
+end
+
 function run_preopts(nseg, o::PreOptimizer, rounds, total_t_min, total_t_max, nsteps)
     res = TimeRangeSolution[]
     for i in 1:nsteps
@@ -213,19 +225,18 @@ function run_preopts(nseg, o::PreOptimizer, rounds, total_t_min, total_t_max, ns
         @time push!(res, TimeRangeSolution(τmin, τmax, find_candidates!(o, rounds)))
         println("Found $(length(res[end].solutions)) candidates")
     end
-    return res
+    return NSegSolution(nseg, res)
 end
 
-const solutions = Vector{Vector{TimeRangeSolution}}(undef, length(nsegs))
+const solutions = Vector{NSegSolution}(undef, length(nsegs))
 for i in 1:length(nsegs)
     precompile(run_preopts, (typeof(nsegs[i]), typeof(preopts[i]),
                              Int, Float64, Float64, Int))
 end
 
 @time Threads.@threads for i in 1:length(nsegs)
-    solutions[i] = run_preopts(nsegs[i], preopts[i], 6000, 150.0, 350.0, 25)
+    solutions[i] = run_preopts(nsegs[i], preopts[i], 100, 150.0, 350.0, 25)
 end
 open("pairs_data.json", "w") do io
-    println(io, JSON.json([[todict(s2) for s2 in s1]
-                           for s1 in solutions]))
+    println(io, JSON.json([todict(s1) for s1 in solutions]))
 end
