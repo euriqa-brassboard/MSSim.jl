@@ -6,7 +6,7 @@ using BenchmarkTools
 using NLopt
 using StaticArrays
 using Statistics
-using PyPlot
+using JSON
 
 using MSSim
 const Opts = MSSim.Optimizers
@@ -140,6 +140,17 @@ struct SolutionInfo{NModes}
     areaδ::NTuple{NModes,Float64}
 end
 
+function todict(info::SolutionInfo)
+    return Dict(
+        "params"=>info.params,
+        "total_t"=>info.total_t,
+        "dis2"=>info.dis2,
+        "disδ2"=>info.disδ2,
+        "area"=>collect(info.area),
+        "areaδ"=>collect(info.areaδ)
+    )
+end
+
 function compute_one(o::PreOptimizer{NModes,ObjArgs}) where {NModes,ObjArgs}
     obj, params, ret = NLopt.optimize(o.opt, Opts.init_vars!(o.tracker))
     if getfield(NLopt, ret) < 0
@@ -174,7 +185,6 @@ end
 
 const nsegs = [80, 100, 120, 140, 160, 180, 200]
 const compute_bufs_opt = [SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_allδ), Val(SS.mask_allδ)) for nseg in nsegs]
-const compute_bufs_plot = [SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full)) for nseg in nsegs]
 const preobjs = [get_preobj(modes, buf, 0.6) for buf in compute_bufs_opt]
 const preopts = [PreOptimizer(preobj) for preobj in preobjs]
 
@@ -182,6 +192,14 @@ struct TimeRangeSolution
     total_t_min::Float64
     total_t_max::Float64
     solutions::Vector{SolutionInfo}
+end
+
+function todict(sol::TimeRangeSolution)
+    return Dict(
+        "total_t_min"=>sol.total_t_min,
+        "total_t_max"=>sol.total_t_max,
+        "solutions"=>[todict(s) for s in sol.solutions]
+    )
 end
 
 function run_preopts(nseg, o::PreOptimizer, rounds, total_t_min, total_t_max, nsteps)
@@ -199,7 +217,15 @@ function run_preopts(nseg, o::PreOptimizer, rounds, total_t_min, total_t_max, ns
 end
 
 const solutions = Vector{Vector{TimeRangeSolution}}(undef, length(nsegs))
-Threads.@threads for i in 1:length(nsegs)
-    solutions[i] = run_preopts(nsegs[i], preopts[i], 100, 150, 350, 25)
+for i in 1:length(nsegs)
+    precompile(run_preopts, (typeof(nsegs[i]), typeof(preopts[i]),
+                             Int, Float64, Float64, Int))
 end
-println(solutions)
+
+@time Threads.@threads for i in 1:length(nsegs)
+    solutions[i] = run_preopts(nsegs[i], preopts[i], 6000, 150.0, 350.0, 25)
+end
+open("pairs_data.json", "w") do io
+    println(io, JSON.json([[todict(s2) for s2 in s1]
+                           for s1 in solutions]))
+end
