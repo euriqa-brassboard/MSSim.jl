@@ -201,8 +201,17 @@ end
 
 function merge_into!(sol::NSegSolution, other::NSegSolution)
     @assert sol.nseg == other.nseg
-    for (s1, s2) in zip(sol.solutions, other.solutions)
-        merge_into!(s1, s2)
+    time_pos = Dict{NTuple{2,Float64},Int}()
+    for (i, s) in enumerate(sol.solutions)
+        time_pos[(s.total_t_min, s.total_t_max)] = i
+    end
+    for s in other.solutions
+        i = get!(time_pos, (s.total_t_min, s.total_t_max)) do
+            push!(sol.solutions,
+                  TimeRangeSolution(s.total_t_min, s.total_t_max, SolutionInfo[]))
+            return length(sol.solutions)
+        end
+        merge_into!(sol.solutions[i], s)
     end
     return
 end
