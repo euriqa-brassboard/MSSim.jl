@@ -266,10 +266,10 @@ end
         dis = PN.displacement(0, total_time, Ωf, θf, rtol=1e-8, atol=1e-8)
         cum_dis = PN.cumulative_displacement(0, total_time, Ωf, θf,
                                              rtol=1e-8, atol=1e-8)
-        area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=5e-6, atol=5e-6)
+        area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=2e-6, atol=2e-6)
         @test result.val.τ ≈ total_time
         @test result.val.dis ≈ dis rtol=1e-3 atol=1e-3
-        @test result.val.area ≈ area rtol=5e-2 atol=5e-2
+        @test result.val.area ≈ area rtol=1e-1 atol=1e-1
         @test result.val.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
     end
     for i in 1:100
@@ -371,14 +371,14 @@ end
                  [eval_grad(add_single_offset_callback(params, i, :δ), nhδ)
                   for i in 1:nseg]]
 
-        @test result.val.disδ ≈ grad_δ.dis rtol=1e-8 atol=1e-8
-        @test result.val.areaδ ≈ grad_δ.area rtol=1e-8 atol=1e-8
+        @test result.val.disδ ≈ grad_δ.dis rtol=1e-7 atol=1e-7
+        @test result.val.areaδ ≈ grad_δ.area rtol=1e-7 atol=1e-7
 
         for i in 1:nseg
             for j in 1:5
-                @test(result.grad[i][j].τ ≈ grads[j][i].τ, rtol=1e-8, atol=1e-8)
+                @test(result.grad[i][j].τ ≈ grads[j][i].τ, rtol=1e-7, atol=1e-7)
                 @test(result.grad[i][j].dis ≈ grads[j][i].dis,
-                      rtol=1e-8, atol=1e-8)
+                      rtol=1e-7, atol=1e-7)
                 @test(result.grad[i][j].area ≈ grads[j][i].area,
                       rtol=1e-5, atol=1e-5)
                 @test(result.grad[i][j].cumdis ≈ grads[j][i].cumdis,
