@@ -77,10 +77,11 @@ end
         nraw = nseg * 5
         args_raw = Vector{Float64}(undef, nraw)
         for namp in (1, 2, 5)
+            amp_spec = Seq.AmpSpec(cb=ntuple(_->(_->rand()), namp), sym=false)
             for _ in 1:100
                 # No FM
-                params = Seq.ModSpec{nseg,namp,false,false,nseg+1}(
-                    ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
+                params = Seq.ModSpec{nseg}(amp=amp_spec,
+                                           freq=Seq.FreqSpec(false, sym=false))
                 nuser = Seq.nparams(params)
                 @test nuser == 2 + namp
 
@@ -96,8 +97,8 @@ end
                 test_msparams_grad(params, 100)
 
                 # FM
-                params = Seq.ModSpec{nseg,namp,false,true,nseg+1}(
-                    ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
+                params = Seq.ModSpec{nseg}(amp=amp_spec,
+                                           freq=Seq.FreqSpec(true, sym=false))
                 nuser = Seq.nparams(params)
                 @test nuser == 1 + namp + nseg
 
@@ -112,8 +113,8 @@ end
                 test_msparams_grad(params, 100)
 
                 # Symmetric FM
-                params = Seq.ModSpec{nseg,namp,true,true,nseg+1}(
-                    ntuple(_->rand(nseg + 1), namp), 1, nothing, nothing, Int[])
+                params = Seq.ModSpec{nseg}(amp=amp_spec,
+                                           freq=Seq.FreqSpec(true, sym=true))
                 nuser = Seq.nparams(params)
                 @test nuser == 1 + namp + (nseg + 1) ÷ 2
 
@@ -130,6 +131,32 @@ end
             end
         end
     end
+end
+
+@testset "RawParams" begin
+    raw_params = Seq.RawParams(1:15)
+    raw_params2 = Seq.adjust(raw_params; tmax=19)
+    @test raw_params2.args == raw_params.args
+    raw_params3 = Seq.adjust(raw_params; tmax=5)
+    @test raw_params3.args[1:5] == raw_params.args[1:5]
+    @test raw_params3.args[6] == 4
+    @test raw_params3.args[7:10] == raw_params.args[7:10]
+    @test raw_params3.args[11] == 0
+    @test raw_params3.args[12:15] == raw_params.args[12:15]
+    raw_params4 = Seq.adjust(raw_params; δ=-1)
+    @test raw_params4.args == [1, 2, 3, 4, 4,
+                               6, 7, 8, 8, 9,
+                               11, 12, 13, 7, 14]
+    raw_params5 = Seq.adjust(raw_params; ωm=-1)
+    @test raw_params5.args == [1, 2, 3, 4, 6,
+                               6, 7, 8, 10, 11,
+                               11, 12, 13, 21, 16]
+    raw_params6 = Seq.adjust(raw_params; ωm=1, δ=1)
+    @test raw_params6.args == raw_params.args
+    @test Seq.get_Ωs(raw_params) == ([0, 1, 1, 7, 7, 18], [2, 5, 7, 55, 12, 155])
+    @test Seq.get_ωs(raw_params) == ([0, 1, 1, 7, 7, 18], [5, 5, 10, 10, 15, 15])
+    @test Seq.get_φs(raw_params) == ([0, 1, 1, 7, 7, 18], [4, 9, 9, 69, 14, 179])
+    @test Seq.get_φs(raw_params, δ=-2) == ([0, 1, 1, 7, 7, 18], [4, 7, 7, 55, 0, 143])
 end
 
 @testset "Objective" begin
@@ -157,7 +184,7 @@ end
         buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
         kern = SL.Kernel(buf, Val(SL.pmask_full))
         freq_spec = Seq.FreqSpec(true, sym=false)
-        amp_spec = Seq.AmpSpec(mid_order=amp_order, sym=false)
+        amp_spec = Seq.AmpSpec(cb=ntuple(i->(x->x^(i - 1)), amp_order + 1), sym=false)
         param0 = Seq.ModSpec{nseg}(freq=freq_spec, amp=amp_spec)
         args_raw = Vector{Float64}(undef, nseg * 5)
         for _ in 1:100
@@ -171,6 +198,7 @@ end
                 model = Seq.Objective(SL.pmask_full, ((name, idx),),
                                       objfunc1, modes1, buf,
                                       freq=freq_spec, amp=amp_spec)
+                @test Seq.nparams(model) == Seq.nparams(param0)
                 grads = similar(args_user)
                 res = model(args_user, grads)
                 @test res == value_record[]

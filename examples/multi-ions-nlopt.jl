@@ -103,7 +103,7 @@ const preobj = Seq.Objective(SL.pmask_tfm,
                                (:areaδ, 5), (:areaδ, 6), (:areaδ, 7)),
                               Opts.autodiff(PreOptObjective{7}()), modes, buf,
                               freq=Seq.FreqSpec(true, sym=false),
-                              amp=Seq.AmpSpec(cb=BlackmanStartEnd{0.6}(), mid_order=-1))
+                              amp=Seq.AmpSpec(cb=BlackmanStartEnd{0.6}()))
 
 struct PreOptimizer{Obj}
     preobj::Obj
@@ -115,7 +115,7 @@ function PreOptimizer(preobj::Obj;
     nargs = Seq.nparams(preobj)
     tracker = Opts.NLVarTracker(nargs)
     Opts.set_bound!(tracker, preobj.param.τ, τmin, τmax)
-    Opts.set_bound!(tracker, preobj.param.Ωbase, Ω, Ω)
+    Opts.set_bound!(tracker, preobj.param.Ωs[1], Ω, Ω)
     for ω in preobj.param.ωs
         Opts.set_bound!(tracker, ω, ωmin, ωmax)
     end
@@ -177,8 +177,7 @@ const arobust_obj = Seq.Objective(SL.pmask_full,
                                    (:areaδ, 5), (:areaδ, 6), (:areaδ, 7)),
                                   Opts.autodiff(arobust_kernel), modes, buf,
                                   freq=Seq.FreqSpec(true, sym=false),
-                                  amp=Seq.AmpSpec(cb=BlackmanStartEnd{0.6}(),
-                                                  mid_order=-1))
+                                  amp=Seq.AmpSpec(cb=BlackmanStartEnd{0.6}()))
 
 struct ParamInfo
     params::Vector{Float64}
@@ -255,7 +254,7 @@ function optimize_pairs(kernel, obj, preopt)
     nargs = Seq.nparams(obj)
     tracker = Opts.NLVarTracker(nargs)
     Opts.set_bound!(tracker, obj.param.τ, 0.1, 3)
-    Opts.set_bound!(tracker, obj.param.Ωbase, 0.01, 0.41)
+    Opts.set_bound!(tracker, obj.param.Ωs[1], 0.01, 0.41)
     for ω in obj.param.ωs
         Opts.set_bound!(tracker, ω, 2π * 2.39, 2π * 2.52)
     end

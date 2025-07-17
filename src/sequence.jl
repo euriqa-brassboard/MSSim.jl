@@ -6,17 +6,16 @@ import ..SegSeq as SS
 import ..SymLinear as SL
 using StaticArrays
 
-struct AmpSpec{CB}
-    cb::CB
+struct AmpSpec{CBs<:Tuple}
+    cbs::CBs
     sym::Bool
-    mid_order::Int
-    end_order::Int
-    function AmpSpec(; cb::CB=nothing, sym=true, mid_order=0, end_order=0) where CB
-        if end_order > 0
-            mid_order = max(0, mid_order)
+    function AmpSpec(; cb::CB=_->1.0, sym=true) where CB
+        _CB = CB
+        if !isa(cb, Tuple)
+            cb = (cb,)
+            _CB = Tuple{_CB}
         end
-        @assert cb !== nothing || mid_order >= 0
-        return new{CB}(cb, sym, mid_order, end_order)
+        return new{_CB}(cb, sym)
     end
 end
 
@@ -53,54 +52,32 @@ The raw parameters and the user arguments are also provided.
 function transform_gradient end
 
 struct ModSpec{NSeg,NAmp,Sym,FM,NAmpNode}
-    # amp0::Vector{Float64}
     amps::NTuple{NAmp,MVector{NAmpNode,Float64}}
     τ::Int
-    Ωbase::Union{Int,Nothing}
-    Ωpoly::Union{Vector{Int},Nothing}
+    Ωs::NTuple{NAmp,Int}
     ωs::Vector{Int}
 end
 
 function ModSpec{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
-    amp_vals = Vector{Float64}[]
-    base = nothing
-    if amp.cb !== nothing
-        Ωbase = MVector{NSeg + 1,Float64}(undef)
+    NAmp = length(amp.cbs)
+    amps = ntuple(_->MVector{NSeg + 1,Float64}(undef), Val(NAmp))
+    Ωs_idx = ntuple(i->i + 1, Val(NAmp))
+    for (cb, Ωs) in zip(amp.cbs, amps)
         if amp.sym
             for i in 1:NSeg ÷ 2 + 1
-                Ω = amp.cb((i - 1) / (NSeg / 2) - 1)
-                Ωbase[i] = Ω
-                Ωbase[NSeg + 1 - i] = Ω
+                Ω = cb((i - 1) / (NSeg / 2) - 1)
+                Ωs[i] = Ω
+                Ωs[NSeg + 1 - i] = Ω
             end
         else
             for i in 1:NSeg + 1
-                Ωbase[i] = amp.cb((i - 1) / (NSeg / 2) - 1)
+                Ωs[i] = cb((i - 1) / (NSeg / 2) - 1)
             end
         end
-        push!(amp_vals, Ωbase)
-        base = 2
     end
-    poly = nothing
-    if amp.mid_order >= 0
-        xs = [(2 * i / (NSeg + 2) - 1) for i in 1:NSeg + 1]
-        if amp.end_order > 0
-            Ωend = (xs .+ 1).^amp.end_order .+ (1 .- xs).^amp.end_order
-        else
-            Ωend = ones(NSeg + 1)
-        end
-        step = amp.sym ? 2 : 1
-        poly = Int[]
-        for order in 0:step:amp.mid_order
-            push!(amp_vals, MVector{NSeg + 1,Float64}(xs.^order .* Ωend))
-            push!(poly, length(amp_vals) + 1)
-        end
-    else
-        @assert amp.end_order <= 0
-    end
-    NAmp = length(amp_vals)
     NFreq = (freq.modulate ? (freq.sym ? (NSeg + 1) ÷ 2 : NSeg) : 1)
     return ModSpec{NSeg,NAmp,freq.sym,freq.modulate,NSeg + 1}(
-        (amp_vals...,), 1, base, poly, (1:NFreq) .+ (1 + NAmp))
+        amps, 1, Ωs_idx, (1:NFreq) .+ (1 + NAmp))
 end
 
 function nparams(params::ModSpec{NSeg,NAmp,Sym,FM}) where {NSeg,NAmp,Sym,FM}

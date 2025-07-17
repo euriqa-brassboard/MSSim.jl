@@ -55,7 +55,7 @@ function get_preobj(modes, buf, ratio=0.6)
                          ((:dis2, 0), (:disδ2, 0), area_args..., areaδ_args...),
                          Opts.autodiff(PreOptObjective{7}()), modes, buf,
                          freq=Seq.FreqSpec(true, sym=false),
-                         amp=Seq.AmpSpec(cb=BlackmanStartEnd{ratio}(), mid_order=-1))
+                         amp=Seq.AmpSpec(cb=BlackmanStartEnd{ratio}()))
 end
 
 struct PreOptimizer{NModes,ObjArgs,Obj}
@@ -68,7 +68,7 @@ function PreOptimizer(preobj::Obj;
     nargs = Seq.nparams(preobj)
     tracker = Opts.NLVarTracker(nargs)
     Opts.set_bound!(tracker, preobj.param.τ, τmin, τmax)
-    Opts.set_bound!(tracker, preobj.param.Ωbase, Ω, Ω)
+    Opts.set_bound!(tracker, preobj.param.Ωs[1], Ω, Ω)
     for ω in preobj.param.ωs
         Opts.set_bound!(tracker, ω, ωmin, ωmax)
     end
