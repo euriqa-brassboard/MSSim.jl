@@ -112,6 +112,69 @@ end
     end
 end
 
+@testset "mul" begin
+    for x in (0, 2, 1.2, 2im, 1.5im, 3 - 2im, 5.6 + 3.8im)
+        for y in (0, 2, 1.2, 2im, 1.5im, 3 - 2im, 5.6 + 3.8im)
+            if isa(x, Real) || isa(y, Real)
+                @test U.mul(x, y) == x * y
+            else
+                @test U.mul(x, y) ≈ x * y
+            end
+        end
+    end
+end
+
+@testset "zero" begin
+    z = U.Zero()
+    b1 = BigInt(1)
+    @test U.Zero() === z
+    @test +z === z
+
+    @test z + z === z
+    @test 1 + z === 1
+    @test z + 1 === 1
+    @test b1 + z === b1
+    @test z + b1 === b1
+
+    @test z - z === z
+    @test 1 - z === 1
+    @test z - 1 === -1
+    @test b1 - z === b1
+    @test z - b1 == -b1
+
+    @test z * z === z
+    @test z * 1 === z
+    @test 1 * z === z
+    @test z * b1 === z
+    @test b1 * z === z
+
+    @test z / 1 === z
+    @test z / b1 === z
+    # the following is wrong mathematically but it fits what we need for performance
+    @test z / 0 === z
+    @test isequal(z / z, NaN)
+    @test isequal(0 / z, NaN)
+    @test isequal(1 / z, Inf)
+
+    @test z^0 === z
+    @test z^2 === z
+    @test 0^z === 1
+
+    @test muladd(z, z, z) === z
+    @test muladd(1, z, z) === z
+    @test muladd(b1, z, z) === z
+    @test muladd(z, 1, z) === z
+    @test muladd(z, b1, z) === z
+    @test muladd(2, 1, z) === 2
+    @test muladd(2, b1, z) == 2
+    @test muladd(z, z, 1) === 1
+    @test muladd(z, z, b1) === b1
+    @test muladd(2, z, 1) === 1
+    @test muladd(2, z, b1) === b1
+    @test muladd(z, 2, 1) === 1
+    @test muladd(z, 2, b1) === b1
+end
+
 function test_diffs(_f; threshold=1e-15)
     function f(x)
         s, c = sincos(x)
