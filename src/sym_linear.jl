@@ -35,9 +35,6 @@ macro gen_trig_ratios(d, s, c, names...)
     expr = :(())
     for (name::Symbol) in names
         field_name = _trig_field_name(String(name))
-        if field_name === nothing
-            error("Unknown function name $name")
-        end
         push!(expr.args, :($field_name = Utils.$name($(esc(d)), $(esc(s)), $(esc(c)))))
     end
     return expr
