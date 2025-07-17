@@ -458,66 +458,47 @@ end
     return
 end
 
-struct ValCb{name,Kern<:Kernel} <: Function
-    kern::Kern
-end
-ValCb{name}(kern::Kern) where {Kern<:Kernel,name} = ValCb{name,Kern}(kern)
-struct GradCb{name,Kern<:Kernel} <: Function
-    kern::Kern
-end
-GradCb{name}(kern::Kern) where {Kern<:Kernel,name} = GradCb{name,Kern}(kern)
-
 @inline _val_mask(kern::Kernel{NSeg,T,SDV,SDG}) where {NSeg,T,SDV,SDG} = SegSeq.value_mask(SDV)
 @inline _grad_mask(kern::Kernel{NSeg,T,SDV,SDG}) where {NSeg,T,SDV,SDG} = SegSeq.value_mask(SDG)
 @inline _nseg(kern::Kernel{NSeg}) where NSeg = NSeg
 
 for var in [:dis, :cumdis, :disδ]
-    rvar = Symbol("r$var")
-    ivar = Symbol("i$var")
-    var2 = Symbol("$(var)2")
+    rvar = "r$var"
+    ivar = "i$var"
+    var2 = "$(var)2"
     @eval begin
-        @inline function (cb::$(ValCb{rvar}))(args...)
-            kern = cb.kern
+        @inline function $(Symbol("value_$rvar"))(kern::Kernel, args...)
             @assert _val_mask(kern).$var
             update!(kern, args)
             return real(kern.result.val.$var)
         end
-        @inline function (cb::$(GradCb{rvar}))(g, args...)
-            kern = cb.kern
+        @inline function $(Symbol("grad_$rvar"))(g, kern::Kernel, args...)
             @assert _grad_mask(kern).$var
             update!(kern, args)
             grad = kern.result.grad.values
             @inbounds for i in 1:_nseg(kern) * 5
                 g[i] = real(grad[i].$var)
             end
-            return
         end
-
-        @inline function (cb::$(ValCb{ivar}))(args...)
-            kern = cb.kern
+        @inline function $(Symbol("value_$ivar"))(kern::Kernel, args...)
             @assert _val_mask(kern).$var
             update!(kern, args)
             return imag(kern.result.val.$var)
         end
-        @inline function (cb::$(GradCb{ivar}))(g, args...)
-            kern = cb.kern
+        @inline function $(Symbol("grad_$ivar"))(g, kern::Kernel, args...)
             @assert _grad_mask(kern).$var
             update!(kern, args)
             grad = kern.result.grad.values
             @inbounds for i in 1:_nseg(kern) * 5
                 g[i] = imag(grad[i].$var)
             end
-            return
         end
-
-        @inline function (cb::$(ValCb{var2}))(args...)
-            kern = cb.kern
+        @inline function $(Symbol("value_$var2"))(kern::Kernel, args...)
             @assert _val_mask(kern).$var
             update!(kern, args)
             return abs2(kern.result.val.$var)
         end
-        @inline function (cb::$(GradCb{var2}))(g, args...)
-            kern = cb.kern
+        @inline function $(Symbol("grad_$var2"))(g, kern::Kernel, args...)
             @assert _grad_mask(kern).$var
             update!(kern, args)
             grad = kern.result.grad.values
@@ -526,46 +507,25 @@ for var in [:dis, :cumdis, :disδ]
                 gv = grad[i].$var
                 g[i] = muladd(real(v2), real(gv), imag(v2) * imag(gv))
             end
-            return
         end
-
-        @inline $(Symbol("value_$rvar"))(kern::Kernel, args...) =
-            $(ValCb{rvar})(kern)(args...)
-        @inline $(Symbol("grad_$rvar"))(g, kern::Kernel, args...) =
-            $(GradCb{rvar})(kern)(g, args...)
-        @inline $(Symbol("value_$ivar"))(kern::Kernel, args...) =
-            $(ValCb{ivar})(kern)(args...)
-        @inline $(Symbol("grad_$ivar"))(g, kern::Kernel, args...) =
-            $(GradCb{ivar})(kern)(g, args...)
-        @inline $(Symbol("value_$var2"))(kern::Kernel, args...) =
-            $(ValCb{var2})(kern)(args...)
-        @inline $(Symbol("grad_$var2"))(g, kern::Kernel, args...) =
-            $(GradCb{var2})(kern)(g, args...)
     end
 end
 
 for var in [:area, :areaδ]
     @eval begin
-        @inline function (cb::$(ValCb{var}))(args...)
-            kern = cb.kern
+        @inline function $(Symbol("value_$var"))(kern::Kernel, args...)
             @assert _val_mask(kern).$var
             update!(kern, args)
             return kern.result.val.$var
         end
-        @inline function (cb::$(GradCb{var}))(g, args...)
-            kern = cb.kern
+        @inline function $(Symbol("grad_$var"))(g, kern::Kernel, args...)
             @assert _grad_mask(kern).$var
             update!(kern, args)
             grad = kern.result.grad.values
             @inbounds for i in 1:_nseg(kern) * 5
                 g[i] = grad[i].$var
             end
-            return
         end
-        @inline $(Symbol("value_$var"))(kern::Kernel, args...) =
-            $(ValCb{var})(kern)(args...)
-        @inline $(Symbol("grad_$var"))(g, kern::Kernel, args...) =
-            $(GradCb{var})(kern)(g, args...)
     end
 end
 
