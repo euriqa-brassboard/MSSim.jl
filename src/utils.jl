@@ -172,11 +172,6 @@ end
 @inline Base.muladd(x, ::Zero, z) = z
 @inline Base.muladd(::Zero, y, z) = z
 
-# Copied from base julia, used for taylor expansion threshold
-# (though we basically never call these with complex number anyway...)
-@inline fastabs(x::Number) = abs(x)
-@inline fastabs(z::Complex) = abs(real(z)) + abs(imag(z))
-
 # Implementation/generation code to compute ratios with trigonometric functions
 # in the numerator accurately and efficiently.
 module TR
@@ -488,7 +483,7 @@ struct TrigRatio{odd,div,plain_poly,sin_poly,cos_poly} <: Function
 end
 
 @generated function (::TrigRatio{odd,div,plain_poly,sin_poly,cos_poly})(
-    x::T, s, c) where {T,odd,div,plain_poly,sin_poly,cos_poly}
+    x::T, s, c) where {T<:Real,odd,div,plain_poly,sin_poly,cos_poly}
 
     T = float(T)
     res_odd, threshold, e, taylor = TR.plan(T, odd, div, plain_poly,
@@ -503,7 +498,7 @@ end
     return quote
         # To inline this function. The second inline means inline into this function
         @inline
-        @inline if fastabs(x) > $(T(threshold))
+        @inline if abs(x) > $(T(threshold))
             return $e
         else
             return $poly_expr

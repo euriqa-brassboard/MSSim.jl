@@ -21,10 +21,6 @@ function _trig_field_name(name)
     if m !== nothing
         return Symbol("S_C$(m[1])")
     end
-    m = match(r"^cos_c([_0-9]*)$", name)
-    if m !== nothing
-        return Symbol("C_C$(m[1])")
-    end
     m = match(r"^sin_f([_0-9]*)$", name)
     if m !== nothing
         return Symbol("S$(m[1])")
