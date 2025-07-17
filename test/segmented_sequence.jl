@@ -43,6 +43,7 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
                                    need_area_mode, need_area_mode)
 
             result′ = SS.SingleModeResult{T}(Val(maskv′), Val(mask_none))
+            @test SS.value_mask(result′.val) === maskv′
             d′, = SL.SegInt.compute_values(τ, Ω, Ω′, φ, δ,
                                             Val(maskv′), Val(mask_none))
             SS.compute_single_mode!(result′, [d′], buffer)
