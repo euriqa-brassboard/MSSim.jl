@@ -39,4 +39,15 @@ using Test
     end
 end
 
+@testset "autodiff" begin
+    func(x) = x[1] * x[2] + x[3] * 2
+    func_diff = Opts.autodiff(func)
+    for _ in 1:100
+        xs = rand(3)
+        gs = zeros(3)
+        @test func_diff(xs, gs) == func(xs)
+        @test gs ≈ [xs[2], xs[1], 2]
+    end
+end
+
 end
