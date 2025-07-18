@@ -90,7 +90,6 @@ end
     @assert length(args_user) == 1 + NAmp + (FM ? (Sym ? (NSeg + 1) ÷ 2 : NSeg) : 1)
     @assert length(args_raw) == NSeg * 5
     @inbounds τ = args_user[1]
-    # @inbounds prev_Ω = params.amp0[1]
     prev_Ω = 0.0
     @inbounds for ai in 1:NAmp
         prev_Ω = muladd(params.amps[ai][1], args_user[ai + 1], prev_Ω)
@@ -98,7 +97,6 @@ end
     φ = 0.0
     invτ = 1 / τ
     @inbounds for i in 1:NSeg
-        # Ω = params.amp0[i + 1]
         Ω = 0.0
         for ai in 1:NAmp
             Ω = muladd(params.amps[ai][i + 1], args_user[ai + 1], Ω)
