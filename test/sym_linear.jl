@@ -305,11 +305,14 @@ end
 
             check_grad(SL.value_rdis, SL.grad_rdis)
             check_grad(SL.value_idis, SL.grad_idis)
+            check_grad(SL.value_dis2, SL.grad_dis2)
             check_grad(SL.value_area, SL.grad_area)
             check_grad(SL.value_rcumdis, SL.grad_rcumdis)
             check_grad(SL.value_icumdis, SL.grad_icumdis)
+            check_grad(SL.value_cumdis2, SL.grad_cumdis2)
             check_grad(SL.value_rdisδ, SL.grad_rdisδ)
             check_grad(SL.value_idisδ, SL.grad_idisδ)
+            check_grad(SL.value_disδ2, SL.grad_disδ2)
             check_grad(SL.value_areaδ, SL.grad_areaδ)
 
             for (τ, Ω, Ω′, φ, δ) in Iterators.product((false, true), (false, true),
