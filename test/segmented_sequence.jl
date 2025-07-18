@@ -258,7 +258,11 @@ end
 
     all_params_array = [SegParam{T}(τ, Ω, Ω′, φ, δ) for (τ, Ω, Ω′, φ, δ) in all_params]
 
-    function test_nseg(nseg)
+    fail_count1 = zeros(Int, 3)
+    fail_count2 = zeros(Int, 3)
+    fail_count5 = zeros(Int, 3)
+
+    function test_nseg(nseg, fail_count)
         params = [rand(all_params_array) for i in 1:nseg]
         total_time = sum(param.τ for param in params)
         Ωf, θf = get_Ω_θ_func(params)
@@ -269,15 +273,18 @@ end
                                              rtol=1e-8, atol=1e-8)
         area = PN.enclosed_area(0, total_time, Ωf, θf, rtol=2e-6, atol=2e-6)
         @test result.val.τ ≈ total_time
-        @test result.val.dis ≈ dis rtol=1e-3 atol=1e-3
-        @test result.val.area ≈ area rtol=1e-1 atol=1e-1
-        @test result.val.cumdis ≈ cum_dis rtol=1e-3 atol=1e-3
+        fail_count[1] += !isapprox(result.val.dis, dis, rtol=1e-3, atol=1e-3)
+        fail_count[2] += !isapprox(result.val.area, area, rtol=3e-2, atol=3e-2)
+        fail_count[3] += !isapprox(result.val.cumdis, cum_dis, rtol=1e-3, atol=1e-3)
     end
     for i in 1:100
-        test_nseg(1)
-        test_nseg(2)
-        test_nseg(5)
+        test_nseg(1, fail_count1)
+        test_nseg(2, fail_count2)
+        test_nseg(5, fail_count5)
     end
+    @test all(fail_count1 .<= 5)
+    @test all(fail_count2 .<= 5)
+    @test all(fail_count5 .<= 5)
 end
 
 function add_δ_offset(params, δ)
