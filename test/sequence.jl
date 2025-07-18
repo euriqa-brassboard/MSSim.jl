@@ -184,7 +184,11 @@ end
         buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
         kern = SL.Kernel(buf, Val(SL.pmask_full))
         freq_spec = Seq.FreqSpec(true, sym=false)
-        amp_spec = Seq.AmpSpec(cb=ntuple(i->(x->x^(i - 1)), amp_order + 1), sym=false)
+        if amp_order == 0
+            amp_spec = Seq.AmpSpec()
+        else
+            amp_spec = Seq.AmpSpec(cb=ntuple(i->(x->x^(i - 1)), amp_order + 1), sym=false)
+        end
         param0 = Seq.ModSpec{nseg}(freq=freq_spec, amp=amp_spec)
         args_raw = Vector{Float64}(undef, nseg * 5)
         for _ in 1:100
@@ -225,6 +229,25 @@ end
                 @test model(Val((:areaδ2, 0)), args_user) ≈ abs2(kern.result.val.areaδ)
                 @test model(Val((:cumdis2, 0)), args_user) ≈ abs2(kern.result.val.cumdis)
                 @test model(Val((:τ, 0)), args_user) ≈ nseg * args_user[1]
+
+                executed = false
+                @test nothing === model(Val(()), args_user) do x
+                    @test length(x) == 0
+                    executed = true
+                    return
+                end
+                @test executed
+                @test nseg * args_user[1] ≈ model(Val((:τ, 0)), args_user) do x
+                    @test length(x) == 1
+                    return x[1]
+                end
+                @test "executed" == model(Val(((:rdis, 1), (:idis, 1), (:area, 1))), args_user) do x
+                    @test length(x) == 3
+                    @test x[1] ≈ real(kern.result.val.dis)
+                    @test x[2] ≈ imag(kern.result.val.dis)
+                    @test x[3] ≈ kern.result.val.area
+                    return "executed"
+                end
 
                 for ai in 1:length(args_user)
                     args_user2 .= args_user

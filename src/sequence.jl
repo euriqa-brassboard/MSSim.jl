@@ -67,7 +67,7 @@ function ModSpec{NSeg}(;freq=FreqSpec(), amp=AmpSpec()) where NSeg
             for i in 1:NSeg ÷ 2 + 1
                 Ω = cb((i - 1) / (NSeg / 2) - 1)
                 Ωs[i] = Ω
-                Ωs[NSeg + 1 - i] = Ω
+                Ωs[NSeg + 2 - i] = Ω
             end
         else
             for i in 1:NSeg + 1
@@ -786,7 +786,8 @@ end
 
 @generated function (m::Objective{pmask,ObjArg,NSeg,Param,Obj,Modes})(
     cb, ::Val{ObjArg2}, x::_VecOrTup) where {pmask,ObjArg,NSeg,Param,Obj,Modes,ObjArg2}
-    return _generate_nlobj(_process_objarg(ObjArg2), NSeg, Modes, :cb, nothing,
+    ObjArg2 = _process_objarg(ObjArg2)
+    return _generate_nlobj(ObjArg2, NSeg, Modes, :cb, nothing,
                            :(MVector{$(length(ObjArg2)),Float64}(undef)), nothing)
 end
 
