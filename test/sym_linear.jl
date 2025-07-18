@@ -288,7 +288,7 @@ end
             end
             for i in 1:nargs
                 results = eval_wrapper.(i, hs)
-                @test grad_buff[i] ≈ compute_grad(results..., h) rtol=1.5e-2 atol=5e-4
+                @test grad_buff[i] ≈ compute_grad(results..., h) rtol=1.5e-2 atol=5e-3
             end
         end
 

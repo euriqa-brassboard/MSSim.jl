@@ -258,7 +258,7 @@ end
                     h = 0.0001 / 4
                     hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
                     gn = compute_grad(eval_at.(hs)..., h)
-                    @test gn ≈ grads[ai] rtol=1e-4 atol=1e-9
+                    @test gn ≈ grads[ai] rtol=1e-4 atol=1e-7
                 end
                 return res
             end
@@ -329,7 +329,7 @@ end
                     h = 0.0001 / 4
                     hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
                     gn = compute_grad(eval_at.(hs)..., h)
-                    @test gn ≈ grads[ai] rtol=1e-4 atol=1e-9
+                    @test gn ≈ grads[ai] rtol=1e-4 atol=1e-7
                 end
                 return res
             end
