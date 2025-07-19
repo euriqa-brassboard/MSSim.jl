@@ -159,6 +159,19 @@ end
     @test Seq.get_φs(raw_params, δ=-2) == ([0, 1, 1, 7, 7, 18], [4, 7, 7, 55, 0, 143])
 end
 
+@testset "Trajectory" begin
+    raw_params = Seq.RawParams(rand(15))
+    ts, xs, ys = Seq.get_trajectory(raw_params, 10001)
+    @test length(ts) == length(xs) == length(ys) == 10001
+    buf = SL.ComputeBuffer{3,Float64}(Val(SS.ValueMask(true, true, false, false, false, false)), Val(zero(SS.ValueMask)))
+    kern = SL.Kernel(buf, Val(SL.ParamGradMask(false, false, false, false, false)))
+    for (t, x, y) in zip(ts, xs, ys)
+        args = Seq.get(raw_params, tmax=t)
+        @test x ≈ SL.value_rdis(kern, args...)
+        @test y ≈ SL.value_idis(kern, args...)
+    end
+end
+
 @testset "Objective" begin
     modes1 = Seq.Modes()
     push!(modes1, 2.5, 0.5)

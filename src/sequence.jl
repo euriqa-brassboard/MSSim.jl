@@ -268,10 +268,8 @@ function get_trajectory(params::RawParams, npoints; kws...)
             break
         end
     end
-    if ti <= npoints
-        xs[ti:end] .= real(total_dis)
-        ys[ti:end] .= imag(total_dis)
-    end
+    xs[ti:end] .= real(total_dis)
+    ys[ti:end] .= imag(total_dis)
     return ts, xs, ys
 end
 
