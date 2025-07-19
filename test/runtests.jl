@@ -4,10 +4,11 @@ using Distributed
 
 addprocs(Sys.CPU_THREADS)
 
-pmap(["sequence",
+pmap(["sequence_objective",
       "sym_linear",
       "segmented_sequence",
       "utils",
+      "sequence",
       "pure_numeric",
       "ion_chain",
       "optimizers"]) do file
