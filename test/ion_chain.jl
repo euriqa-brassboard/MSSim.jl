@@ -1,7 +1,5 @@
 #!/usr/bin/julia
 
-module IonChain
-
 using Test
 
 using MSSim
@@ -38,6 +36,4 @@ const IC = MSSim.IonChain
             @test vecs[1, 2] ≈ vecs[2, 2]
         end
     end
-end
-
 end

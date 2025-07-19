@@ -1,7 +1,5 @@
 #!/usr/bin/julia
 
-module PureNumeric
-
 using MSSim
 const PN = MSSim.PureNumeric
 using Test
@@ -29,6 +27,4 @@ end
         0.2^2 * 1.5^2 / (2π) * 2
     @test PN.enclosed_area_complex(0, 3.1, t->1.2, t->0.1 + (2π / 3.1) * t) ≈
         im * 1.2^2 * 3.1^2 / (2π)
-end
-
 end

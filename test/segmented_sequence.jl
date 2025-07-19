@@ -1,7 +1,5 @@
 #!/usr/bin/julia
 
-module SegSeq
-
 using MSSim
 const U = MSSim.Utils
 const PN = MSSim.PureNumeric
@@ -405,6 +403,4 @@ end
         test_nseg(10)
         test_nseg(20)
     end
-end
-
 end

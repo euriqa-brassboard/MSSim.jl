@@ -1,7 +1,5 @@
 #!/usr/bin/julia
 
-module TestSequence
-
 using MSSim
 const U = MSSim.Utils
 const SL = MSSim.SymLinear
@@ -349,6 +347,4 @@ end
             eval_model3(rand(key_combs)...)
         end
     end
-end
-
 end

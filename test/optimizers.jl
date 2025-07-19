@@ -1,11 +1,9 @@
 #!/usr/bin/julia
 
-module TestOptimizers
+using Test
 
 using MSSim
 const Opts = MSSim.Optimizers
-
-using Test
 
 @testset "NLVarTracker" begin
     tracker = Opts.NLVarTracker(10)
@@ -48,6 +46,4 @@ end
         @test func_diff(xs, gs) == func(xs)
         @test gs ≈ [xs[2], xs[1], 2]
     end
-end
-
 end

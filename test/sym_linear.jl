@@ -1,7 +1,5 @@
 #!/usr/bin/julia
 
-module SymLinear
-
 using Test
 using ForwardDiff
 using Setfield
@@ -341,6 +339,4 @@ end
     test_nseg(Val(5))
     test_nseg(Val(10))
     test_nseg(Val(20))
-end
-
 end

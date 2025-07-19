@@ -1,7 +1,5 @@
 #!/usr/bin/julia
 
-module Utils
-
 using Test
 using ForwardDiff
 using MSSim
@@ -230,6 +228,4 @@ end
 
 @testset "sin_f5" begin
     test_diffs(U.sin_f5, threshold=1.2e-15)
-end
-
 end
