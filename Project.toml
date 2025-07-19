@@ -25,6 +25,7 @@ QuadGK = "2.0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [targets]
-test = ["Test", "Combinatorics", "Random"]
+test = ["Test", "Combinatorics", "Random", "Distributed"]
