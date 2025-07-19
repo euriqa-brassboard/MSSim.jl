@@ -44,73 +44,84 @@ end
 # The kernel version are shared by both the test version
 # and the version used in actual computation.
 @inline function displacement_kernel(o, o′, d, s, c, V)
-    return complex(muladd(o + o′, V.S_C1, -o′ * V.C1),
-                   muladd(o * d, V.C1, o′ * V.S_C2))
+    return complex(muladd(o + o′, V.S_C1, -U.mul(o′, V.C1)),
+                   muladd(U.mul(o, d), V.C1, U.mul(o′, V.S_C2)))
 end
 
 @inline function displacement_δ_kernel(o, o′, d, s, c, V)
-    return complex(muladd(o + o′, -V.S_C2, o′ * V.C2),
-                   muladd(o, muladd(-d, V.C2, V.C1), o′ * V.S_C3))
+    return complex(muladd(o + o′, -V.S_C2, U.mul(o′, V.C2)),
+                   muladd(o, muladd(-d, V.C2, V.C1), U.mul(o′, V.S_C3)))
 end
 
 @inline function displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-    return (complex(muladd(Ω′, τ, Ω) * c, muladd(Ω′, τ, Ω) * s),
+    τ2 = τ^2
+    return (U.mul(muladd(Ω′, τ, Ω), complex(c, s)),
             τ * complex(V.S_C1, d * V.C1),
-            τ^2 * complex(V.S_C1 - V.C1, V.S_C2))
+            τ2 * complex(V.S_C1 - V.C1, V.S_C2))
 end
 
 @inline function displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-    return ((o + o′) * complex(-s, c),
-            τ^2 * complex(-V.S_C2, muladd(d, -V.C2, V.C1)),
-            τ^2 * τ * complex(V.C2 - V.S_C2, V.S_C3),
-            τ^2 * complex(muladd(o + o′, -V.S_C3, o′ * V.C3_2),
-                           -muladd(o′, V.S3_3, o * muladd(d, V.C3_2, 2 * V.C2))))
+    τ2 = τ^2
+    τ3 = τ2 * τ
+    return (U.mul(o + o′, complex(-s, c)),
+            τ2 * complex(-V.S_C2, muladd(d, -V.C2, V.C1)),
+            τ3 * complex(V.C2 - V.S_C2, V.S_C3),
+            τ2 * complex(muladd(o + o′, -V.S_C3, U.mul(o′, V.C3_2)),
+                          -muladd(o′, V.S3_3, U.mul(o, muladd(d, V.C3_2, 2 * V.C2)))))
 end
 
 @inline function cumulative_displacement_kernel(o, o′, d, s, c, V)
-    return complex(muladd(o, V.C1, o′ * V.S2), muladd(o, V.S1 * d, o′ * V.C2))
+    return complex(muladd(o, V.C1, U.mul(o′, V.S2)),
+                   muladd(o, U.mul(V.S1, d), U.mul(o′, V.C2)))
 end
 
 @inline function cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-    return (complex(muladd(o + o′, V.S_C1, -(o′ * V.C1)),
-                    muladd(o * d, V.C1, o′ * V.S_C2)),
-            τ^2 * complex(V.C1, V.S1 * d), τ * τ^2 * complex(V.S2, V.C2),
-            τ^2 * complex(-muladd(o, V.C2, o′ * V.S3_2),
-                           muladd(o, V.S2, o′ * V.C3_2)))
+    τ2 = τ^2
+    τ3 = τ2 * τ
+    return (complex(muladd(o + o′, V.S_C1, -U.mul(o′, V.C1)),
+                    muladd(U.mul(o, d), V.C1, U.mul(o′, V.S_C2))),
+            τ2 * complex(V.C1, U.mul(V.S1, d)),
+            τ3 * complex(V.S2, V.C2),
+            τ2 * complex(-muladd(o, V.C2, U.mul(o′, V.S3_2)),
+                          muladd(o, V.S2, U.mul(o′, V.C3_2))))
 end
 
 # Twice the enclosed area
 @inline function enclosed_area_complex_kernel(o, o′, d, s, c, V)
     a1 = o * (o + o′)
     a2 = o′^2
-    return complex(muladd(a1, V.C1, a2 * V.C3), muladd(a1, V.S1 * d, a2 * V.S3))
+    return complex(muladd(a1, V.C1, U.mul(a2, V.C3)),
+                   muladd(a1, U.mul(V.S1, d), U.mul(a2, V.S3)))
 end
 
 # Twice the enclosed area
 @inline function enclosed_area_kernel(o, o′, d, s, c, V)
     a1 = o * (o + o′)
     a2 = o′^2
-    return muladd(a1, V.S1 * d, a2 * V.S3)
+    return muladd(a1, U.mul(V.S1, d), U.mul(a2, V.S3))
 end
 
 @inline function enclosed_area_δ_kernel(o, o′, d, s, c, V)
     a1 = o * (o + o′)
     a2 = o′^2
-    return muladd(a1, V.S2, a2 * V.S4)
+    return muladd(a1, V.S2, U.mul(a2, V.S4))
 end
 
 @inline function enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-    return (muladd(Ω′, τ, Ω) * d * muladd(o, V.C1, o′ * V.S1),
+    τ2 = τ^2
+    return (muladd(Ω′, τ, Ω) * d * muladd(o, V.C1, U.mul(o′, V.S1)),
             τ * muladd(2, o, o′) * (V.S1 * d),
-            τ^2 * muladd(2 * o′, V.S3, o * (V.S1 * d)))
+            τ2 * muladd(U.mul(2, o′), V.S3, U.mul(o, U.mul(V.S1, d))))
 end
 
 @inline function enclosed_area_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-    return (muladd(muladd(muladd(-2, V.S1, V.S_C1), o′, o * (V.S_C1 - V.C1)),
-                   o, o′^2 * V.S2),
-            τ^2 * muladd(2, o, o′) * V.S2,
-            τ^2 * τ * muladd(2 * o′, V.S4, o * V.S2),
-            τ^2 * muladd(o * (o + o′), -V.S3_2, -o′^2 * V.S5))
+    τ2 = τ^2
+    τ3 = τ2 * τ
+    return (muladd(muladd(muladd(-2, V.S1, V.S_C1), o′, U.mul(o, V.S_C1 - V.C1)),
+                   o, U.mul(U.mul(o′, o′), V.S2)),
+            τ2 * muladd(2, o, o′) * V.S2,
+            τ3 * muladd(U.mul(2, o′), V.S4, U.mul(o, V.S2)),
+            τ2 * muladd(U.mul(o, o + o′), -V.S3_2, -U.mul(U.mul(o′, o′), V.S5)))
 end
 
 # These are for testing only.
