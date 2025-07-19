@@ -8,7 +8,7 @@ using StaticArrays
 
 module SegInt
 
-import ...Utils
+import ...Utils as U
 import ...SegSeq
 
 using StaticArrays
@@ -35,7 +35,7 @@ macro gen_trig_ratios(d, s, c, names...)
     expr = :(())
     for (name::Symbol) in names
         field_name = _trig_field_name(String(name))
-        push!(expr.args, :($field_name = Utils.$name($(esc(d)), $(esc(s)), $(esc(c)))))
+        push!(expr.args, :($field_name = U.$name($(esc(d)), $(esc(s)), $(esc(c)))))
     end
     return expr
 end
@@ -120,7 +120,7 @@ function displacement(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, cos_f1)
     return phase0 * displacement_kernel(o, o′, d, s, c, V)
 end
@@ -130,7 +130,7 @@ function displacement_δ(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, cos_f2, sin_c2, sin_c3)
     return phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V)
 end
@@ -140,12 +140,12 @@ function displacement_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, sin_c3, cos_f1, cos_f2)
 
     τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (phase0 * τΩs[1], phase0 * τΩs[2], phase0 * τΩs[3],
-            Utils.mulim(phase0 * displacement_kernel(o, o′, d, s, c, V)),
+            U.mulim(phase0 * displacement_kernel(o, o′, d, s, c, V)),
             phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V))
 end
 
@@ -154,12 +154,12 @@ function displacement_δ_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, cos_f2, cos_f3_2, sin_f3_3, sin_c2, sin_c3)
 
     τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (phase0 * τΩsδ[1], phase0 * τΩsδ[2], phase0 * τΩsδ[3],
-            Utils.mulim(phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V)),
+            U.mulim(phase0 * τ * displacement_δ_kernel(o, o′, d, s, c, V)),
             phase0 * τΩsδ[4])
 end
 
@@ -168,7 +168,7 @@ function cumulative_displacement(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f2, sin_f2)
 
     return phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c, V)
@@ -179,13 +179,13 @@ function cumulative_displacement_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f2, sin_f2,
                          sin_f3_2, cos_f3_2, sin_c1, sin_c2)
 
     τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
     return (phase0 * τΩsδ[1], phase0 * τΩsδ[2], phase0 * τΩsδ[3],
-            Utils.mulim(phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c, V)),
+            U.mulim(phase0 * τ * cumulative_displacement_kernel(o, o′, d, s, c, V)),
             phase0 * τΩsδ[4])
 end
 
@@ -194,7 +194,7 @@ function enclosed_area_complex(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, cos_f3, sin_f3)
 
     return enclosed_area_complex_kernel(o, o′, d, s, c, V)
@@ -205,7 +205,7 @@ function enclosed_area(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_f1, sin_f3)
 
     return enclosed_area_kernel(o, o′, d, s, c, V)
@@ -215,7 +215,7 @@ function enclosed_area_δ(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, sin_f2, sin_f4)
 
     return τ * enclosed_area_δ_kernel(o, o′, d, s, c, V)
@@ -225,7 +225,7 @@ function enclosed_area_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, sin_f2, sin_f3, sin_f4)
 
     τΩs = enclosed_area_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
@@ -237,7 +237,7 @@ function enclosed_area_δ_gradients(τ, Ω, Ω′, φ, δ)
     d = δ * τ
     o = Ω * τ
     o′ = Ω′ * τ^2
-    s, c = Utils.fast_sincos(d)
+    s, c = U.fast_sincos(d)
     V = @gen_trig_ratios(d, s, c, cos_f1, sin_f1, sin_f2, sin_f3_2,
                          sin_f4, sin_f5, sin_c1)
 
@@ -270,18 +270,18 @@ end
         d = δ * τ
         o = Ω * τ
         o′ = Ω′ * τ^2
-        s, c = Utils.fast_sincos(d)
-        sφ, cφ = Utils.fast_sincos(φ)
+        s, c = U.fast_sincos(d)
+        sφ, cφ = U.fast_sincos(φ)
         phase0 = complex(cφ, sφ)
         phase0_τ = phase0 * τ
         V = @gen_trig_ratios(d, s, c, sin_c1, sin_c2, sin_c3,
                              cos_f1, sin_f1, cos_f2, sin_f2,
                              cos_f3_2, sin_f3, sin_f3_2, sin_f3_3, sin_f4, sin_f5)
 
-        dis = Utils.mul(phase0, displacement_kernel(o, o′, d, s, c, V))
+        dis = U.mul(phase0, displacement_kernel(o, o′, d, s, c, V))
         area = enclosed_area_kernel(o, o′, d, s, c, V)
-        cumdis = Utils.mul(phase0_τ, cumulative_displacement_kernel(o, o′, d, s, c, V))
-        disδ = Utils.mul(phase0_τ, displacement_δ_kernel(o, o′, d, s, c, V))
+        cumdis = U.mul(phase0_τ, cumulative_displacement_kernel(o, o′, d, s, c, V))
+        disδ = U.mul(phase0_τ, displacement_δ_kernel(o, o′, d, s, c, V))
         areaδ = τ * enclosed_area_δ_kernel(o, o′, d, s, c, V)
         res = SDV(maskv.τ ? τ : nothing, maskv.dis ? dis : nothing,
                   maskv.area ? area : nothing, maskv.cumdis ? cumdis : nothing,
@@ -296,8 +296,8 @@ end
         end
         if maskg.dis
             dis_τΩs = displacement_τΩs_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-            dis_grad = SA[Utils.mul(phase0, dis_τΩs[1]), Utils.mul(phase0, dis_τΩs[2]),
-                          Utils.mul(phase0, dis_τΩs[3]), Utils.mulim(dis), disδ]
+            dis_grad = SA[U.mul(phase0, dis_τΩs[1]), U.mul(phase0, dis_τΩs[2]),
+                          U.mul(phase0, dis_τΩs[3]), U.mulim(dis), disδ]
         else
             dis_grad = SA[nothing, nothing, nothing, nothing, nothing]
         end
@@ -310,21 +310,21 @@ end
         if maskg.cumdis
             cumdis_τΩsδ = cumulative_displacement_τΩsδ_kernel(o, o′, d, s, c,
                                                                     Ω, Ω′, τ, V)
-            cumdis_grad = SA[Utils.mul(phase0, cumdis_τΩsδ[1]),
-                             Utils.mul(phase0, cumdis_τΩsδ[2]),
-                             Utils.mul(phase0, cumdis_τΩsδ[3]),
-                             Utils.mulim(cumdis),
-                             Utils.mul(phase0, cumdis_τΩsδ[4])]
+            cumdis_grad = SA[U.mul(phase0, cumdis_τΩsδ[1]),
+                             U.mul(phase0, cumdis_τΩsδ[2]),
+                             U.mul(phase0, cumdis_τΩsδ[3]),
+                             U.mulim(cumdis),
+                             U.mul(phase0, cumdis_τΩsδ[4])]
         else
             cumdis_grad = SA[nothing, nothing, nothing, nothing, nothing]
         end
         if maskg.disδ
             disδ_τΩsδ = displacement_δ_τΩsδ_kernel(o, o′, d, s, c, Ω, Ω′, τ, V)
-            disδ_grad = SA[Utils.mul(phase0, disδ_τΩsδ[1]),
-                            Utils.mul(phase0, disδ_τΩsδ[2]),
-                            Utils.mul(phase0, disδ_τΩsδ[3]),
-                            Utils.mulim(disδ),
-                            Utils.mul(phase0, disδ_τΩsδ[4])]
+            disδ_grad = SA[U.mul(phase0, disδ_τΩsδ[1]),
+                            U.mul(phase0, disδ_τΩsδ[2]),
+                            U.mul(phase0, disδ_τΩsδ[3]),
+                            U.mulim(disδ),
+                            U.mul(phase0, disδ_τΩsδ[4])]
         else
             disδ_grad = SA[nothing, nothing, nothing, nothing, nothing]
         end
@@ -351,7 +351,7 @@ end
 
 end
 
-import ..Utils
+import ..Utils as U
 import ..SegSeq
 
 struct ParamGradMask
@@ -369,7 +369,7 @@ const pmask_tam = ParamGradMask(true, true, true, false, false)
 
 struct ComputeBuffer{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T}}
     seg_buf::Vector{SDV}
-    seg_grad_buf::Utils.JaggedMatrix{SDG}
+    seg_grad_buf::U.JaggedMatrix{SDG}
     buffer::SegSeq.SeqComputeBuffer{T}
 
     function ComputeBuffer{NSeg,T}(::Val{maskv}, ::Val{maskg}) where {NSeg,T,maskv,maskg}
@@ -377,9 +377,9 @@ struct ComputeBuffer{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T}}
         SDG = SegSeq.SegData(T, maskg)
 
         seg_buf = Vector{SDV}(undef, NSeg)
-        seg_grad_buf = Utils.JaggedMatrix{SDG}()
+        seg_grad_buf = U.JaggedMatrix{SDG}()
         buffer = SegSeq.SeqComputeBuffer{T}()
-        Utils.resize_uniform!(seg_grad_buf, NSeg, 5)
+        U.resize_uniform!(seg_grad_buf, NSeg, 5)
         return new{NSeg,T,SDV,SDG}(seg_buf, seg_grad_buf, buffer)
     end
 end
@@ -395,7 +395,7 @@ mutable struct Kernel{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T},pmask
         maskv = SegSeq.value_mask(SDV)
         maskg = SegSeq.value_mask(SDG)
         result = SegSeq.SingleModeResult{T}(Val(maskv), Val(maskg))
-        Utils.resize_uniform!(result.grad, NSeg, 5)
+        U.resize_uniform!(result.grad, NSeg, 5)
         return new{NSeg,T,SDV,SDG,pmask,NSeg*5}(buffer, result, false,
                                                 MVector{NSeg*5,T}(undef))
     end
@@ -418,7 +418,7 @@ function force_update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs}) where {NSeg,T,S
         φ = args[i * 5 - 1]
         δ = args[i * 5]
         if Ω′ == 0
-            seg, grad = SegInt.compute_values(τ, Ω, Utils.Zero(), φ, δ,
+            seg, grad = SegInt.compute_values(τ, Ω, U.Zero(), φ, δ,
                                               Val(maskv), Val(maskg))
         else
             seg, grad = SegInt.compute_values(τ, Ω, Ω′, φ, δ, Val(maskv), Val(maskg))

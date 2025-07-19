@@ -6,7 +6,7 @@ module SegSeq
 # This includes the representation of segmented sequence,
 # and the code to combine them to compute the properties of the whole sequence.
 
-using ..Utils
+import ..Utils as U
 
 _empty(::Type{T}) where T = T()
 _empty(::Type{T}) where T<:Number = zero(T)
@@ -55,11 +55,11 @@ end
 
 mutable struct SingleModeResult{T,SDV<:SegData,SDG<:SegData}
     val::SDV
-    const grad::Utils.JaggedMatrix{SDG}
+    const grad::U.JaggedMatrix{SDG}
     function SingleModeResult{T}(::Val{maskv}, ::Val{maskg}) where {T,maskv,maskg}
         SDV = SegData(T, maskv)
         SDG = SegData(T, maskg)
-        return new{T,SDV,SDG}(SDV(), Utils.JaggedMatrix{SDG}())
+        return new{T,SDV,SDG}(SDV(), U.JaggedMatrix{SDG}())
     end
 end
 
@@ -166,7 +166,7 @@ function compute_single_mode!(
         p_τ = zero(T)
         for i in 1:nseg
             seg = segments[i]
-            buffer_disφ[i] = muladd(Utils.mulim(seg.dis), p_τ, seg.disδ)
+            buffer_disφ[i] = muladd(U.mulim(seg.dis), p_τ, seg.disδ)
             p_τ += seg.τ
         end
     end
@@ -250,7 +250,7 @@ function compute_single_mode!(
             for j in 1:nvar
                 sg = seg_grad[j]
 
-                τ_v = has_τ_grad ? sg.τ : Utils.Zero()
+                τ_v = has_τ_grad ? sg.τ : U.Zero()
 
                 dis_v = sg.dis
                 if maskg.area
@@ -268,8 +268,8 @@ function compute_single_mode!(
                 end
 
                 if maskg.disδ
-                    disδ_v0 = muladd(Utils.mulim(dis_v), p_τ, sg.disδ)
-                    disδ_v = muladd(Utils.mulim(dis_b), τ_v, disδ_v0)
+                    disδ_v0 = muladd(U.mulim(dis_v), p_τ, sg.disδ)
+                    disδ_v = muladd(U.mulim(dis_b), τ_v, disδ_v0)
                 else
                     disδ_v = nothing
                 end
