@@ -87,15 +87,52 @@ end
 
 # Math utility functions
 
+const FTypes = Union{Float32,Float64}
+const ITypes = Union{Int8,Int16,Int32,Int64,UInt8,UInt16,UInt32,UInt64}
+const FITypes = Union{FTypes,ITypes}
+
 # Multiply by `im`.
 # The default implementation for floating point number contains handling
 # of signed zeros and such that we don't care about.
 @inline mulim(x) = @inline complex(-imag(x), real(x))
 # Multiply that allows fma.
 @inline mul(x, y) = @inline x * y
-@inline function mul(x::Complex, y::Complex)
-    return complex(muladd(real(x), real(y), -imag(x) * imag(y)),
-                   muladd(real(x), imag(y), imag(x) * real(y)))
+# This should be lowered into a contractable fmul.
+@inline function mul(x::FITypes, y::FITypes)
+    if isa(x, ITypes) && isa(y, ITypes)
+        return x * y
+    end
+    return @inline muladd(x, y, -0.0f0)
+end
+@inline function mul(x::Union{Complex,FITypes}, y::Union{Complex,FITypes})
+    return complex(muladd(real(x), real(y), mul(-imag(x), imag(y))),
+                   muladd(real(x), imag(y), mul(imag(x), real(y))))
+end
+
+# Add that allows fma.
+@inline add(x, y) = @inline x + y
+# This should be lowered into a contractable fadd.
+@inline function add(x::FITypes, y::FITypes)
+    if isa(x, ITypes) && isa(y, ITypes)
+        return x + y
+    end
+    return @inline muladd(true, x, y)
+end
+@inline function add(x::Union{Complex,FITypes}, y::Union{Complex,FITypes})
+    return complex(add(real(x), real(y)), add(imag(x), imag(y)))
+end
+
+# Subtract that allows fma.
+@inline sub(x, y) = @inline x - y
+# This should be lowered into a contractable fsub.
+@inline function sub(x::FITypes, y::FITypes)
+    if isa(x, ITypes) && isa(y, ITypes)
+        return x - y
+    end
+    return @inline muladd(-1, y, x)
+end
+@inline function sub(x::Union{Complex,FITypes}, y::Union{Complex,FITypes})
+    return complex(sub(real(x), real(y)), sub(imag(x), imag(y)))
 end
 
 @inline _sincos(x) = sincos(x)
@@ -108,8 +145,8 @@ const DS4 = 2.75573137070700676789e-06
 const DS5 = -2.50507602534068634195e-08
 const DS6 = 1.58969099521155010221e-10
 @inline function sin_kernel(x::Float64)
-    x² =  x * x
-    return x * evalpoly(x², (1, DS1, DS2, DS3, DS4, DS5, DS6))
+    x² = mul(x, x)
+    return mul(x, evalpoly(x², (1, DS1, DS2, DS3, DS4, DS5, DS6)))
 end
 
 const DC1 = 4.16666666666666019037e-02
@@ -119,12 +156,12 @@ const DC4 = -2.75573143513906633035e-07
 const DC5 = 2.08757232129817482790e-09
 const DC6 = -1.13596475577881948265e-11
 @inline function cos_kernel(x::Float64)
-    x² =  x * x
+    x² = mul(x, x)
     return evalpoly(x², (1, -0.5, DC1, DC2, DC3, DC4, DC5, DC6))
 end
 
 @inline function _sincos(x::Float64)
-    q = round(x * (2 / π))
+    q = round(mul(x, (2 / π)))
     n = unsafe_trunc(Int, q) & 3
     x = muladd(q, -π / 2, x)
     si = sin_kernel(x)
@@ -176,6 +213,8 @@ end
 # in the numerator accurately and efficiently.
 module TR
 
+import ..mul, ..add
+
 # First n Taylor coefficients for sin and cos
 sin_taylor_coeffs(n) = [(-1)^k // factorial(big(k) * 2 + 1) for k in 0:(n - 1)]
 cos_taylor_coeffs(n) = [(-1)^k // factorial(big(k) * 2) for k in 0:(n - 1)]
@@ -194,17 +233,18 @@ end
 
 # Multiply julia expressions
 function mul_expr(@nospecialize(e1), @nospecialize(e2))
+    if isa(e1, Number) && isinteger(e1)
+        e1 = Int(e1)
+    end
+    if isa(e2, Number) && isinteger(e2)
+        e2 = Int(e2)
+    end
     if e1 == 1
         return e2
     elseif e2 == 1
         return e1
-    elseif isa(e1, Number) && isinteger(e1)
-        return :($(Int(e1)) * $e2)
-    elseif isa(e2, Number) && isinteger(e2)
-        return :($(Int(e2)) * $e1)
-    else
-        return :($e1 * $e2)
     end
+    return :($mul($e1, $e2))
 end
 
 function add_expr(@nospecialize(e1), @nospecialize(e2))
@@ -212,12 +252,12 @@ function add_expr(@nospecialize(e1), @nospecialize(e2))
         return e2
     elseif e2 == 0
         return e1
-    elseif Meta.isexpr(e1, :call) && length(e1.args) == 3 && e1.args[1] === :*
+    elseif Meta.isexpr(e1, :call) && length(e1.args) == 3 && e1.args[1] === mul
         return :(muladd($(e1.args[2]), $(e1.args[3]), $e2))
-    elseif Meta.isexpr(e2, :call) && length(e2.args) == 3 && e2.args[1] === :*
+    elseif Meta.isexpr(e2, :call) && length(e2.args) == 3 && e2.args[1] === mul
         return :(muladd($(e2.args[2]), $(e2.args[3]), $e1))
     else
-        return :($e1 + $e2)
+        return :(add($e1, $e2))
     end
 end
 
@@ -286,7 +326,7 @@ function compute_xpower(power, powers, computed, exp)
     end
     p1sym = xpower_sym(p1)
     p2sym = xpower_sym(p2)
-    push!(exp.args, :($(xpower_sym(power)) = $p1sym * $p2sym))
+    push!(exp.args, :($(xpower_sym(power)) = mul($p1sym, $p2sym)))
     push!(computed, power)
     delete!(powers, power)
     return
@@ -471,9 +511,9 @@ function plan(T, odd_num, div_pow, plain_poly, sin_poly, cos_poly)
 end
 
 function gen_poly_expr(T, odd, taylor)
-    poly_expr = :(evalpoly(x * x, ($(T.(taylor)...),)))
+    poly_expr = :(evalpoly(mul(x, x), ($(T.(taylor)...),)))
     if odd
-        poly_expr = :(x * $poly_expr)
+        poly_expr = :(mul(x, $poly_expr))
     end
     return poly_expr
 end

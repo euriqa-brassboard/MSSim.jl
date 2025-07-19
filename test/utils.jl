@@ -110,7 +110,7 @@ end
     end
 end
 
-@testset "mul" begin
+@testset "mul/add/sub" begin
     for x in (0, 2, 1.2, 2im, 1.5im, 3 - 2im, 5.6 + 3.8im)
         for y in (0, 2, 1.2, 2im, 1.5im, 3 - 2im, 5.6 + 3.8im)
             if isa(x, Real) || isa(y, Real)
@@ -118,6 +118,9 @@ end
             else
                 @test U.mul(x, y) ≈ x * y
             end
+            @test U.add(x, y) == x + y
+            @test U.sub(x, y) == x - y
+            @test U.sub(y, x) == y - x
         end
     end
 end
