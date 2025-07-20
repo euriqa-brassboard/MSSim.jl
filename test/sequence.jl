@@ -156,8 +156,8 @@ end
     @test Seq.get_φs(raw_params, δ=-2) == ([0, 1, 1, 7, 7, 18], [4, 7, 7, 55, 0, 143])
 
     gate_info = Seq.gate_solution_info(raw_params)
-    @test sort(keys(gate_info)) == ["amp", "amp_slope", "nsteps",
-                                    "phase", "phase_slope", "time"]
+    @test sort(collect(keys(gate_info))) == ["amp", "amp_slope", "nsteps",
+                                             "phase", "phase_slope", "time"]
     @test gate_info["nsteps"] == 3
     @test gate_info["time"] == [1, 6, 11]
     @test gate_info["amp"] == [2, 7, 12]
