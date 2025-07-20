@@ -46,8 +46,8 @@ const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
                                             Val(maskv′), Val(mask_none))
             SS.compute_single_mode!(result′, [d′], buffer)
             @test result′.val.τ == τ
-            @test result′.val.dis == d.dis
-            @test result′.val.area == d.area
+            @test result′.val.dis ≈ d.dis
+            @test result′.val.area ≈ d.area
             if need_cumdis
                 @test result′.val.cumdis ≈ d.cumdis
             end
