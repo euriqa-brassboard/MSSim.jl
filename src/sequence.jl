@@ -197,6 +197,21 @@ struct RawParams
     args::Vector{Float64}
 end
 
+function gate_solution_info(params::RawParams)
+    nargs = length(params.args)
+    @assert nargs % 5 == 0
+    nseg = nargs ÷ 5
+
+    max_amp = maximum(@view params.args[2:5:end])
+
+    return Dict("time"=>params.args[1:5:end],
+                "amp"=>params.args[2:5:end],
+                "amp_slope"=>params.args[3:5:end],
+                "phase"=>(params.args[4:5:end] ./ 2π) .% 1,
+                "phase_slope"=>params.args[5:5:end] ./ 2π,
+                "nsteps"=>nseg)
+end
+
 function Base.get(args::RawParams; tmax=Inf, δ=0.0, ωm=0.0)
     res = copy(args.args)
     nargs = length(res)
