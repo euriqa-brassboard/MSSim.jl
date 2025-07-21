@@ -155,13 +155,36 @@ end
     @test Seq.get_φs(raw_params) == ([0, 1, 1, 7, 7, 18], [4, 9, 9, 69, 14, 179])
     @test Seq.get_φs(raw_params, δ=-2) == ([0, 1, 1, 7, 7, 18], [4, 7, 7, 55, 0, 143])
 
-    gate_info = Seq.gate_solution_info(raw_params)
+    gate_info = Seq.gate_solution_info(raw_params, normalize_amp=false)
     @test sort(collect(keys(gate_info))) == ["amp", "amp_slope", "nsteps",
                                              "phase", "phase_slope", "time"]
     @test gate_info["nsteps"] == 3
     @test gate_info["time"] == [1, 6, 11]
     @test gate_info["amp"] == [2, 7, 12]
     @test gate_info["amp_slope"] == [3, 8, 13]
+    @test gate_info["phase"] ≈ [0.6366197723675814, 0.432394487827058, 0.228169203286535]
+    @test gate_info["phase_slope"] ≈ [0.7957747154594768, 1.5915494309189535,
+                                       2.3873241463784303]
+
+    gate_info = Seq.gate_solution_info(raw_params)
+    @test sort(collect(keys(gate_info))) == ["amp", "amp_slope", "nsteps",
+                                             "phase", "phase_slope", "time"]
+    @test gate_info["nsteps"] == 3
+    @test gate_info["time"] == [1, 6, 11]
+    @test gate_info["amp"] ≈ [2, 7, 12] ./ 155
+    @test gate_info["amp_slope"] ≈ [3, 8, 13] ./ 155
+    @test gate_info["phase"] ≈ [0.6366197723675814, 0.432394487827058, 0.228169203286535]
+    @test gate_info["phase_slope"] ≈ [0.7957747154594768, 1.5915494309189535,
+                                       2.3873241463784303]
+
+    raw_params.args[3:5:end] .= .-raw_params.args[3:5:end]
+    gate_info = Seq.gate_solution_info(raw_params, normalize_amp=true)
+    @test sort(collect(keys(gate_info))) == ["amp", "amp_slope", "nsteps",
+                                             "phase", "phase_slope", "time"]
+    @test gate_info["nsteps"] == 3
+    @test gate_info["time"] == [1, 6, 11]
+    @test gate_info["amp"] ≈ [2, 7, 12] ./ 131
+    @test gate_info["amp_slope"] ≈ [-3, -8, -13] ./ 131
     @test gate_info["phase"] ≈ [0.6366197723675814, 0.432394487827058, 0.228169203286535]
     @test gate_info["phase_slope"] ≈ [0.7957747154594768, 1.5915494309189535,
                                        2.3873241463784303]
