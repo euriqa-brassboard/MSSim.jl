@@ -176,6 +176,20 @@ end
     @test muladd(z, 2, b1) === b1
 end
 
+function blackman2(x)
+    return 21 / 50 + 1 / 2 * cos(π * x) + 2 / 25 * cos(2π * x)
+end
+
+@testset "blackman" begin
+    @test U.blackman.(range(-1, 1, 1000)) ≈ blackman2.(range(-1, 1, 1000))
+    for ratio in (0.1, 0.2, 0.3, 0.5, 0.9)
+        b = U.BlackmanStartEnd{ratio}()
+        @test b.(range(-ratio, ratio, 1000)) ≈ fill(1.0, 1000)
+        @test b.(ratio .+ (1 - ratio) .* range(0, 1, 1000)) ≈ blackman2.(range(0, 1, 1000))
+        @test b.(-ratio .- (1 - ratio) .* range(0, 1, 1000)) ≈ blackman2.(range(0, 1, 1000))
+    end
+end
+
 function test_diffs(_f; threshold=1e-15)
     function f(x)
         s, c = sincos(x)

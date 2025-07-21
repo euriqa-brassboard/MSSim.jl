@@ -588,4 +588,20 @@ const sin_f4 = TrigRatio{true,5,(0,-1//3),(4,-1),(-4,)}()
 # (-2/3 * x^3 + (20 - 7x^2) * sin(x) + (-20 + x^2) * x * cos(x)) / x^6
 const sin_f5 = TrigRatio{true,6,(0,-2//3),(20,-7),(-20,1)}()
 
+blackman(x) = 0.42 + 0.5 * cospi(x) + 0.08 * cospi(2 * x)
+
+struct BlackmanStartEnd{Ratio} <: Function
+end
+
+function (::BlackmanStartEnd{Ratio})(x) where Ratio
+    if -Ratio <= x <= Ratio
+        return float(one(x))
+    elseif x < 0
+        x = (x + Ratio) / (1 - Ratio)
+    else
+        x = (x - Ratio) / (1 - Ratio)
+    end
+    return blackman(x)
+end
+
 end
