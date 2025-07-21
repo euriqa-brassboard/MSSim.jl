@@ -8,6 +8,7 @@ using StaticArrays
 import ..Sequence as Seq
 import ..SymLinear as SL
 import ..SegSeq as SS
+import ..Utils as U
 
 struct NLVarTracker
     vars::Vector{Tuple{Float64,Float64}}
@@ -55,21 +56,54 @@ function autodiff(f::F) where F
     end
 end
 
-struct AbsAreaObjCallback{NModes}
-    dis_weights::MVector{NModes,Float64}
-    disδ_weights::MVector{NModes,Float64}
-    area_weights::MVector{NModes,Float64}
+function _init_weights!(weights, input)
+    if input === nothing
+        weights .= 1
+    else
+        weights .= input
+    end
+    return
 end
 
-function (obj::AbsAreaObjCallback{NModes})(vals, grads) where NModes
-    @assert length(vals) == 3 * NModes
-    @assert length(grads) == 3 * NModes
-    v1 = zero(eltype(vals))
-    v2 = zero(eltype(vals))
-    @inbounds @simd ivdep for i in 1:NModes
-        v1 = muladd(vals[i], obj.dis_weights[i],
-                    muladd(vals[i + NModes], obj.disδ_weights[i], v1))
-        v2 = muladd(abs(vals[i + NModes * 2]), obj.area_weights[i], v2)
+struct AbsAreaObjCallback{NW}
+    weights::MVector{NW,Float64}
+    function AbsAreaObjCallback(NModes, dis_weights, disδ_weights, area_weights)
+        @assert NModes >= 1
+        cb = new{NModes * 3}(MVector{NModes * 3,Float64}(undef))
+        _init_weights!(cb.dis_weights, dis_weights)
+        _init_weights!(cb.disδ_weights, disδ_weights)
+        _init_weights!(cb.area_weights, area_weights)
+        return cb
+    end
+end
+
+@inline function Base.getproperty(obj::AbsAreaObjCallback{NW}, field::Symbol) where NW
+    NModes = NW ÷ 3
+    w = getfield(obj, :weights)
+    if field === :dis_weights
+        return @view w[1:NModes]
+    elseif field === :disδ_weights
+        return @view w[NModes + 1:2 * NModes]
+    elseif field === :area_weights
+        return @view w[2 * NModes + 1:3 * NModes]
+    else
+        return getfield(obj, field)
+    end
+end
+
+function (obj::AbsAreaObjCallback{NW})(vals, grads) where NW
+    @assert length(vals) == NW
+    @assert length(grads) == NW
+    NModes = NW ÷ 3
+    weights = obj.weights
+    @inbounds begin
+        v1 = muladd(vals[1], weights[1], U.mul(vals[1 + NModes], weights[1 + NModes]))
+        v2 = U.mul(abs(vals[1 + NModes * 2]), weights[1 + NModes * 2])
+    end
+    @inbounds @simd ivdep for i in 2:NModes
+        v1 = muladd(vals[i], weights[i],
+                    muladd(vals[i + NModes], weights[i + NModes], v1))
+        v2 = muladd(abs(vals[i + NModes * 2]), weights[i + NModes * 2], v2)
     end
     iv2 = 1 / v2
 
@@ -78,20 +112,12 @@ function (obj::AbsAreaObjCallback{NModes})(vals, grads) where NModes
     dv2 = -res * iv2
 
     @inbounds @simd ivdep for i in 1:NModes
-        grads[i] = obj.dis_weights[i] * dv1
-        grads[i + NModes] = obj.disδ_weights[i] * dv1
-        grads[i + NModes * 2] = flipsign(obj.area_weights[i] * dv2, vals[i + NModes * 2])
+        grads[i] = weights[i] * dv1
+        grads[i + NModes] = weights[i + NModes] * dv1
+        grads[i + NModes * 2] = flipsign(weights[i + NModes * 2] * dv2,
+                                         vals[i + NModes * 2])
     end
     return res
-end
-
-function _init_weights!(weights, input)
-    if input === nothing
-        weights .= 1
-    else
-        weights .= input
-    end
-    return
 end
 
 function abs_area_obj(nseg, modes, pmask;
@@ -102,18 +128,13 @@ function abs_area_obj(nseg, modes, pmask;
     disδ_args = ntuple(i->(:disδ2, i), nmodes)
     area_args = ntuple(i->(:area, i), nmodes)
 
-    cb = AbsAreaObjCallback{nmodes}(MVector{nmodes,Float64}(undef),
-                                    MVector{nmodes,Float64}(undef),
-                                    MVector{nmodes,Float64}(undef))
-    _init_weights!(cb.dis_weights, dis_weights)
-    _init_weights!(cb.disδ_weights, disδ_weights)
-    _init_weights!(cb.area_weights, area_weights)
-
     mask_dis_area = SS.ValueMask(true, true, true, false, true, false)
     buf = SL.ComputeBuffer{nseg,Float64}(Val(mask_dis_area), Val(mask_dis_area))
 
     return Seq.Objective(pmask, (dis_args..., disδ_args..., area_args...),
-                         cb, modes, buf, freq=freq, amp=amp)
+                         AbsAreaObjCallback(nmodes, dis_weights, disδ_weights,
+                                            area_weights),
+                         modes, buf, freq=freq, amp=amp)
 end
 
 end
