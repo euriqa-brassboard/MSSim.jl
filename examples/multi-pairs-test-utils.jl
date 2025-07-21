@@ -13,22 +13,7 @@ const Opts = MSSim.Optimizers
 const SS = MSSim.SegSeq
 const SL = MSSim.SymLinear
 const Seq = MSSim.Sequence
-
-blackman(x) = 0.42 + 0.5 * cospi(x) + 0.08 * cospi(2 * x)
-
-struct BlackmanStartEnd{Ratio} <: Function
-end
-
-function (::BlackmanStartEnd{Ratio})(x) where Ratio
-    if -Ratio <= x <= Ratio
-        return float(one(x))
-    elseif x < 0
-        x = (x + Ratio) / (1 - Ratio)
-    else
-        x = (x - Ratio) / (1 - Ratio)
-    end
-    return blackman(x)
-end
+const U = MSSim.Utils
 
 struct PreOptObjective{NModes}
 end
@@ -37,14 +22,14 @@ function (::PreOptObjective{NModes})(vals) where NModes
     dis = vals[1]
     disδ = vals[2]
     area = zero(eltype(vals))
-    areaδ = zero(eltype(vals))
+    # areaδ = zero(eltype(vals))
     for i in 1:NModes
-        areai = abs(vals[2 + i])
-        areaδi = abs(vals[2 + NModes + i])
-        area += areai
-        areaδ += areaδi / areai
+        # areai = abs(vals[2 + i])
+        # areaδi = abs(vals[2 + NModes + i])
+        area = max(area, abs(vals[2 + i]))
+        # areaδ += areaδi / areai
     end
-    return (dis + disδ / 200) * areaδ / area^2
+    return (dis + disδ / 200) / area^2
 end
 
 function get_preobj(modes, buf, ratio=0.6)
@@ -55,7 +40,7 @@ function get_preobj(modes, buf, ratio=0.6)
                          ((:dis2, 0), (:disδ2, 0), area_args..., areaδ_args...),
                          Opts.autodiff(PreOptObjective{7}()), modes, buf,
                          freq=Seq.FreqSpec(true, sym=false),
-                         amp=Seq.AmpSpec(cb=BlackmanStartEnd{ratio}()))
+                         amp=Seq.AmpSpec(cb=U.BlackmanStartEnd{ratio}()))
 end
 
 struct PreOptimizer{NModes,ObjArgs,Obj}
@@ -64,7 +49,7 @@ struct PreOptimizer{NModes,ObjArgs,Obj}
     opt::NLopt.Opt
 end
 function PreOptimizer(preobj::Obj;
-                      τmin=0.1, τmax=3, Ω=0.4, ωmin=2π * 2.39, ωmax=2π * 2.52) where Obj
+                      τmin=0.1, τmax=3, Ω=0.4, ωmin=2π * 2.37, ωmax=2π * 2.52) where Obj
     nargs = Seq.nparams(preobj)
     tracker = Opts.NLVarTracker(nargs)
     Opts.set_bound!(tracker, preobj.param.τ, τmin, τmax)
@@ -262,6 +247,7 @@ function mode_weight!(weights, ion1, ion2)
     for i in 1:7
         weights[i] = participation_factors[i, ion1] * participation_factors[i, ion2] * lamb_dicke_parameters[i]^2
     end
+    return weights
 end
 
 const modes = Seq.Modes()
