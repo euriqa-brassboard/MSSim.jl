@@ -86,30 +86,39 @@ end
     args2 = Vector{Float64}(undef, 15)
     grads = Vector{Float64}(undef, 15)
     grads2 = Vector{Float64}(undef, 15)
-    for _ in 1:1000
-        dis = rand(5)
-        disδ = rand(5)
-        area = (rand(5) .+ 0.1) .* rand((1, -1), 5)
+    for _ in 1:10
+        dis_weights = rand(5)
+        disδ_weights = rand(5)
+        area_weights = rand(5)
+        obj.obj.dis_weights .= dis_weights
+        obj.obj.disδ_weights .= disδ_weights
+        obj.obj.area_weights .= area_weights
 
-        args[1:5] .= dis
-        args[6:10] .= disδ
-        args[11:15] .= area
-        args2 .= args
+        for _ in 1:100
+            dis = rand(5)
+            disδ = rand(5)
+            area = (rand(5) .+ 0.1) .* rand((1, -1), 5)
 
-        function eval_wrapper(i, d)
-            args2[i] = args[i] + d
-            return obj.obj(args2, grads2)
-        end
+            args[1:5] .= dis
+            args[6:10] .= disδ
+            args[11:15] .= area
+            args2 .= args
 
-        @test obj.obj(args, grads) ≈
-            (dot(dis, dis_weights) + dot(disδ, disδ_weights)) / dot(abs.(area), area_weights)
+            function eval_wrapper(i, d)
+                args2[i] = args[i] + d
+                return obj.obj(args2, grads2)
+            end
 
-        h = 0.000005 / 4
-        hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
-        for i in 1:15
-            results = eval_wrapper.(i, hs)
-            args2[i] = args[i]
-            @test grads[i] ≈ compute_grad(results..., h) rtol=1.5e-5 atol=5e-5
+            @test obj.obj(args, grads) ≈
+                (dot(dis, dis_weights) + dot(disδ, disδ_weights)) / dot(abs.(area), area_weights)
+
+            h = 0.000005 / 4
+            hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
+            for i in 1:15
+                results = eval_wrapper.(i, hs)
+                args2[i] = args[i]
+                @test grads[i] ≈ compute_grad(results..., h) rtol=1.5e-5 atol=5e-5
+            end
         end
     end
 end
