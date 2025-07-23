@@ -799,4 +799,46 @@ end
                            :(MVector{$(length(ObjArg2)),Float64}(undef)), nothing)
 end
 
+struct SolutionInfo
+    params::RawParams
+    total_time::Float64
+    modes::Vector{Float64}
+    dis::Vector{ComplexF64}
+    disδ::Vector{ComplexF64}
+    cumdis::Vector{ComplexF64}
+    area::Vector{Float64}
+    areaδ::Vector{Float64}
+end
+
+struct Summarizer{NSeg,Kern}
+    kern::Kern
+    function Summarizer{NSeg}() where NSeg
+        mask = SS.ValueMask(true, true, true, true, true, true)
+        buf = SL.ComputeBuffer{NSeg,Float64}(Val(mask), Val(zero(SS.ValueMask)))
+        kern = SL.Kernel(buf, Val(zero(SL.ParamGradMask)))
+        return new{NSeg,typeof(kern)}(kern)
+    end
+end
+
+function Base.get(s::Summarizer{NSeg}, params::RawParams, modes::Modes) where NSeg
+    kern = s.kern
+    args = params.args
+    @assert length(args) == NSeg * 5
+    total_time = sum(@view args[1:5:end])
+    info = SolutionInfo(params, total_time, Float64[],
+                        ComplexF64[], ComplexF64[], ComplexF64[],
+                        Float64[], Float64[])
+    for (ωm, _) in modes.modes
+        SL.eval_with_mode!(kern, args, ωm)
+        val = kern.result.val
+        push!(info.modes, ωm)
+        push!(info.dis, val.dis)
+        push!(info.disδ, val.disδ)
+        push!(info.cumdis, val.cumdis)
+        push!(info.area, val.area)
+        push!(info.areaδ, val.areaδ)
+    end
+    return info
+end
+
 end

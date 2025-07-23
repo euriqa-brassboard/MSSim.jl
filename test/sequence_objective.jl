@@ -36,6 +36,7 @@ end
     end
 
     for (nseg, amp_order) in Iterators.product((1, 2, 5, 10), (0, 2, 5))
+        summarizer = Seq.Summarizer{nseg}()
         buf = SL.ComputeBuffer{nseg,Float64}(Val(SS.mask_full), Val(SS.mask_full))
         kern = SL.Kernel(buf, Val(SL.pmask_full))
         freq_spec = Seq.FreqSpec(true, sym=false)
@@ -117,6 +118,17 @@ end
                 end
                 return res
             end
+
+            solinfo = get(summarizer, raw_params, modes1)
+            @test solinfo.params === raw_params
+            @test solinfo.total_time ≈ nseg * args_user[1]
+            @test solinfo.modes[1] == modes1.modes[1][1]
+            @test solinfo.dis[1] ≈ kern.result.val.dis
+            @test solinfo.disδ[1] ≈ kern.result.val.disδ
+            @test solinfo.cumdis[1] ≈ kern.result.val.cumdis
+            @test solinfo.area[1] ≈ kern.result.val.area
+            @test solinfo.areaδ[1] ≈ kern.result.val.areaδ
+
             @test eval_model1(:rdis, 1) ≈ real(kern.result.val.dis)
             @test eval_model1(:idis, 1) ≈ imag(kern.result.val.dis)
             @test eval_model1(:dis2, 1) ≈ abs2(kern.result.val.dis)
@@ -139,8 +151,18 @@ end
             @test eval_model1(:τ, 0) ≈ nseg * args_user[1]
 
             val_map = Dict{Tuple{Symbol,Int},Float64}()
+
+            solinfo3 = get(summarizer, raw_params, modes3)
+            @test solinfo3.params === raw_params
+            @test solinfo3.total_time ≈ nseg * args_user[1]
             for idx in 1:3
                 SL.update!(kern, (get(raw_params; ωm=modes3[idx][1])...,))
+                @test solinfo3.modes[idx] == modes3.modes[idx][1]
+                @test solinfo3.dis[idx] ≈ kern.result.val.dis
+                @test solinfo3.disδ[idx] ≈ kern.result.val.disδ
+                @test solinfo3.cumdis[idx] ≈ kern.result.val.cumdis
+                @test solinfo3.area[idx] ≈ kern.result.val.area
+                @test solinfo3.areaδ[idx] ≈ kern.result.val.areaδ
                 val_map[(:rdis, idx)] = real(kern.result.val.dis)
                 val_map[(:idis, idx)] = imag(kern.result.val.dis)
                 val_map[(:dis2, idx)] = abs2(kern.result.val.dis)
