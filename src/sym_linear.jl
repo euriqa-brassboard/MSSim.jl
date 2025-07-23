@@ -407,7 +407,9 @@ mutable struct Kernel{NSeg,T,SDV<:SegSeq.SegData{T},SDG<:SegSeq.SegData{T},pmask
         maskv = SegSeq.value_mask(SDV)
         maskg = SegSeq.value_mask(SDG)
         result = SegSeq.SingleModeResult{T}(Val(maskv), Val(maskg))
-        U.resize_uniform!(result.grad, NSeg, 5)
+        if maskg !== zero(SegSeq.ValueMask)
+            U.resize_uniform!(result.grad, NSeg, 5)
+        end
         return new{NSeg,T,SDV,SDG,pmask,NSeg*5}(buffer, result, false,
                                                 MVector{NSeg*5,T}(undef))
     end
