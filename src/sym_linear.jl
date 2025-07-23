@@ -450,6 +450,22 @@ function force_update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs}) where {NSeg,T,S
     return
 end
 
+@inline function eval_with_mode!(kern::Kernel{NSeg}, args, ωm) where NSeg
+    φ = 0.0
+    kargs = kern.args
+    @inbounds for j in 1:NSeg
+        τ = args[j * 5 - 4]
+        kargs[j * 5 - 4] = τ
+        kargs[j * 5 - 3] = args[j * 5 - 3]
+        kargs[j * 5 - 2] = args[j * 5 - 2]
+        kargs[j * 5 - 1] = args[j * 5 - 1] - φ
+        δ = args[j * 5]
+        kargs[j * 5] = δ - ωm
+        φ = muladd(ωm, τ, φ)
+    end
+    force_update!(kern)
+end
+
 @inline function update!(kern::Kernel{NSeg,T,SDV,SDG,pmask,NArgs},
                          args::NTuple{N}) where {NSeg,T,SDV,SDG,pmask,NArgs,N}
     @assert N == NArgs

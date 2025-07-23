@@ -522,18 +522,7 @@ function _generate_nlobj(ObjArg, NSeg, Modes, obj_ex, grads_out_var, objargs_ex,
                   $(mode_var.weight) = $(mode_var.mode).weight
                   $(mode_var.kern) = $(mode_var.mode).kern
                   $(mode_var.args) = $(mode_var.kern).args
-                  φ = 0.0
-                  @inbounds for j in 1:$NSeg
-                      τ = args[j * 5 - 4]
-                      $(mode_var.args)[j * 5 - 4] = τ
-                      $(mode_var.args)[j * 5 - 3] = args[j * 5 - 3]
-                      $(mode_var.args)[j * 5 - 2] = args[j * 5 - 2]
-                      $(mode_var.args)[j * 5 - 1] = args[j * 5 - 1] - φ
-                      δ = args[j * 5]
-                      $(mode_var.args)[j * 5] = δ - $(mode_var.ωm)
-                      φ = muladd($(mode_var.ωm), τ, φ)
-                  end
-                  SL.force_update!($(mode_var.kern))
+                  SL.eval_with_mode!($(mode_var.kern), args, $(mode_var.ωm))
                   $(mode_var.res) = $(mode_var.kern).result
                   $(mode_var.resval) = $(mode_var.res).val
                   $(mode_var.resgrad) = $(mode_var.res).grad.values
