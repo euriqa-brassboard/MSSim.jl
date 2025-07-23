@@ -31,6 +31,10 @@ const δs = [-20, -10, -5, -1, -0.1, -0.02, -0.001, 0,
 
 const all_params = Iterators.product(τs, Ωs, Ω′s, φs, δs)
 
+@testset "ParamGradMask" begin
+    @test zero(SL.ParamGradMask) === SL.ParamGradMask(false, false, false, false, false)
+end
+
 @testset "Displacement" begin
     for (τ, Ω, Ω′, φ, δ) in all_params
         Ωf, θf = get_Ω_θ_func(Ω, Ω′, φ, δ)

@@ -372,6 +372,7 @@ struct ParamGradMask
     φ::Bool
     ω::Bool
 end
+Base.zero(::Type{ParamGradMask}) = ParamGradMask(false, false, false, false, false)
 const pmask_full = ParamGradMask(true, true, true, true, true)
 const pmask_fm = ParamGradMask(false, false, false, true, true)
 const pmask_tfm = ParamGradMask(true, false, false, true, true)
