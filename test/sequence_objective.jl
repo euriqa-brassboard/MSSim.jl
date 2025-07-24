@@ -189,7 +189,11 @@ end
                 model = Seq.Objective(SL.pmask_full, (key1, key2, key3),
                                       objfunc3, modes3, buf,
                                       freq=freq_spec, amp=amp_spec)
-                @test Seq.RawParams(model, args_user).args == args_raw
+                args3 = Seq.RawParams(model, args_user).args
+                @test args3 == args_raw
+                args3′ = Seq.RawParams(model, args_user, buff=args3).args
+                @test args3′ === args3
+                @test args3′ == args_raw
                 grads = similar(args_user)
                 res = model(args_user, grads)
                 @test res ≈ val_map[key1] * 0.9 - val_map[key2] * 0.2 + val_map[key3]^2

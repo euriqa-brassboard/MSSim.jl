@@ -769,10 +769,10 @@ const _VecOrTup0 = Union{AbstractVector,Tuple{}}
                            :(m.objargs), :(m.objgrads))
 end
 
-function RawParams(m::Objective{pmask,ObjArg,NSeg}, x) where {pmask,ObjArg,NSeg}
-    res = Vector{Float64}(undef, NSeg * 5)
-    transform_argument(m.param, res, x)
-    return RawParams(res)
+function RawParams(m::Objective{pmask,ObjArg,NSeg}, x;
+                   buff=Vector{Float64}(undef, NSeg * 5)) where {pmask,ObjArg,NSeg}
+    transform_argument(m.param, buff, x)
+    return RawParams(buff)
 end
 
 @inline _dummy_obj(x) = x[1]
