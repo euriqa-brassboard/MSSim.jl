@@ -799,8 +799,7 @@ end
                            :(MVector{$(length(ObjArg2)),Float64}(undef)), nothing)
 end
 
-struct SolutionInfo
-    params::RawParams
+struct SolutionProperties
     total_time::Float64
     modes::Vector{Float64}
     dis::Vector{ComplexF64}
@@ -825,9 +824,9 @@ function Base.get(s::Summarizer{NSeg}, params::RawParams, modes::Modes) where NS
     args = params.args
     @assert length(args) == NSeg * 5
     total_time = sum(@view args[1:5:end])
-    info = SolutionInfo(params, total_time, Float64[],
-                        ComplexF64[], ComplexF64[], ComplexF64[],
-                        Float64[], Float64[])
+    info = SolutionProperties(total_time, Float64[],
+                              ComplexF64[], ComplexF64[], ComplexF64[],
+                              Float64[], Float64[])
     for (ωm, _) in modes.modes
         SL.eval_with_mode!(kern, args, ωm)
         val = kern.result.val
