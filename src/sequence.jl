@@ -809,6 +809,29 @@ struct SolutionProperties
     areaδ::Vector{Float64}
 end
 
+Base.Dict(props::SolutionProperties) = Dict(
+    "total_time"=>props.total_time,
+    "modes"=>props.modes,
+    "rdis"=>real.(props.dis),
+    "idis"=>imag.(props.dis),
+    "rdisδ"=>real.(props.disδ),
+    "idisδ"=>imag.(props.disδ),
+    "rcumdis"=>real.(props.cumdis),
+    "icumdis"=>imag.(props.cumdis),
+    "area"=>props.area,
+    "areaδ"=>props.areaδ,
+)
+
+SolutionProperties(d::Dict{<:AbstractString}) = SolutionProperties(
+    d["total_time"],
+    copy(d["modes"]),
+    complex.(d["rdis"], d["idis"]),
+    complex.(d["rdisδ"], d["idisδ"]),
+    complex.(d["rcumdis"], d["icumdis"]),
+    copy(d["area"]),
+    copy(d["areaδ"]),
+)
+
 struct Summarizer{NSeg,Kern}
     kern::Kern
     function Summarizer{NSeg}() where NSeg

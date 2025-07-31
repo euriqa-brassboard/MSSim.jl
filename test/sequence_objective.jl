@@ -127,6 +127,15 @@ end
             @test solprops.cumdis[1] ≈ kern.result.val.cumdis
             @test solprops.area[1] ≈ kern.result.val.area
             @test solprops.areaδ[1] ≈ kern.result.val.areaδ
+            solprops_data = Dict(solprops)
+            solprops2 = Seq.SolutionProperties(solprops_data)
+            @test solprops2.total_time == solprops.total_time
+            @test solprops2.modes == solprops.modes
+            @test solprops2.dis == solprops.dis
+            @test solprops2.disδ == solprops.disδ
+            @test solprops2.cumdis == solprops.cumdis
+            @test solprops2.area == solprops.area
+            @test solprops2.areaδ == solprops.areaδ
 
             @test eval_model1(:rdis, 1) ≈ real(kern.result.val.dis)
             @test eval_model1(:idis, 1) ≈ imag(kern.result.val.dis)
