@@ -1,0 +1,16 @@
+//
+
+syntax = "proto3";
+
+message SolutionProperties {
+  double total_time = 1;
+  repeated double modes = 2;
+  repeated double rdis = 3;
+  repeated double idis = 4;
+  repeated double rdis_det = 5;
+  repeated double idis_det = 6;
+  repeated double rcumdis = 7;
+  repeated double icumdis = 8;
+  repeated double area = 9;
+  repeated double area_det = 10;
+}

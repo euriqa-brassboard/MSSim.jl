@@ -20,12 +20,20 @@ Setfield = "1.1"
 StaticArrays = "1.9"
 LinearAlgebra = "1.10"
 QuadGK = "2.0"
+ProtoBuf = "1.0"
+
+[weakdeps]
+ProtoBuf = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
+
+[extensions]
+MSSimProtoBufExt = ["ProtoBuf"]
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+ProtoBuf = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
 
 [targets]
 test = ["Test", "Combinatorics", "Random", "Distributed"]
