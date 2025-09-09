@@ -142,6 +142,7 @@ end
             solprops_io = IOBuffer()
             pb_encoder = ProtoEncoder(solprops_io)
             encode(pb_encoder, solprops)
+            @test solprops_io.size == ProtoBuf._encoded_size(solprops)
 
             seekstart(solprops_io)
             pb_decoder = ProtoDecoder(solprops_io)
