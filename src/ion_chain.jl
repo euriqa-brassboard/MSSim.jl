@@ -58,10 +58,10 @@ struct AxialPosInfo
 end
 
 struct AxialModel
-    model::Model
+    model
     ions::Vector{IonInfo}
     pos::Vector{AxialPosInfo}
-    posvars::Vector{VariableRef}
+    posvars::Vector
     _new_axial_model(model, ions, pos, vars) = new(model, ions, pos, vars)
 end
 
@@ -112,12 +112,7 @@ end
 
 function optimize! end
 
-function update_all_init_pos!(am::AxialModel)
-    for (i, var) in enumerate(am.posvars)
-        set_init_pos!(am, i, value(var))
-    end
-    return am
-end
+function update_all_init_pos! end
 
 function axial_modes(ions, poses, dc::Function1D, rf::Union{Function1D,Nothing}=nothing)
     nions = length(ions)

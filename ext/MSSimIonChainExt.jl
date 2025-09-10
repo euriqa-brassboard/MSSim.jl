@@ -1,7 +1,7 @@
 module MSSimIonChainExt
 
 import MSSim.IonChain: IonChain, IonInfo, Function1D,
-    AxialPosInfo, AxialModel, _new_axial_model
+    AxialPosInfo, AxialModel, _new_axial_model, update_all_init_pos!
 
 using JuMP
 using NLopt
@@ -56,8 +56,9 @@ function AxialModel(ions::Vector{IonInfo}, dc::Function1D,
 end
 
 function IonChain.optimize!(am::AxialModel,
-                            pos_out::Vector=Vector{Float64}(undef, length(am.posvars)))
-    for (info, var) in zip(am.pos, am.posvars)
+                            pos_out::Vector=Vector{Float64}(undef, length(am.posvars::Vector{VariableRef})))
+    posvars = am.posvars::Vector{VariableRef}
+    for (info, var) in zip(am.pos, posvars)
         if isfinite(info.pos)
             set_start_value(var, info.pos)
         else
@@ -74,9 +75,16 @@ function IonChain.optimize!(am::AxialModel,
             delete_upper_bound(var)
         end
     end
-    JuMP.optimize!(am.model)
-    pos_out .= value.(am.posvars)
+    JuMP.optimize!(am.model::Model)
+    pos_out .= value.(posvars)
     return pos_out
+end
+
+function update_all_init_pos!(am::AxialModel)
+    for (i, var) in enumerate(am.posvars::Vector{VariableRef})
+        set_init_pos!(am, i, value(var))
+    end
+    return am
 end
 
 end
