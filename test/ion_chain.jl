@@ -1,6 +1,8 @@
 #!/usr/bin/julia
 
 using Test
+using JuMP
+using NLopt
 
 using MSSim
 const IC = MSSim.IonChain

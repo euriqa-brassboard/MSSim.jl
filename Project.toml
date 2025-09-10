@@ -4,8 +4,6 @@ version = "1.0.0"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
-NLopt = "76087f3c-5699-56af-9a33-bf431cd00edd"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -24,10 +22,13 @@ ProtoBuf = "1.0"
 [weakdeps]
 ProtoBuf = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+NLopt = "76087f3c-5699-56af-9a33-bf431cd00edd"
 
 [extensions]
 MSSimProtoBufExt = ["ProtoBuf"]
 MSSimPureNumericExt = ["QuadGK"]
+MSSimIonChainExt = ["JuMP", "NLopt"]
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -36,6 +37,9 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 ProtoBuf = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+NLopt = "76087f3c-5699-56af-9a33-bf431cd00edd"
 
 [targets]
-test = ["Test", "Combinatorics", "Random", "Distributed", "ProtoBuf", "QuadGK"]
+test = ["Test", "Combinatorics", "Random", "Distributed", "ProtoBuf", "QuadGK",
+        "JuMP", "NLopt"]

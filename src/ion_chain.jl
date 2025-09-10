@@ -2,12 +2,10 @@
 
 module IonChain
 
-using JuMP
-using NLopt
-using Setfield
-using StaticArrays
 using ForwardDiff
 using LinearAlgebra
+using Setfield
+using StaticArrays
 
 struct IonInfo
     charge::Float64
@@ -22,17 +20,6 @@ struct Function1D{F,∇F,∇²F}
     ∇²f::∇²F
     Function1D(f::F, ∇f::∇F=nothing, ∇²f::∇²F=nothing) where {F,∇F,∇²F} =
         new{F,∇F,∇²F}(f, ∇f, ∇²f)
-end
-
-function _register(model, potential::Function1D, name)
-    if potential.∇²f !== nothing
-        register(model, name, 1, potential.f, potential.∇f, potential.∇²f)
-    elseif potential.∇f !== nothing
-        register(model, name, 1, potential.f, potential.∇f)
-    else
-        register(model, name, 1, potential.f, autodiff=true)
-    end
-    return
 end
 
 function _derivative_2nd(f::Function1D, x)
@@ -75,44 +62,7 @@ struct AxialModel
     ions::Vector{IonInfo}
     pos::Vector{AxialPosInfo}
     posvars::Vector{VariableRef}
-    function AxialModel(ions::Vector{IonInfo}, dc::Function1D,
-                        rf::Union{Function1D,Nothing}=nothing; model=nothing)
-        if model === nothing
-            model = Model(NLopt.Optimizer)
-            # LD_MMA is slower
-            # LD_SLSQP is slightly faster but gives wrong answer from time to time
-            # Other LD_ solvers does not accept the inequality constraints.
-            set_optimizer_attribute(model, "algorithm", :LD_CCSAQ)
-        end
-        nions = length(ions)
-        vars = [@variable(model) for i in 1:nions]
-        for i in 2:nions
-            @constraint(model, vars[i - 1] <= vars[i])
-        end
-        pos = [AxialPosInfo(NaN, -Inf, Inf) for i in 1:nions]
-        _register(model, dc, :dc)
-        if rf !== nothing
-            _register(model, rf, :rf)
-        end
-        obj = @NLexpression(model, 0)
-        for (i1, ion1) in enumerate(ions)
-            pos1 = vars[i1]
-            if rf !== nothing
-                obj = @NLexpression(model, obj + dc(pos1) * ion1.charge
-                                    + rf(pos1) * (ion1.charge / ion1.mass)^2)
-            else
-                obj = @NLexpression(model, obj + dc(pos1) * ion1.charge)
-            end
-            for i2 in (i1 + 1):nions
-                ion2 = ions[i2]
-                pos2 = vars[i2]
-                obj = @NLexpression(model,
-                                    obj + ion1.charge * ion2.charge / (pos2 - pos1))
-            end
-        end
-        @NLobjective(model, Min, obj)
-        return new(model, ions, pos, vars)
-    end
+    _new_axial_model(model, ions, pos, vars) = new(model, ions, pos, vars)
 end
 
 function set_init_pos!(am::AxialModel, i, pos)
@@ -160,29 +110,7 @@ function clear_barriers!(am::AxialModel)
     return am
 end
 
-function optimize!(am::AxialModel,
-                   pos_out::Vector=Vector{Float64}(undef, length(am.posvars)))
-    for (info, var) in zip(am.pos, am.posvars)
-        if isfinite(info.pos)
-            set_start_value(var, info.pos)
-        else
-            set_start_value(var, nothing)
-        end
-        if isfinite(info.pre_barrier)
-            set_lower_bound(var, info.pre_barrier)
-        elseif has_lower_bound(var)
-            delete_lower_bound(var)
-        end
-        if isfinite(info.post_barrier)
-            set_upper_bound(var, info.post_barrier)
-        elseif has_upper_bound(var)
-            delete_upper_bound(var)
-        end
-    end
-    JuMP.optimize!(am.model)
-    pos_out .= value.(am.posvars)
-    return pos_out
-end
+function optimize! end
 
 function update_all_init_pos!(am::AxialModel)
     for (i, var) in enumerate(am.posvars)
