@@ -2,7 +2,9 @@
 
 using MSSim
 const PN = MSSim.PureNumeric
+
 using Test
+using QuadGK
 
 @testset "Displacement" begin
     @test PN.displacement(0, 3.1, t->1.2, t->0.1) ≈ 3.1 * 1.2 * exp(im * 0.1)

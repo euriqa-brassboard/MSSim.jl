@@ -4,6 +4,7 @@ using Test
 using ForwardDiff
 using Setfield
 using Random
+using QuadGK
 
 using MSSim
 const PN = MSSim.PureNumeric

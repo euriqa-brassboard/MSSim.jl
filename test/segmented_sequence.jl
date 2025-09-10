@@ -7,6 +7,7 @@ const SL = MSSim.SymLinear
 const SS = MSSim.SegSeq
 
 using Test
+using QuadGK
 
 const τs = [0, 1, 5, 10, 20]
 const Ωs = [-20, -10, -5, -1, -0.1, -0.02, -0.001, 0, 0.001, 0.02, 1, 5, 10, 20]
