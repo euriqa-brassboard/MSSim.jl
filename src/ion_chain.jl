@@ -62,7 +62,7 @@ struct AxialModel
     ions::Vector{IonInfo}
     pos::Vector{AxialPosInfo}
     posvars::Vector
-    _new_axial_model(model, ions, pos, vars) = new(model, ions, pos, vars)
+    global _new_axial_model(model, ions, pos, vars) = new(model, ions, pos, vars)
 end
 
 function set_init_pos!(am::AxialModel, i, pos)
