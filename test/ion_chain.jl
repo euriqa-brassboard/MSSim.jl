@@ -8,17 +8,18 @@ using StaticArrays
 using MSSim
 const IC = MSSim.IonChain
 
-@testset "Harmonic potential" begin
+@testset "Ions" begin
     ions = IC.simple_ions(2)
     @test ions[1] === ions[2]
     @test ions[1].charge == 1
     @test ions[1].mass == 1
 
-    ions2 = [IC.IonInfo(1, 2), IC.IonInfo(1, 2)]
-    @test ions2[1] === ions2[2]
-    @test ions2[1].charge == 1
-    @test ions2[1].mass == 2
+    ion2 = IC.IonInfo(-1.3, 2)
+    @test ion2.charge == -1.3
+    @test ion2.mass == 2
+end
 
+@testset "Harmonic potential" begin
     coeffs_dc, func_dc3 = IC.poly_function(Val(2))
     func_dc2 = IC.Function1D(func_dc3.f, func_dc3.∇f)
     func_dc1 = IC.Function1D(func_dc3.f)
@@ -78,4 +79,88 @@ const IC = MSSim.IonChain
             check_harmonic(mass, func_dc, func_rf, 1, 1, 1, 1)
         end
     end
+end
+
+@testset "Double well" begin
+    coeffs, axial = IC.poly_function(Val(4))
+    coeffs[2] = -4
+    coeffs[4] = 2
+
+    model = IC.AxialModel(IC.simple_ions(2), axial)
+    function ramp_model(x1s)
+        for x1 in x1s
+            coeffs[1] = x1
+            IC.optimize!(model)
+            IC.update_all_init_pos!(model)
+        end
+        return IC.optimize!(model)
+    end
+
+    # One in each well from initial position
+    IC.set_init_pos!(model, 1, -1)
+    IC.set_init_pos!(model, 2, 1)
+    pos0 = IC.optimize!(model)
+    @test pos0[1] < 0
+    @test pos0[2] > 0
+    @test pos0[1] ≈ -pos0[2]
+
+    # Use middle barrier to split the ions
+    IC.set_init_pos!(model, 1, nothing)
+    IC.set_init_pos!(model, 2, nothing)
+    IC.set_post_barrier!(model, 1, 0)
+    IC.set_pre_barrier!(model, 2, 0)
+    @test IC.optimize!(model) ≈ pos0
+
+    # Use barrier to force into left
+    IC.set_post_barrier!(model, 1, nothing)
+    IC.set_pre_barrier!(model, 2, nothing)
+    IC.set_init_pos!(model, 1, -3)
+    IC.set_init_pos!(model, 2, -1)
+    IC.set_barrier!(model, 2, 0)
+    pos_l = IC.optimize!(model)
+    @test pos_l[1] < pos_l[2] < 0
+
+    # Use barrier to force into right
+    IC.set_init_pos!(model, 1, 1)
+    IC.set_init_pos!(model, 2, 3)
+    IC.clear_barriers!(model)
+    IC.set_barrier!(model, 0, 0)
+    pos_r = IC.optimize!(model)
+    @test 0 < pos_r[1] < pos_r[2]
+
+    # Middle barrier
+    IC.set_init_pos!(model, 1, nothing)
+    IC.set_init_pos!(model, 2, nothing)
+    IC.clear_barriers!(model)
+    IC.set_barrier!(model, 1, 0)
+    @test IC.optimize!(model) ≈ pos0
+
+    # Ramp from left
+    IC.clear_barriers!(model)
+    pos_l3l = ramp_model(range(5, 3, 1001))
+    @test pos_l3l[1] < pos_l3l[2] < 0
+
+    @test ramp_model(range(3, 0, 1001)) ≈ pos_l atol=5e-3 rtol=5e-3
+
+    # Ramp from right
+    IC.set_init_pos!(model, 1, nothing)
+    IC.set_init_pos!(model, 2, nothing)
+    pos_r3r = ramp_model(range(-5, -3, 1001))
+    @test 0 < pos_r3r[1] < pos_r3r[2]
+
+    @test ramp_model(range(-3, 0, 1001)) ≈ pos_r atol=5e-3 rtol=5e-3
+
+    # Ramp to left from middle
+    IC.set_init_pos!(model, 1, -1)
+    IC.set_init_pos!(model, 2, 1)
+    pos_l3r = ramp_model(range(0, 3, 1001))
+    @test pos_l3r[1] < -0.65
+    @test pos_l3r[2] > 0
+
+    # Ramp to right from middle
+    IC.set_init_pos!(model, 1, -1)
+    IC.set_init_pos!(model, 2, 1)
+    pos_r3l = ramp_model(range(0, -3, 1001))
+    @test pos_r3l[2] > 0.65
+    @test pos_r3l[1] < 0
 end

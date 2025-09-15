@@ -1,7 +1,7 @@
 module MSSimIonChainExt
 
 import MSSim.IonChain: IonChain, IonInfo, Function1D,
-    AxialPosInfo, AxialModel, _new_axial_model, update_all_init_pos!
+    AxialPosInfo, AxialModel, _new_axial_model, set_init_pos!, update_all_init_pos!
 
 using JuMP
 using NLopt

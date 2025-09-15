@@ -95,10 +95,10 @@ end
 # insert a barrier after the index i
 function set_barrier!(am::AxialModel, i, pos)
     if i >= 1
-        set_post_barrier(am, i, pos)
+        set_post_barrier!(am, i, pos)
     end
     if i < length(am.pos)
-        set_pre_barrier(am, i + 1, pos)
+        set_pre_barrier!(am, i + 1, pos)
     end
     return am
 end
