@@ -139,21 +139,27 @@ end
             @test solprops2.area == solprops.area
             @test solprops2.areaδ == solprops.areaδ
 
-            solprops_io = IOBuffer()
-            pb_encoder = ProtoEncoder(solprops_io)
-            encode(pb_encoder, solprops)
-            @test solprops_io.size == ProtoBuf._encoded_size(solprops)
+            for extra_fld in (false, true)
+                solprops_io = IOBuffer()
+                pb_encoder = ProtoEncoder(solprops_io)
+                encode(pb_encoder, solprops)
+                if extra_fld
+                    encode(pb_encoder, 100, 1.2)
+                else
+                    @test solprops_io.size == ProtoBuf._encoded_size(solprops)
+                end
 
-            seekstart(solprops_io)
-            pb_decoder = ProtoDecoder(solprops_io)
-            solprops3 = decode(pb_decoder, Seq.SolutionProperties)
-            @test solprops3.total_time == solprops.total_time
-            @test solprops3.modes == solprops.modes
-            @test solprops3.dis == solprops.dis
-            @test solprops3.disδ == solprops.disδ
-            @test solprops3.cumdis == solprops.cumdis
-            @test solprops3.area == solprops.area
-            @test solprops3.areaδ == solprops.areaδ
+                seekstart(solprops_io)
+                pb_decoder = ProtoDecoder(solprops_io)
+                solprops3 = decode(pb_decoder, Seq.SolutionProperties)
+                @test solprops3.total_time == solprops.total_time
+                @test solprops3.modes == solprops.modes
+                @test solprops3.dis == solprops.dis
+                @test solprops3.disδ == solprops.disδ
+                @test solprops3.cumdis == solprops.cumdis
+                @test solprops3.area == solprops.area
+                @test solprops3.areaδ == solprops.areaδ
+            end
 
             @test eval_model1(:rdis, 1) ≈ real(kern.result.val.dis)
             @test eval_model1(:idis, 1) ≈ imag(kern.result.val.dis)
