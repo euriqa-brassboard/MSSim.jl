@@ -10,7 +10,7 @@ function _register(model, potential::Function1D, name)
     if potential.∇²f !== nothing
         register(model, name, 1, potential.f, potential.∇f, potential.∇²f)
     elseif potential.∇f !== nothing
-        register(model, name, 1, potential.f, potential.∇f)
+        register(model, name, 1, potential.f, potential.∇f, autodiff=true)
     else
         register(model, name, 1, potential.f, autodiff=true)
     end
