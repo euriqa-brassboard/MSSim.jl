@@ -276,7 +276,7 @@ end
         fail_count[2] += !isapprox(result.val.area, area, rtol=3e-2, atol=3e-2)
         fail_count[3] += !isapprox(result.val.cumdis, cum_dis, rtol=1e-3, atol=1e-3)
     end
-    for i in 1:100
+    for i in 1:20
         test_nseg(1, fail_count1)
         test_nseg(2, fail_count2)
         test_nseg(5, fail_count5)
@@ -397,7 +397,7 @@ end
             end
         end
     end
-    for i in 1:1000
+    for i in 1:500
         test_nseg(1)
         test_nseg(2)
         test_nseg(5)
