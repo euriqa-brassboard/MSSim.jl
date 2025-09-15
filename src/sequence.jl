@@ -808,6 +808,20 @@ struct SolutionProperties
     area::Vector{Float64}
     areaδ::Vector{Float64}
 end
+Base.:(==)(v1::SolutionProperties, v2::SolutionProperties) =
+    (v1.total_time == v2.total_time && v1.modes == v2.modes &&
+    v1.dis == v2.dis && v1.disδ == v2.disδ && v1.cumdis == v2.cumdis &&
+    v1.area == v2.area && v1.areaδ == v2.areaδ)
+function Base.hash(v::SolutionProperties, h::UInt)
+    h = hash(:SolutionProperties, h)
+    h = hash(v.areaδ, h)
+    h = hash(v.area, h)
+    h = hash(v.cumdis, h)
+    h = hash(v.disδ, h)
+    h = hash(v.dis, h)
+    h = hash(v.modes, h)
+    return hash(v.total_time, h)
+end
 
 Base.Dict(props::SolutionProperties) = Dict(
     "total_time"=>props.total_time,

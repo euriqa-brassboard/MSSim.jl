@@ -8,7 +8,31 @@ const SS = MSSim.SegSeq
 const Seq = MSSim.Sequence
 
 using Combinatorics
-using ProtoBuf
+import ProtoBuf as PB
+
+function _check_pb(v::T, extra_fld) where T
+    io = IOBuffer()
+    encoder = PB.ProtoEncoder(io)
+    PB.encode(encoder, v)
+    if extra_fld
+        max_fld = maximum(PB.field_numbers(T))
+        PB.encode(encoder, max_fld + 1, 1.2)
+    else
+        @test PB._encoded_size(v) == io.size
+    end
+    seekstart(io)
+
+    decoder = PB.ProtoDecoder(io)
+    v2 = PB.decode(decoder, T)
+    @test v == v2
+    @test isbitstype(T) || v !== v2
+    @test hash(v) == hash(v2)
+end
+
+function check_pb(v)
+    _check_pb(v, false)
+    _check_pb(v, true)
+end
 
 function compute_grad(v₋₄, v₋₃, v₋₂, v₋₁, v₁, v₂, v₃, v₄, h)
     return (-(v₄ - v₋₄) / 280 + 4 * (v₃ - v₋₃) / 105
@@ -139,27 +163,7 @@ end
             @test solprops2.area == solprops.area
             @test solprops2.areaδ == solprops.areaδ
 
-            for extra_fld in (false, true)
-                solprops_io = IOBuffer()
-                pb_encoder = ProtoEncoder(solprops_io)
-                encode(pb_encoder, solprops)
-                if extra_fld
-                    encode(pb_encoder, 100, 1.2)
-                else
-                    @test solprops_io.size == ProtoBuf._encoded_size(solprops)
-                end
-
-                seekstart(solprops_io)
-                pb_decoder = ProtoDecoder(solprops_io)
-                solprops3 = decode(pb_decoder, Seq.SolutionProperties)
-                @test solprops3.total_time == solprops.total_time
-                @test solprops3.modes == solprops.modes
-                @test solprops3.dis == solprops.dis
-                @test solprops3.disδ == solprops.disδ
-                @test solprops3.cumdis == solprops.cumdis
-                @test solprops3.area == solprops.area
-                @test solprops3.areaδ == solprops.areaδ
-            end
+            check_pb(solprops)
 
             @test eval_model1(:rdis, 1) ≈ real(kern.result.val.dis)
             @test eval_model1(:idis, 1) ≈ imag(kern.result.val.dis)

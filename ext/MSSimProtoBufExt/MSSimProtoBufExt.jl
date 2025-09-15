@@ -5,8 +5,8 @@ module MSSimProtoBufExt
 import ProtoBuf as PB
 import MSSim.Sequence as Seq
 
-# PB.default_values(::Type{Seq.SolutionProperties}) = (;total_time = zero(Float64), modes = Vector{Float64}(), rdis = Vector{Float64}(), idis = Vector{Float64}(), rdis_det = Vector{Float64}(), idis_det = Vector{Float64}(), rcumdis = Vector{Float64}(), icumdis = Vector{Float64}(), area = Vector{Float64}(), area_det = Vector{Float64}())
-# PB.field_numbers(::Type{Seq.SolutionProperties}) = (;total_time = 1, modes = 2, rdis = 3, idis = 4, rdis_det = 5, idis_det = 6, rcumdis = 7, icumdis = 8, area = 9, area_det = 10)
+# PB.default_values(::Type{Seq.SolutionProperties}) = (;total_time = zero(Float64), modes = Vector{Float64}(), rdis = Vector{Float64}(), idis = Vector{Float64}(), rdisδ = Vector{Float64}(), idisδ = Vector{Float64}(), rcumdis = Vector{Float64}(), icumdis = Vector{Float64}(), area = Vector{Float64}(), areaδ = Vector{Float64}())
+PB.field_numbers(::Type{Seq.SolutionProperties}) = (;total_time = 1, modes = 2, rdis = 3, idis = 4, rdisδ = 5, idisδ = 6, rcumdis = 7, icumdis = 8, area = 9, areaδ = 10)
 
 function PB.decode(d::PB.AbstractProtoDecoder, ::Type{<:Seq.SolutionProperties})
     total_time = zero(Float64)
