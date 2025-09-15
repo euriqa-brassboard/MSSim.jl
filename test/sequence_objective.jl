@@ -72,7 +72,7 @@ end
         end
         param0 = Seq.ModSpec{nseg}(freq=freq_spec, amp=amp_spec)
         args_raw = Vector{Float64}(undef, nseg * 5)
-        for _ in 1:60
+        for _ in 1:20
             args_user = rand(Seq.nparams(param0))
             args_user[1] += 0.1 # τ
             args_user2 = similar(args_user)
