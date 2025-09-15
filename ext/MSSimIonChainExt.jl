@@ -8,13 +8,13 @@ using NLopt
 
 function _register(model, potential::Function1D, name)
     if potential.∇²f !== nothing
-        register(model, name, 1, potential.f, potential.∇f, potential.∇²f)
+        add_nonlinear_operator(model, 1, potential.f, potential.∇f, potential.∇²f,
+                               name=name)
     elseif potential.∇f !== nothing
-        register(model, name, 1, potential.f, potential.∇f, autodiff=true)
+        add_nonlinear_operator(model, 1, potential.f, potential.∇f, name=name)
     else
-        register(model, name, 1, potential.f, autodiff=true)
+        add_nonlinear_operator(model, 1, potential.f, name=name)
     end
-    return
 end
 
 function AxialModel(ions::Vector{IonInfo}, dc::Function1D,
@@ -32,26 +32,26 @@ function AxialModel(ions::Vector{IonInfo}, dc::Function1D,
         @constraint(model, vars[i - 1] <= vars[i])
     end
     pos = [AxialPosInfo(NaN, -Inf, Inf) for i in 1:nions]
-    _register(model, dc, :dc)
+    dc = _register(model, dc, :dc)
     if rf !== nothing
-        _register(model, rf, :rf)
+        rf = _register(model, rf, :rf)
     end
-    obj = @NLexpression(model, 0)
+    obj = 0
     for (i1, ion1) in enumerate(ions)
         pos1 = vars[i1]
         if rf !== nothing
-            obj = @NLexpression(model, obj + dc(pos1) * ion1.charge
-                                + rf(pos1) * (ion1.charge / ion1.mass)^2)
+            obj = @expression(model, obj + dc(pos1) * ion1.charge
+                              + rf(pos1) * (ion1.charge / ion1.mass)^2)
         else
-            obj = @NLexpression(model, obj + dc(pos1) * ion1.charge)
+            obj = @expression(model, obj + dc(pos1) * ion1.charge)
         end
         for i2 in (i1 + 1):nions
             ion2 = ions[i2]
             pos2 = vars[i2]
-            obj = @NLexpression(model, obj + ion1.charge * ion2.charge / (pos2 - pos1))
+            obj = @expression(model, obj + ion1.charge * ion2.charge / (pos2 - pos1))
         end
     end
-    @NLobjective(model, Min, obj)
+    @objective(model, Min, obj)
     return _new_axial_model(model, ions, pos, vars)
 end
 
