@@ -11,7 +11,8 @@ pmap(["sequence_objective",
       "sequence",
       "pure_numeric",
       "ion_chain",
-      "optimizers"]) do file
+      "optimizers",
+      "far_detune"]) do file
           println("Start testing $file")
           @eval module $(Symbol("Test_$(file)_mod"))
           include($(joinpath(@__DIR__, "$(file).jl")))
