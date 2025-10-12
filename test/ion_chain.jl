@@ -5,8 +5,7 @@ using JuMP
 using NLopt
 using StaticArrays
 
-using MSSim
-const IC = MSSim.IonChain
+using MSSim: IonChain as IC
 
 @testset "Ions" begin
     ions = IC.simple_ions(2)

@@ -6,10 +6,7 @@ using Setfield
 using Random
 using QuadGK
 
-using MSSim
-const PN = MSSim.PureNumeric
-const SL = MSSim.SymLinear
-const SS = MSSim.SegSeq
+using MSSim: PureNumeric as PN, SymLinear as SL, SegSeq as SS
 
 function get_Ω_θ_func(Ω, Ω′, φ, δ)
     return t->Ω + Ω′ * t, t->φ + δ * t

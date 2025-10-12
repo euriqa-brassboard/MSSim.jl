@@ -1,10 +1,6 @@
 #!/usr/bin/julia
 
-using MSSim
-const U = MSSim.Utils
-const PN = MSSim.PureNumeric
-const SL = MSSim.SymLinear
-const SS = MSSim.SegSeq
+using MSSim: Utils as U, PureNumeric as PN, SymLinear as SL, SegSeq as SS
 
 using Test
 using QuadGK

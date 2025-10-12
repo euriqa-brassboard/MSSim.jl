@@ -5,9 +5,7 @@ using Test
 using LinearAlgebra
 using Random
 
-import MSSim.Optimizers as Opts
-import MSSim.SymLinear as SL
-import MSSim.Sequence as Seq
+import MSSim: Optimizers as Opts, SymLinear as SL, Sequence as Seq
 
 function compute_grad(v₋₄, v₋₃, v₋₂, v₋₁, v₁, v₂, v₃, v₄, h)
     return (-(v₄ - v₋₄) / 280 + 4 * (v₃ - v₋₃) / 105

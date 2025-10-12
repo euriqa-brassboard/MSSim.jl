@@ -2,10 +2,7 @@
 
 using Test
 
-using MSSim
-const SL = MSSim.SymLinear
-const SS = MSSim.SegSeq
-const Seq = MSSim.Sequence
+using MSSim: SymLinear as SL, SegSeq as SS, Sequence as Seq
 
 using Random
 using LinearAlgebra

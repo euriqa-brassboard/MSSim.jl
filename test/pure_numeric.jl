@@ -1,7 +1,6 @@
 #!/usr/bin/julia
 
-using MSSim
-const PN = MSSim.PureNumeric
+using MSSim: PureNumeric as PN
 
 using Test
 using QuadGK

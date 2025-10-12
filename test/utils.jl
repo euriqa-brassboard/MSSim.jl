@@ -2,8 +2,7 @@
 
 using Test
 using ForwardDiff
-using MSSim
-const U = MSSim.Utils
+using MSSim: Utils as U
 
 @testset "JaggedMatrix" begin
     m = U.JaggedMatrix{Float64}()

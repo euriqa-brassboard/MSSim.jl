@@ -1,17 +1,13 @@
 #!/usr/bin/julia
 
-using MSSim
+using MSSim: Utils as U, SymLinear as SL, SegSeq as SS
 using BenchmarkTools
-
-const U = MSSim.Utils
-const SL = MSSim.SymLinear
-const SS = MSSim.SegSeq
 
 for (cumdis, area_mode, grad) in Iterators.product((false, true), (false, true),
                                                    (false, true))
     @show (cumdis, area_mode, grad)
-    maskv = MSSim.SegSeq.ValueMask(true, true, true, cumdis, area_mode, area_mode)
-    maskg = grad ? maskv : zero(MSSim.SegSeq.ValueMask)
+    maskv = SS.ValueMask(true, true, true, cumdis, area_mode, area_mode)
+    maskg = grad ? maskv : zero(SS.ValueMask)
 
     T = Float64
     SDV = SS.SegData(T, maskv)
