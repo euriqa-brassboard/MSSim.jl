@@ -3,6 +3,7 @@
 module FarDetune
 
 using Static
+using StaticArrays
 
 macro accum_grad(keep, tgt, g, w)
     tgt = esc(tgt)
@@ -103,6 +104,59 @@ end
                                                  @view(Ω2s_g[i + 1]), @view(δs_g[i]));
                                        keep_grad=keep_grad1)
         end
+    end
+    return res
+end
+
+struct AreaTargets{NIons,Vec}
+    targets::Vec
+    weights::Vec
+    function AreaTargets{NIons}() where NIons
+        NPairs = NIons * (NIons - 1) ÷ 2
+        targets = MVector{NPairs,Float64}(undef)
+        weights = MVector{NPairs,Float64}(undef)
+        # broadcast and fill! flattens the loop which is not necessary here.
+        @inbounds for i in 1:NPairs
+            targets[i] = 0
+            weights[i] = 1
+        end
+        return new{NIons,typeof(targets)}(targets, weights)
+    end
+end
+
+Base.@propagate_inbounds function pair_idx(tgt::AreaTargets{NIons}, _i, _j) where NIons
+    if _i > _j
+        i, j = _j, _i
+    else
+        i, j = _i, _j
+    end
+    @boundscheck if i == j || j > NIons || i <= 0
+        throw(BoundsError(tgt, (_i, _j)))
+    end
+    return (2 * NIons - i) * (i - 1) ÷ 2 + (j - i)
+end
+
+Base.@propagate_inbounds Base.getindex(tgt::AreaTargets, i, j) =
+    tgt.targets[pair_idx(tgt, i, j)]
+Base.@propagate_inbounds Base.setindex!(tgt::AreaTargets, v, i, j) =
+    (tgt.targets[pair_idx(tgt, i, j)] = v)
+
+Base.@propagate_inbounds getweight(tgt::AreaTargets, i, j) =
+    tgt.weights[pair_idx(tgt, i, j)]
+Base.@propagate_inbounds setweight!(tgt::AreaTargets, v, i, j) =
+    (tgt.weights[pair_idx(tgt, i, j)] = v)
+
+@inline function (tgt::AreaTargets)(x, grads_out)
+    NPairs = length(tgt.targets)
+    res = 0.0
+    has_grad = !isempty(grads_out)
+    @inbounds @simd ivdep for i in 1:NPairs
+        d = x[i] - tgt.targets[i]
+        dw = d * tgt.weights[i]
+        if has_grad
+            grads_out[i] = 2 * dw
+        end
+        res = muladd(d, dw, res)
     end
     return res
 end

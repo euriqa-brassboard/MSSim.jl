@@ -14,7 +14,7 @@ function numeric_area(τ, Ω11, Ω12, Ω21, Ω22, δ; atol=1e-8, rtol=1e-8)
     return res
 end
 
-@testset "FarDetune" begin
+@testset "FarDetune area kernel" begin
     ωs0 = zeros(1)
     ωs0_2 = zeros(2)
     weights0 = ones(1)
@@ -131,5 +131,69 @@ end
                                      @view(grad4[22:32]), @view(grad4[33:42]))
         @test vseq2 ≈ v1
         @test grad4 ≈ vseq_autodiff.partials
+    end
+end
+
+@testset "FarDetune area target" begin
+    NIons = 10
+    NPairs = NIons * (NIons - 1) ÷ 2
+
+    tgt = FD.AreaTargets{NIons}()
+    @test length(tgt.targets) == NPairs
+    @test length(tgt.weights) == NPairs
+    @test all(tgt.targets .== 0)
+    @test all(tgt.weights .== 1)
+
+    index_map = Dict{NTuple{2,Int},Int}()
+    pair_idx = 0
+    for ion1 in 1:NIons - 1
+        for ion2 in ion1 + 1:NIons
+            pair_idx += 1
+            index_map[(ion1, ion2)] = pair_idx
+            index_map[(ion2, ion1)] = pair_idx
+            @test FD.pair_idx(tgt, ion1, ion2) == pair_idx
+            @test FD.pair_idx(tgt, ion2, ion1) == pair_idx
+        end
+    end
+    @test_throws BoundsError FD.pair_idx(tgt, 0, 1)
+    @test_throws BoundsError FD.pair_idx(tgt, NIons + 1, 1)
+    for ion1 in 1:NIons
+        @test_throws BoundsError FD.pair_idx(tgt, ion1, ion1)
+    end
+    @test NPairs == pair_idx
+
+    grad = zeros(NPairs)
+    for _ in 1:100
+        targets = rand(NPairs)
+        weights = rand(NPairs)
+        xs = rand(NPairs)
+        pair_idx = 0
+        for ion1 in 1:NIons - 1
+            for ion2 in ion1 + 1:NIons
+                pair_idx += 1
+                t = targets[pair_idx]
+                w = weights[pair_idx]
+
+                tgt[ion1, ion2] = t
+                @test tgt[ion1, ion2] == t
+                @test tgt[ion2, ion1] == t
+                @test tgt.targets[index_map[(ion1, ion2)]] == t
+
+                FD.setweight!(tgt, w, ion1, ion2)
+                @test FD.getweight(tgt, ion1, ion2) == w
+                @test FD.getweight(tgt, ion2, ion1) == w
+                @test tgt.weights[index_map[(ion1, ion2)]] == w
+            end
+        end
+
+        v = sum((xs .- targets).^2 .* weights)
+        @test tgt(xs, ()) ≈ v
+        @test tgt(xs, grad) ≈ v
+
+        xs_dual = [ForwardDiff.Dual(xs[i], ntuple(j->Float64(j == i), NPairs))
+                   for i in 1:NPairs]
+        v_dual = sum((xs_dual .- targets).^2 .* weights)
+        @test v_dual.value ≈ v
+        @test grad ≈ v_dual.partials
     end
 end
