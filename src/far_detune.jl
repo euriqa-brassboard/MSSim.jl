@@ -8,13 +8,13 @@ macro accum_grad(keep, tgt, g, w)
     tgt = esc(tgt)
     g = esc(g)
     w = esc(w)
-    quote
-        if dynamic($(esc(keep)))
-            $tgt = muladd($g, $w, $tgt)
-        else
-            $tgt = $g * $w
-        end
-    end
+    # Use an dummy expression to make sure the original source info is preserved
+    :(nothing;
+      if dynamic($(esc(keep)))
+          $tgt = muladd($g, $w, $tgt)
+      else
+          $tgt = $g * $w
+      end)
 end
 
 struct SlotArray{T}
