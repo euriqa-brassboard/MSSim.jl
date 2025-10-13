@@ -17,6 +17,15 @@ macro accum_grad(keep, tgt, g, w)
     end
 end
 
+struct SlotArray{T}
+    slots::T
+    @inline SlotArray(slots...) = new{typeof(slots)}(slots)
+end
+@inline Base.isempty(a::SlotArray) = isempty(a.slots)
+# @inline Base.length(a::SlotArray) = length(a.slots)
+@inline Base.getindex(a::SlotArray, i) = a.slots[i][]
+@inline Base.setindex!(a::SlotArray, v, i) = (a.slots[i][] = v)
+
 @inline function enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ, grad,
                                       weight=static(true);
                                       keep_grad=(τ=static(false), δ=static(false),
@@ -50,7 +59,8 @@ end
                      Ω21=static(true), Ω22=static(true))
     nmodes = length(ωs)
     if nmodes == 0
-        return enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ - zero(eltype(ωs)),
+        return enclosed_area_kernel(zero(τ), zero(Ω11), zero(Ω12), zero(Ω21), zero(Ω22),
+                                    one(δ) - zero(eltype(ωs)),
                                     grad, zero(eltype(weights)); keep_grad=keep_grad)
     end
     res = @inbounds enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ - ωs[1], grad,
@@ -58,6 +68,41 @@ end
     @inbounds for i in 2:nmodes
         res += enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ - ωs[i], grad,
                                     weights[i]; keep_grad=keep_all_grad)
+    end
+    return res
+end
+
+@inline function enclosed_area_seq(τs, Ω1s, Ω2s, δs, ωs, weights,
+                                   τs_g, Ω1s_g, Ω2s_g, δs_g;
+                                   keep_grad=(τ=static(false), δ=static(false),
+                                              Ω1s=static(false), Ω2s=static(false)))
+    nsegs = length(τs)
+    keep_grad0 = (τ=keep_grad.τ, δ=keep_grad.δ, Ω11=keep_grad.Ω1s, Ω12=keep_grad.Ω1s,
+                  Ω21=keep_grad.Ω2s, Ω22=keep_grad.Ω2s)
+    keep_grad1 = (τ=keep_grad.τ, δ=keep_grad.δ, Ω11=static(true), Ω12=keep_grad.Ω1s,
+                  Ω21=static(true), Ω22=keep_grad.Ω2s)
+    @inbounds if isempty(τs_g)
+        res = enclosed_area_modes(τs[1], Ω1s[1], Ω1s[2], Ω2s[1], Ω2s[2], δs[1],
+                                  ωs, weights, ())
+        for i in 2:nsegs
+            res += enclosed_area_modes(τs[i], Ω1s[i], Ω1s[i + 1], Ω2s[i], Ω2s[i + 1],
+                                       δs[i], ωs, weights, ())
+        end
+    else
+        res = enclosed_area_modes(τs[1], Ω1s[1], Ω1s[2], Ω2s[1], Ω2s[2], δs[1],
+                                  ωs, weights,
+                                  SlotArray(@view(τs_g[1]), @view(Ω1s_g[1]),
+                                            @view(Ω1s_g[2]), @view(Ω2s_g[1]),
+                                            @view(Ω2s_g[2]), @view(δs_g[1]));
+                                  keep_grad=keep_grad0)
+        for i in 2:nsegs
+            res += enclosed_area_modes(τs[i], Ω1s[i], Ω1s[i + 1], Ω2s[i], Ω2s[i + 1],
+                                       δs[i], ωs, weights,
+                                       SlotArray(@view(τs_g[i]), @view(Ω1s_g[i]),
+                                                 @view(Ω1s_g[i + 1]), @view(Ω2s_g[i]),
+                                                 @view(Ω2s_g[i + 1]), @view(δs_g[i]));
+                                       keep_grad=keep_grad1)
+        end
     end
     return res
 end
