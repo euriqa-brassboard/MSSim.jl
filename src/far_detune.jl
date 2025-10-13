@@ -49,6 +49,10 @@ end
     keep_all_grad = (τ=static(true), δ=static(true), Ω11=static(true), Ω12=static(true),
                      Ω21=static(true), Ω22=static(true))
     nmodes = length(ωs)
+    if nmodes == 0
+        return enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ - zero(eltype(ωs)),
+                                    grad, zero(eltype(weights)); keep_grad=keep_grad)
+    end
     res = @inbounds enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ - ωs[1], grad,
                                          weights[1]; keep_grad=keep_grad)
     @inbounds for i in 2:nmodes

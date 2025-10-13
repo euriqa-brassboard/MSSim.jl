@@ -45,13 +45,16 @@ end
 
         vs_grad = FD.enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ, grad)
         @test vs_grad ≈ vs
-        for i in 1:6
-            @test grad[i] ≈ vs_autodiff.partials[i]
-        end
+        @test grad ≈ vs_autodiff.partials
 
         vs2_grad = FD.enclosed_area_modes(τ, Ω11, Ω12, Ω21, Ω22, δ, ωs0, weights0, grad2)
         @test vs2_grad ≈ vs
         @test grad2 ≈ grad
+
+        vs0 = FD.enclosed_area_modes(τ, Ω11, Ω12, Ω21, Ω22, δ, Float64[],
+                                     Float64[], grad2)
+        @test vs0 == 0
+        @test grad2 == zeros(6)
 
         vs2_grad = FD.enclosed_area_modes(τ, Ω11, Ω12, Ω21, Ω22, δ,
                                           ωs0_2, weights0_2, grad2)
@@ -78,8 +81,6 @@ end
 
         vs2_grad = FD.enclosed_area_modes(τ, Ω11, Ω12, Ω21, Ω22, δ, ωs, weights, grad2)
         @test vs2_grad ≈ vs2
-        for i in 1:6
-            @test grad2[i] ≈ vs2_autodiff.partials[i]
-        end
+        @test grad2 ≈ vs2_autodiff.partials
     end
 end
