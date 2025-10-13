@@ -23,8 +23,8 @@ struct SlotArray{T}
 end
 @inline Base.isempty(a::SlotArray) = isempty(a.slots)
 # @inline Base.length(a::SlotArray) = length(a.slots)
-@inline Base.getindex(a::SlotArray, i) = a.slots[i][]
-@inline Base.setindex!(a::SlotArray, v, i) = (a.slots[i][] = v)
+Base.@propagate_inbounds Base.getindex(a::SlotArray, i) = a.slots[i][]
+Base.@propagate_inbounds Base.setindex!(a::SlotArray, v, i) = (a.slots[i][] = v)
 
 @inline function enclosed_area_kernel(τ, Ω11, Ω12, Ω21, Ω22, δ, grad,
                                       weight=static(true);
