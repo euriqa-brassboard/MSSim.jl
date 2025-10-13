@@ -52,11 +52,13 @@ end
         @test vs2_grad ≈ vs
         @test grad2 ≈ grad
 
+        grad2 .= 1
         vs0 = FD.enclosed_area_modes(τ, Ω11, Ω12, Ω21, Ω22, δ, Float64[],
                                      Float64[], grad2)
         @test vs0 == 0
         @test grad2 == zeros(6)
 
+        grad2 .= 1
         vs2_grad = FD.enclosed_area_modes(τ, Ω11, Ω12, Ω21, Ω22, δ,
                                           ωs0_2, weights0_2, grad2)
         @test vs2_grad ≈ 2 * vs
@@ -80,6 +82,7 @@ end
             ForwardDiff.Dual(δ, (0.0, 0.0, 0.0, 0.0, 0.0, 1.0)), ωs, weights, ())
         @test vs2_autodiff.value ≈ vs2
 
+        grad2 .= 1
         vs2_grad = FD.enclosed_area_modes(τ, Ω11, Ω12, Ω21, Ω22, δ, ωs, weights, grad2)
         @test vs2_grad ≈ vs2
         @test grad2 ≈ vs2_autodiff.partials
