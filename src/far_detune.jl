@@ -124,27 +124,37 @@ struct AreaTargets{NIons,Vec}
     end
 end
 
-Base.@propagate_inbounds function pair_idx(tgt::AreaTargets{NIons}, _i, _j) where NIons
-    if _i > _j
-        i, j = _j, _i
-    else
-        i, j = _i, _j
-    end
-    @boundscheck if i == j || j > NIons || i <= 0
-        throw(BoundsError(tgt, (_i, _j)))
+@noinline throw_boundserror(A, I) = throw(BoundsError(A, I))
+@inline Base.checkbounds(::Type{Bool}, tgt::AreaTargets{NIons}, i, j) where {NIons} =
+    0 < i <= NIons && 0 < j <= NIons && i != j
+@inline Base.checkbounds(tgt::AreaTargets, i, j) =
+    checkbounds(Bool, tgt, i, j) || throw_boundserror(tgt, (i, j))
+
+@inline function pair_idx(NIons::Number, i, j)
+    if i > j
+        i, j = j, i
     end
     return (2 * NIons - i) * (i - 1) ÷ 2 + (j - i)
 end
+@inline pair_idx(tgt::AreaTargets{NIons}, i, j) where NIons = pair_idx(NIons, i, j)
 
-Base.@propagate_inbounds Base.getindex(tgt::AreaTargets, i, j) =
-    tgt.targets[pair_idx(tgt, i, j)]
-Base.@propagate_inbounds Base.setindex!(tgt::AreaTargets, v, i, j) =
-    (tgt.targets[pair_idx(tgt, i, j)] = v)
+Base.@propagate_inbounds function Base.getindex(tgt::AreaTargets, i, j)
+    @boundscheck checkbounds(tgt, i, j)
+    return @inbounds tgt.targets[pair_idx(tgt, i, j)]
+end
+Base.@propagate_inbounds function Base.setindex!(tgt::AreaTargets, v, i, j)
+    @boundscheck checkbounds(tgt, i, j)
+    @inbounds tgt.targets[pair_idx(tgt, i, j)] = v
+end
 
-Base.@propagate_inbounds getweight(tgt::AreaTargets, i, j) =
-    tgt.weights[pair_idx(tgt, i, j)]
-Base.@propagate_inbounds setweight!(tgt::AreaTargets, v, i, j) =
-    (tgt.weights[pair_idx(tgt, i, j)] = v)
+Base.@propagate_inbounds function getweight(tgt::AreaTargets, i, j)
+    @boundscheck checkbounds(tgt, i, j)
+    return @inbounds tgt.weights[pair_idx(tgt, i, j)]
+end
+Base.@propagate_inbounds function setweight!(tgt::AreaTargets, v, i, j)
+    @boundscheck checkbounds(tgt, i, j)
+    @inbounds tgt.weights[pair_idx(tgt, i, j)] = v
+end
 
 @inline function (tgt::AreaTargets)(x, grads_out)
     NPairs = length(tgt.targets)

@@ -153,12 +153,17 @@ end
             index_map[(ion2, ion1)] = pair_idx
             @test FD.pair_idx(tgt, ion1, ion2) == pair_idx
             @test FD.pair_idx(tgt, ion2, ion1) == pair_idx
+            @test FD.pair_idx(NIons, ion1, ion2) == pair_idx
+            @test FD.pair_idx(NIons, ion2, ion1) == pair_idx
         end
     end
-    @test_throws BoundsError FD.pair_idx(tgt, 0, 1)
-    @test_throws BoundsError FD.pair_idx(tgt, NIons + 1, 1)
+    @test_throws BoundsError tgt[0, 1]
+    @test_throws BoundsError tgt[NIons + 1, 1]
+    @test_throws BoundsError FD.getweight(tgt, 0, 1)
+    @test_throws BoundsError FD.getweight(tgt, NIons + 1, 1)
     for ion1 in 1:NIons
-        @test_throws BoundsError FD.pair_idx(tgt, ion1, ion1)
+        @test_throws BoundsError tgt[ion1, ion1]
+        @test_throws BoundsError FD.getweight(tgt, ion1, ion1)
     end
     @test NPairs == pair_idx
 
