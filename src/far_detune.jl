@@ -161,4 +161,117 @@ Base.@propagate_inbounds setweight!(tgt::AreaTargets, v, i, j) =
     return res
 end
 
+mutable struct Kernel{NSeg,NModes,NIons,Omegas,Weights,PairBuff,ObjBuff}
+    const ωs::Omegas
+    const weights::Weights
+    const pair_buffs::PairBuff
+    const obj_args_buff::ObjBuff
+    const obj_grad_buff::ObjBuff
+    function Kernel{NSeg,NModes,NIons}(_ωs, bij, ηs) where {NSeg,NModes,NIons}
+        ωs = SVector{NModes,Float64}(_ωs)
+        NPairs = NIons * (NIons - 1) ÷ 2
+        m_weights = MMatrix{NModes,NPairs,Float64}(undef)
+        pair_idx = 0
+        @inbounds for ion1 in 1:NIons - 1
+            for ion2 in ion1 + 1:NIons
+                pair_idx += 1
+                nions = length(ηs)
+                @simd ivdep for modei in 1:NModes
+                    m_weights[modei, pair_idx] =
+                        bij[modei, ion1] * bij[modei, ion2] * ηs[modei]^2
+                end
+            end
+        end
+        weights = SMatrix(m_weights)
+        pair_buffs = MMatrix{4 * NSeg + 2,NPairs,Float64}(undef)
+        obj_args_buff = MVector{NPairs,Float64}(undef)
+        obj_grad_buff = MVector{NPairs,Float64}(undef)
+        return new{NSeg,NModes,NIons,typeof(ωs),typeof(weights),
+                   typeof(pair_buffs),typeof(obj_args_buff)}(ωs, weights, pair_buffs,
+                                                             obj_args_buff,
+                                                             obj_grad_buff)
+    end
+    function Kernel{NSeg}(ωs, bij, ηs) where {NSeg}
+        NModes, NIons = size(bij)
+        @assert length(ωs) == NModes
+        @assert length(ηs) == NModes
+        return Kernel{NSeg,NModes,NIons}(ωs, bij, ηs)
+    end
+end
+
+@inline function _copy!(tgt, src, scale, keep)
+    @inbounds @simd ivdep for i in 1:length(tgt)
+        tgt[i] = dynamic(keep) ? muladd(src[i], scale, tgt[i]) : (src[i] * scale)
+    end
+end
+
+@inline function _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, grads_δs, pair_buff,
+                              w, keep1, keep2, NSeg)
+    @inbounds begin
+        _copy!(grads_τs, @view(pair_buff[1:NSeg]), w, keep1)
+        _copy!(grads_Ω1s, @view(pair_buff[NSeg + 1:2 * NSeg + 1]), w, keep1)
+        _copy!(grads_Ω2s, @view(pair_buff[2 * NSeg + 2:3 * NSeg + 2]), w, keep2)
+        _copy!(grads_δs, @view(pair_buff[3 * NSeg + 3:4 * NSeg + 2]), w, keep1)
+    end
+end
+
+@inline function _evaluate(kern::Kernel{NSeg,NModes,NIons}, @specialize(obj),
+                           x, grads_out, has_grad) where {NSeg,NModes,NIons}
+    pair_idx = 0
+    τs = @inbounds @view(x[1:NSeg])
+    offsetδ = NSeg + NIons * (NSeg + 1)
+    δs = @inbounds @view(x[offsetδ + 1:offsetδ + NSeg])
+    @inbounds for ion1 in 1:NIons - 1
+        offset1 = NSeg + (ion1 - 1) * (NSeg + 1)
+        Ω1s = @view(x[offset1 + 1:offset1 + NSeg + 1])
+        for ion2 in ion1 + 1:NIons
+            pair_idx += 1
+            offset2 = NSeg + (ion2 - 1) * (NSeg + 1)
+            Ω2s = @view(x[offset2 + 1:offset2 + NSeg + 1])
+            ws = @view(kern.weights[:, pair_idx])
+            pair_buff = @view(kern.pair_buffs[:, pair_idx])
+            kern.obj_args_buff[pair_idx] =
+                enclosed_area_seq(τs, Ω1s, Ω2s, δs, kern.ωs, ws, @view(pair_buff[1:NSeg]),
+                                  @view(pair_buff[NSeg + 1:2 * NSeg + 1]),
+                                  @view(pair_buff[2 * NSeg + 2:3 * NSeg + 2]),
+                                  @view(pair_buff[3 * NSeg + 3:4 * NSeg + 2]))
+        end
+    end
+    if !dynamic(has_grad)
+        return obj(kern.obj_args_buff, ())
+    end
+    res = obj(kern.obj_args_buff, kern.obj_grad_buff)
+    pair_idx = 0
+    grads_τs = @inbounds @view(grads_out[1:NSeg])
+    grads_δs = @inbounds @view(grads_out[offsetδ + 1:offsetδ + NSeg])
+    @inbounds for ion1 in 1:NIons - 1
+        offset1 = NSeg + (ion1 - 1) * (NSeg + 1)
+        grads_Ω1s = @view(grads_out[offset1 + 1:offset1 + NSeg + 1])
+        for ion2 in ion1 + 1:NIons
+            pair_idx += 1
+            offset2 = NSeg + (ion2 - 1) * (NSeg + 1)
+            grads_Ω2s = @view(grads_out[offset2 + 1:offset2 + NSeg + 1])
+            pair_buff = @view(kern.pair_buffs[:, pair_idx])
+            grad_weight = kern.obj_grad_buff[pair_idx]
+            if ion1 > 1
+                _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, grads_δs, pair_buff,
+                             grad_weight, static(true), static(true), NSeg)
+            elseif pair_idx > 1
+                _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, grads_δs, pair_buff,
+                             grad_weight, static(true), static(false), NSeg)
+            else
+                _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, grads_δs, pair_buff,
+                             grad_weight, static(false), static(false), NSeg)
+            end
+        end
+    end
+    return res
+end
+
+(kern::Kernel)(@specialize(obj), x, grads_out) = if isempty(grads_out)
+    return _evaluate(kern, obj, x, (), static(false))
+else
+    return _evaluate(kern, obj, x, grads_out, static(true))
+end
+
 end

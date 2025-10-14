@@ -197,3 +197,72 @@ end
         @test grad ≈ v_dual.partials
     end
 end
+
+function compute_grad(v₋₄, v₋₃, v₋₂, v₋₁, v₁, v₂, v₃, v₄, h)
+    return (-(v₄ - v₋₄) / 280 + 4 * (v₃ - v₋₃) / 105
+            - (v₂ - v₋₂) / 5 + 4 * (v₁ - v₋₁) / 5) / h
+end
+
+@testset "FarDetune Kernel" begin
+    NSeg = 10
+    NModes = 6
+    NIons = 4
+    NPairs = NIons * (NIons - 1) ÷ 2
+    tgt = FD.AreaTargets{NIons}()
+
+    obj_args = Vector{Float64}(undef, NPairs)
+    arg_obj_res = 0.0
+    function arg_obj(x, grad)
+        obj_args .= x
+        return arg_obj_res::Float64
+    end
+
+    grad = Vector{Float64}(undef, NSeg * 2 + (NSeg + 1) * NIons)
+    for _ in 1:50
+        ωs = rand(NModes) .- 0.8
+        bij = rand(NModes, NIons) .- 0.5
+        ηs = rand(NModes) .+ 0.01
+        tgt.targets .= rand.()
+        tgt.weights .= rand.()
+        arg_obj_res = rand()
+
+        τs = rand(NSeg) .+ 0.2
+        all_Ωs = ntuple(_->rand(NSeg + 1) .+ 0.1, NIons)
+        δs = rand(NSeg) .+ 0.5
+        xs = [τs; all_Ωs...; δs]
+
+        kern = FD.Kernel{NSeg}(ωs, bij, ηs)
+        @test kern isa FD.Kernel{NSeg,NModes,NIons}
+        for ion1 in 1:NIons - 1
+            for ion2 in ion1 + 1:NIons
+                @test kern.weights[:, FD.pair_idx(tgt, ion1, ion2)] == bij[:, ion1] .* bij[:, ion2] .* ηs.^2
+            end
+        end
+
+        @test kern(arg_obj, xs, ()) == arg_obj_res
+        for ion1 in 1:NIons - 1
+            for ion2 in ion1 + 1:NIons
+                pair_idx = FD.pair_idx(tgt, ion1, ion2)
+                @test FD.enclosed_area_seq(τs, all_Ωs[ion1], all_Ωs[ion2], δs,
+                                           ωs, kern.weights[:, pair_idx],
+                                           (), (), (), ()) ≈ obj_args[pair_idx]
+            end
+        end
+        v0 = tgt(obj_args, ())
+        @test kern(tgt, xs, ()) ≈ v0
+        @test kern(tgt, xs, grad) ≈ v0
+
+        xs2 = copy(xs)
+        for xi in 1:length(xs)
+            xs2 .= xs
+            function eval_at(x)
+                xs2[xi] = xs[xi] + x
+                return kern(tgt, xs2, ())
+            end
+            h = 0.001 / 4
+            hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
+            gn = compute_grad(eval_at.(hs)..., h)
+            @test gn ≈ grad[xi] rtol=1e-7 atol=1e-7
+        end
+    end
+end
