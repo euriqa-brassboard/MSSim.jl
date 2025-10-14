@@ -2,7 +2,15 @@
 
 using Distributed
 
-addprocs(Sys.CPU_THREADS)
+env_nproc = get(ENV, "MSSIM_NPROC", nothing)
+if env_nproc === nothing
+    addprocs(Sys.CPU_THREADS)
+else
+    env_nproc = parse(Int, env_nproc)
+    if env_nproc > 0
+        addprocs(env_nproc)
+    end
+end
 
 pmap(["sequence_objective",
       "sym_linear",

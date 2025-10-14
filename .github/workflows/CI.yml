@@ -21,16 +21,23 @@ jobs:
           - windows-latest
         arch:
           - x64
+        nproc:
+          - 1
         exclude:
           - version: "nightly"
             os: windows-latest
             arch: x64
+            nproc: 1
         include:
           - version: "1"
             os: macOS-latest
             arch: aarch64
+            nproc: 0
     steps:
       - uses: actions/checkout@v5
+      - name: Disable multiprocess
+        if: ${{ matrix.nproc == 0 }}
+        run: echo "MSSIM_NPROC=0" >> $GITHUB_ENV
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
