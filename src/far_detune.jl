@@ -137,8 +137,14 @@ end
     return (2 * NIons - i) * (i - 1) ÷ 2 + (j - i)
 end
 @inline pair_idx(tgt::AreaTargets{NIons}, i, j) where NIons = pair_idx(NIons, i, j)
+function Base.Matrix(tgt::AreaTargets{NIons}) where {NIons}
+    return Float64[tgt[i, j] for i in 1:NIons, j in 1:NIons]
+end
 
 Base.@propagate_inbounds function Base.getindex(tgt::AreaTargets, i, j)
+    if i == j
+        return 0.0
+    end
     @boundscheck checkbounds(tgt, i, j)
     return @inbounds tgt.targets[pair_idx(tgt, i, j)]
 end
@@ -225,8 +231,8 @@ end
     end
 end
 
-@inline function _evaluate(kern::Kernel{NSeg,NModes,NIons}, @specialize(obj),
-                           x, grads_out, has_grad) where {NSeg,NModes,NIons}
+@inline function _evaluate_obj_args(kern::Kernel{NSeg,NModes,NIons},
+                                    x, has_grad) where {NSeg,NModes,NIons}
     pair_idx = 0
     τs = @inbounds @view(x[1:NSeg])
     offsetδ = NSeg + NIons * (NSeg + 1)
@@ -240,19 +246,32 @@ end
             Ω2s = @view(x[offset2 + 1:offset2 + NSeg + 1])
             ws = @view(kern.weights[:, pair_idx])
             pair_buff = @view(kern.pair_buffs[:, pair_idx])
-            kern.obj_args_buff[pair_idx] =
-                enclosed_area_seq(τs, Ω1s, Ω2s, δs, kern.ωs, ws, @view(pair_buff[1:NSeg]),
-                                  @view(pair_buff[NSeg + 1:2 * NSeg + 1]),
-                                  @view(pair_buff[2 * NSeg + 2:3 * NSeg + 2]),
-                                  @view(pair_buff[3 * NSeg + 3:4 * NSeg + 2]))
+            if dynamic(has_grad)
+                kern.obj_args_buff[pair_idx] =
+                    enclosed_area_seq(τs, Ω1s, Ω2s, δs, kern.ωs, ws,
+                                      @view(pair_buff[1:NSeg]),
+                                      @view(pair_buff[NSeg + 1:2 * NSeg + 1]),
+                                      @view(pair_buff[2 * NSeg + 2:3 * NSeg + 2]),
+                                      @view(pair_buff[3 * NSeg + 3:4 * NSeg + 2]))
+            else
+                kern.obj_args_buff[pair_idx] =
+                    enclosed_area_seq(τs, Ω1s, Ω2s, δs, kern.ωs, ws,
+                                      (), (), (), ())
+            end
         end
     end
+end
+
+@inline function _evaluate(kern::Kernel{NSeg,NModes,NIons}, @specialize(obj),
+                           x, grads_out, has_grad) where {NSeg,NModes,NIons}
+    _evaluate_obj_args(kern, x, has_grad)
     if !dynamic(has_grad)
         return obj(kern.obj_args_buff, ())
     end
     res = obj(kern.obj_args_buff, kern.obj_grad_buff)
     pair_idx = 0
     grads_τs = @inbounds @view(grads_out[1:NSeg])
+    offsetδ = NSeg + NIons * (NSeg + 1)
     grads_δs = @inbounds @view(grads_out[offsetδ + 1:offsetδ + NSeg])
     @inbounds for ion1 in 1:NIons - 1
         offset1 = NSeg + (ion1 - 1) * (NSeg + 1)
@@ -282,6 +301,13 @@ end
     return _evaluate(kern, obj, x, (), static(false))
 else
     return _evaluate(kern, obj, x, grads_out, static(true))
+end
+
+function AreaTargets(kern::Kernel{NSeg,NModes,NIons}, x) where {NSeg,NModes,NIons}
+    _evaluate_obj_args(kern, x, static(false))
+    tgt = AreaTargets{NIons}()
+    tgt.targets .= kern.obj_args_buff
+    return tgt
 end
 
 end

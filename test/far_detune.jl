@@ -162,7 +162,8 @@ end
     @test_throws BoundsError FD.getweight(tgt, 0, 1)
     @test_throws BoundsError FD.getweight(tgt, NIons + 1, 1)
     for ion1 in 1:NIons
-        @test_throws BoundsError tgt[ion1, ion1]
+        @test tgt[ion1, ion1] == 0
+        @test_throws BoundsError tgt[ion1, ion1] = 0.0
         @test_throws BoundsError FD.getweight(tgt, ion1, ion1)
     end
     @test NPairs == pair_idx
@@ -188,6 +189,17 @@ end
                 @test FD.getweight(tgt, ion1, ion2) == w
                 @test FD.getweight(tgt, ion2, ion1) == w
                 @test tgt.weights[index_map[(ion1, ion2)]] == w
+            end
+        end
+
+        m = Matrix(tgt)
+        for ion1 in 1:NIons
+            for ion2 in 1:NIons
+                if ion1 == ion2
+                    @test m[ion1, ion2] == 0
+                else
+                    @test m[ion1, ion2] == targets[FD.pair_idx(NIons, ion1, ion2)]
+                end
             end
         end
 
@@ -269,5 +281,8 @@ end
             gn = compute_grad(eval_at.(hs)..., h)
             @test gn ≈ grad[xi] rtol=1e-7 atol=1e-7
         end
+
+        tgt2 = FD.AreaTargets(kern, xs)
+        @test tgt2.targets ≈ obj_args
     end
 end
