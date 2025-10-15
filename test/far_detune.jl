@@ -234,6 +234,19 @@ end
         return arg_obj_res::Float64
     end
 
+    time_weight_cb1 = FD.TotalTimeWeight{NSeg}() do time, grads
+        if !isempty(grads)
+            grads[1] = 1
+        end
+        return time
+    end
+    time_weight_cb2 = FD.TotalTimeWeight{NSeg}() do time, grads
+        if !isempty(grads)
+            grads[1] = 2 * time
+        end
+        return time^2
+    end
+
     grad = Vector{Float64}(undef, NSeg * 2 + (NSeg + 1) * NIons)
     for _ in 1:50
         ωs = rand(NModes) .- 0.8
@@ -266,20 +279,31 @@ end
             end
         end
         v0 = tgt(obj_args, ())
-        @test kern(tgt, xs, ()) ≈ v0
-        @test kern(tgt, xs, grad) ≈ v0
 
-        xs2 = copy(xs)
-        for xi in 1:length(xs)
-            xs2 .= xs
-            function eval_at(x)
-                xs2[xi] = xs[xi] + x
-                return kern(tgt, xs2, ())
+        function test_val_grad(cb, v)
+            @test cb(xs, ()) ≈ v
+            @test cb(xs, grad) ≈ v
+            xs2 = copy(xs)
+            for xi in 1:length(xs)
+                xs2 .= xs
+                function eval_at(x)
+                    xs2[xi] = xs[xi] + x
+                    return cb(xs2, ())
+                end
+                h = 0.001 / 4
+                hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
+                gn = compute_grad(eval_at.(hs)..., h)
+                @test gn ≈ grad[xi] rtol=1e-7 atol=1e-7
             end
-            h = 0.001 / 4
-            hs = (-4, -3, -2, -1, 1, 2, 3, 4) .* h
-            gn = compute_grad(eval_at.(hs)..., h)
-            @test gn ≈ grad[xi] rtol=1e-7 atol=1e-7
+        end
+        test_val_grad(v0) do _xs, _grad
+            return kern(tgt, _xs, _grad)
+        end
+        test_val_grad(v0 * sum(τs)) do _xs, _grad
+            return time_weight_cb1((args...)->kern(tgt, args...), _xs, _grad)
+        end
+        test_val_grad(v0 * sum(τs)^2) do _xs, _grad
+            return time_weight_cb2((args...)->kern(tgt, args...), _xs, _grad)
         end
 
         tgt2 = FD.AreaTargets(kern, xs)

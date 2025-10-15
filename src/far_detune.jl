@@ -310,4 +310,32 @@ function AreaTargets(kern::Kernel{NSeg,NModes,NIons}, x) where {NSeg,NModes,NIon
     return tgt
 end
 
+struct TotalTimeWeight{NSeg,CB}
+    time_cb::CB
+    TotalTimeWeight{NSeg}(cb::CB) where {NSeg,CB} = new{NSeg,CB}(cb)
+end
+
+function (f::TotalTimeWeight{NSeg})(@specialize(cb), x, grads) where NSeg
+    total_time = 0.0
+    @inbounds @simd ivdep for i in 1:NSeg
+        total_time += x[i]
+    end
+    if isempty(grads)
+        return f.time_cb(total_time, ()) * cb(x, ())
+    end
+    cb_res = cb(x, grads)
+    time_grads = MVector{1,Float64}(undef)
+    time_res = @inline f.time_cb(total_time, time_grads)
+    time_grad = @inbounds time_grads[1]
+    res = time_res * cb_res
+    NArgs = length(grads)
+    @inbounds @simd ivdep for i in 1:NSeg
+        grads[i] = muladd(grads[i], time_res, time_grad * cb_res)
+    end
+    @inbounds @simd ivdep for i in NSeg + 1:NArgs
+        grads[i] = grads[i] * time_res
+    end
+    return res
+end
+
 end
