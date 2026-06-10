@@ -206,9 +206,7 @@ mutable struct Kernel{NSeg,NModes,NIons,Omegas,Weights,PairBuff,ObjBuff}
     const pair_buffs::PairBuff
     const obj_args_buff::ObjBuff
     const obj_grad_buff::ObjBuff
-    function Kernel{NSeg,NModes,NIons}(_ωs, bij, ηs;
-                                       weights=native_mode_weights(bij, ηs; NModes=NModes,
-                                                                   NIons=NIons)) where {NSeg,NModes,NIons}
+    function Kernel{NSeg,NModes,NIons}(_ωs; weights) where {NSeg,NModes,NIons}
         ωs = SVector{NModes,Float64}(_ωs)
         NPairs = NIons * (NIons - 1) ÷ 2
         _weights = SMatrix{NModes,NPairs,Float64}(weights)
@@ -220,11 +218,20 @@ mutable struct Kernel{NSeg,NModes,NIons,Omegas,Weights,PairBuff,ObjBuff}
                                                              obj_args_buff,
                                                              obj_grad_buff)
     end
-    function Kernel{NSeg}(ωs, bij, ηs; kws...) where {NSeg}
+    function Kernel{NSeg,NModes,NIons}(_ωs, bij, ηs) where {NSeg,NModes,NIons}
+        return Kernel{NSeg,NModes,NIons}(_ωs; weights=native_mode_weights(bij, ηs; NModes=NModes, NIons=NIons))
+    end
+    function Kernel{NSeg}(ωs, bij, ηs) where {NSeg}
         NModes, NIons = size(bij)
         @assert length(ωs) == NModes
         @assert length(ηs) == NModes
-        return Kernel{NSeg,NModes,NIons}(ωs, bij, ηs; kws...)
+        return Kernel{NSeg,NModes,NIons}(ωs, bij, ηs)
+    end
+    function Kernel{NSeg}(ωs; weights) where {NSeg}
+        NModes, NIons = size(bij)
+        @assert length(ωs) == NModes
+        @assert length(ηs) == NModes
+        return Kernel{NSeg,NModes,NIons}(ωs; weights=weights)
     end
 end
 
