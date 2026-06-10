@@ -177,7 +177,7 @@ end
     return res
 end
 
-function native_couple(bij, ηs; NModes=nothing, NIons=nothing)
+function native_mode_weights(bij, ηs; NModes=nothing, NIons=nothing)
     if NModes === nothing
         NModes = size(bij, 1)
     end
@@ -207,8 +207,8 @@ mutable struct Kernel{NSeg,NModes,NIons,Omegas,Weights,PairBuff,ObjBuff}
     const obj_args_buff::ObjBuff
     const obj_grad_buff::ObjBuff
     function Kernel{NSeg,NModes,NIons}(_ωs, bij, ηs;
-                                       weights=native_couple(bij, ηs;
-                                                             NModes=NModes, NIons=NIons)) where {NSeg,NModes,NIons}
+                                       weights=native_mode_weights(bij, ηs; NModes=NModes,
+                                                                   NIons=NIons)) where {NSeg,NModes,NIons}
         ωs = SVector{NModes,Float64}(_ωs)
         NPairs = NIons * (NIons - 1) ÷ 2
         _weights = SMatrix{NModes,NPairs,Float64}(weights)
