@@ -177,13 +177,9 @@ end
     return res
 end
 
-function native_mode_weights(bij, ηs; NModes=nothing, NIons=nothing)
-    if NModes === nothing
-        NModes = size(bij, 1)
-    end
-    if NIons === nothing
-        NIons = size(bij, 2)
-    end
+function native_mode_weights(bij, ηs)
+    NModes = size(bij, 1)
+    NIons = size(bij, 2)
     NPairs = NIons * (NIons - 1) ÷ 2
     m_weights = Matrix{Float64}(undef, NModes,NPairs)
     pair_idx = 0
@@ -219,7 +215,7 @@ mutable struct Kernel{NSeg,NModes,NIons,Omegas,Weights,PairBuff,ObjBuff}
                                                              obj_grad_buff)
     end
     function Kernel{NSeg,NModes,NIons}(_ωs, bij, ηs) where {NSeg,NModes,NIons}
-        return Kernel{NSeg,NModes,NIons}(_ωs; weights=native_mode_weights(bij, ηs; NModes=NModes, NIons=NIons))
+        return Kernel{NSeg,NModes,NIons}(_ωs; weights=native_mode_weights(bij, ηs))
     end
     function Kernel{NSeg}(ωs, bij, ηs) where {NSeg}
         NModes, NIons = size(bij)
