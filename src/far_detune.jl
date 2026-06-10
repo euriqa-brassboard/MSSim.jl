@@ -177,41 +177,54 @@ end
     return res
 end
 
+function native_couple(bij, ηs; NModes=nothing, NIons=nothing)
+    if NModes === nothing
+        NModes = size(bij, 1)
+    end
+    if NIons === nothing
+        NIons = size(bij, 2)
+    end
+    NPairs = NIons * (NIons - 1) ÷ 2
+    m_weights = Matrix{Float64}(undef, NModes,NPairs)
+    pair_idx = 0
+    @inbounds for ion1 in 1:NIons - 1
+        for ion2 in ion1 + 1:NIons
+            pair_idx += 1
+            nions = length(ηs)
+            @simd ivdep for modei in 1:NModes
+                m_weights[modei, pair_idx] =
+                    bij[modei, ion1] * bij[modei, ion2] * ηs[modei]^2
+            end
+        end
+    end
+    return m_weights
+end
+
 mutable struct Kernel{NSeg,NModes,NIons,Omegas,Weights,PairBuff,ObjBuff}
     const ωs::Omegas
     const weights::Weights
     const pair_buffs::PairBuff
     const obj_args_buff::ObjBuff
     const obj_grad_buff::ObjBuff
-    function Kernel{NSeg,NModes,NIons}(_ωs, bij, ηs) where {NSeg,NModes,NIons}
+    function Kernel{NSeg,NModes,NIons}(_ωs, bij, ηs;
+                                       weights=native_couple(bij, ηs;
+                                                             NModes=NModes, NIons=NIons)) where {NSeg,NModes,NIons}
         ωs = SVector{NModes,Float64}(_ωs)
         NPairs = NIons * (NIons - 1) ÷ 2
-        m_weights = MMatrix{NModes,NPairs,Float64}(undef)
-        pair_idx = 0
-        @inbounds for ion1 in 1:NIons - 1
-            for ion2 in ion1 + 1:NIons
-                pair_idx += 1
-                nions = length(ηs)
-                @simd ivdep for modei in 1:NModes
-                    m_weights[modei, pair_idx] =
-                        bij[modei, ion1] * bij[modei, ion2] * ηs[modei]^2
-                end
-            end
-        end
-        weights = SMatrix(m_weights)
+        _weights = SMatrix{NModes,NPairs,Float64}(weights)
         pair_buffs = MMatrix{4 * NSeg + 2,NPairs,Float64}(undef)
         obj_args_buff = MVector{NPairs,Float64}(undef)
         obj_grad_buff = MVector{NPairs,Float64}(undef)
-        return new{NSeg,NModes,NIons,typeof(ωs),typeof(weights),
-                   typeof(pair_buffs),typeof(obj_args_buff)}(ωs, weights, pair_buffs,
+        return new{NSeg,NModes,NIons,typeof(ωs),typeof(_weights),
+                   typeof(pair_buffs),typeof(obj_args_buff)}(ωs, _weights, pair_buffs,
                                                              obj_args_buff,
                                                              obj_grad_buff)
     end
-    function Kernel{NSeg}(ωs, bij, ηs) where {NSeg}
+    function Kernel{NSeg}(ωs, bij, ηs; kws...) where {NSeg}
         NModes, NIons = size(bij)
         @assert length(ωs) == NModes
         @assert length(ηs) == NModes
-        return Kernel{NSeg,NModes,NIons}(ωs, bij, ηs)
+        return Kernel{NSeg,NModes,NIons}(ωs, bij, ηs; kws...)
     end
 end
 
