@@ -310,3 +310,57 @@ end
         @test tgt2.targets ≈ obj_args
     end
 end
+
+@testset "FarDetune CoupleKernel" begin
+    NSeg = 10
+    NModes = 6
+    NIons = 4
+    NPairs = NIons * (NIons - 1) ÷ 2
+    tgt = FD.AreaTargets{NIons}()
+
+    obj_args = Vector{Float64}(undef, NPairs)
+    obj_grad1 = Vector{Float64}(undef, NSeg * 2 + NIons * (NSeg + 1))
+    obj_grad2 = Vector{Float64}(undef, NSeg + NIons * (NSeg + 1))
+    arg_obj_res = 0.0
+    function sum_obj(x, grad)
+        obj_args .= x
+        if !isempty(grad)
+            grad .= x
+        end
+        return sum(x.^2 ./ 2)
+    end
+
+    for _ in 1:50
+        ωs = rand(NModes) .- 0.8
+        bij = rand(NModes, NIons) .- 0.5
+        ηs = rand(NModes) .+ 0.01
+        tgt.targets .= rand.()
+        tgt.weights .= rand.()
+
+        τs = rand(NSeg) .+ 0.2
+        all_Ωs = ntuple(_->rand(NSeg + 1) .+ 0.1, NIons)
+        δ = rand() + 0.5
+        xs_couple = [τs; all_Ωs...]
+        xs = [τs; all_Ωs...; fill(δ, NSeg)]
+
+        couple = FD.native_couple(ωs, bij, ηs; δ=δ)
+        kern_couple = FD.CoupleKernel{NSeg}(couple)
+        @test kern_couple isa FD.CoupleKernel{NSeg,NIons}
+
+        kern = FD.Kernel{NSeg}(ωs, bij, ηs)
+        @test kern isa FD.Kernel{NSeg,NModes,NIons}
+
+        v1 = kern(sum_obj, xs, ())
+        obj_args1 = copy(obj_args)
+        v2 = kern_couple(sum_obj, xs_couple, ())
+        obj_args2 = copy(obj_args)
+
+        @test v1 ≈ v2
+        @test obj_args1 ≈ obj_args2
+
+        kern(sum_obj, xs, obj_grad1)
+        kern_couple(sum_obj, xs_couple, obj_grad2)
+
+        @test @view(obj_grad1[1:NSeg + NIons * (NSeg + 1)]) ≈ obj_grad2
+    end
+end

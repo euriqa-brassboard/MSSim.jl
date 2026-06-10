@@ -108,6 +108,62 @@ end
     return res
 end
 
+@inline function enclosed_area_couple(τ, Ω11, Ω12, Ω21, Ω22, grad,
+                                      weight=static(true);
+                                      keep_grad=(τ=static(false),
+                                                 Ω11=static(false),
+                                                 Ω12=static(false),
+                                                 Ω21=static(false),
+                                                 Ω22=static(false)))
+    A = muladd(2, Ω21, Ω22)
+    B = muladd(2, Ω22, Ω21)
+    grad_τ = (A * Ω11 + B * Ω12) / 6
+
+    res = τ * grad_τ * weight
+
+    @inbounds if !isempty(grad)
+        w2 = τ * weight / 6
+        @accum_grad(keep_grad.τ, grad[1], grad_τ, weight)
+        @accum_grad(keep_grad.Ω11, grad[2], A, w2)
+        @accum_grad(keep_grad.Ω12, grad[3], B, w2)
+        @accum_grad(keep_grad.Ω21, grad[4], muladd(2, Ω11, Ω12), w2)
+        @accum_grad(keep_grad.Ω22, grad[5], muladd(2, Ω12, Ω11), w2)
+    end
+    return res
+end
+
+@inline function enclosed_area_seq_couple(τs, Ω1s, Ω2s, weight, τs_g, Ω1s_g, Ω2s_g;
+                                          keep_grad=(τ=static(false),
+                                                     Ω1s=static(false), Ω2s=static(false)))
+    nsegs = length(τs)
+    keep_grad0 = (τ=keep_grad.τ, Ω11=keep_grad.Ω1s, Ω12=keep_grad.Ω1s,
+                  Ω21=keep_grad.Ω2s, Ω22=keep_grad.Ω2s)
+    keep_grad1 = (τ=keep_grad.τ, Ω11=static(true), Ω12=keep_grad.Ω1s,
+                  Ω21=static(true), Ω22=keep_grad.Ω2s)
+    @inbounds if isempty(τs_g)
+        res = enclosed_area_couple(τs[1], Ω1s[1], Ω1s[2], Ω2s[1], Ω2s[2],
+                                   (), weight)
+        for i in 2:nsegs
+            res += enclosed_area_couple(τs[i], Ω1s[i], Ω1s[i + 1], Ω2s[i], Ω2s[i + 1],
+                                        (), weight)
+        end
+    else
+        res = enclosed_area_couple(τs[1], Ω1s[1], Ω1s[2], Ω2s[1], Ω2s[2],
+                                   SlotArray(@view(τs_g[1]), @view(Ω1s_g[1]),
+                                             @view(Ω1s_g[2]), @view(Ω2s_g[1]),
+                                             @view(Ω2s_g[2])), weight;
+                                   keep_grad=keep_grad0)
+        for i in 2:nsegs
+            res += enclosed_area_couple(τs[i], Ω1s[i], Ω1s[i + 1], Ω2s[i], Ω2s[i + 1],
+                                        SlotArray(@view(τs_g[i]), @view(Ω1s_g[i]),
+                                                  @view(Ω1s_g[i + 1]), @view(Ω2s_g[i]),
+                                                  @view(Ω2s_g[i + 1])), weight;
+                                        keep_grad=keep_grad1)
+        end
+    end
+    return res
+end
+
 struct AreaTargets{NIons,Vec}
     targets::Vec
     weights::Vec
@@ -320,6 +376,144 @@ else
 end
 
 function AreaTargets(kern::Kernel{NSeg,NModes,NIons}, x) where {NSeg,NModes,NIons}
+    _evaluate_obj_args(kern, x, static(false))
+    tgt = AreaTargets{NIons}()
+    tgt.targets .= kern.obj_args_buff
+    return tgt
+end
+
+function native_couple(ωs; δ, weights)
+    NModes, NPairs = size(weights)
+    NIons = ceil(Int, sqrt(NPairs * 2))
+    @assert NPairs == NIons * (NIons - 1) ÷ 2
+    couple = zeros(NIons, NIons)
+    pair_idx = 0
+    for ion1 in 1:NIons
+        for ion2 in ion1 + 1:NIons
+            pair_idx += 1
+            c = enclosed_area_modes(1.0, 1.0, 1.0, 1.0, 1.0, δ, ωs,
+                                    @view(weights[:, pair_idx]), ())
+            couple[ion1, ion2] = c
+            couple[ion2, ion1] = c
+        end
+    end
+    return couple
+end
+
+native_couple(ωs, bij, ηs; δ) =
+    native_couple(ωs; δ=δ, weights=native_mode_weights(bij, ηs))
+
+mutable struct CoupleKernel{NSeg,NIons,Couples,PairBuff,ObjBuff}
+    const couples::Couples
+    const pair_buffs::PairBuff
+    const obj_args_buff::ObjBuff
+    const obj_grad_buff::ObjBuff
+    function CoupleKernel{NSeg,NIons}(m_couples) where {NSeg,NIons}
+        NPairs = NIons * (NIons - 1) ÷ 2
+
+        @assert size(m_couples) == (NIons, NIons)
+
+        couples = MVector{NPairs,Float64}(undef)
+        pair_idx = 0
+        @inbounds for ion1 in 1:NIons - 1
+            for ion2 in ion1 + 1:NIons
+                pair_idx += 1
+                couples[pair_idx] = m_couples[ion1, ion2]
+            end
+        end
+        _couples = SVector{NPairs,Float64}(couples)
+
+        pair_buffs = MMatrix{3 * NSeg + 2,NPairs,Float64}(undef)
+        obj_args_buff = MVector{NPairs,Float64}(undef)
+        obj_grad_buff = MVector{NPairs,Float64}(undef)
+        return new{NSeg,NIons,typeof(_couples),
+                   typeof(pair_buffs),typeof(obj_args_buff)}(_couples, pair_buffs,
+                                                             obj_args_buff,
+                                                             obj_grad_buff)
+    end
+    function CoupleKernel{NSeg}(couples) where {NSeg}
+        NIons, NIons2 = size(couples)
+        @assert NIons == NIons2
+        return CoupleKernel{NSeg,NIons}(couples)
+    end
+end
+
+@inline function _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, pair_buff,
+                              w, keep1, keep2, NSeg)
+    @inbounds begin
+        _copy!(grads_τs, @view(pair_buff[1:NSeg]), w, keep1)
+        _copy!(grads_Ω1s, @view(pair_buff[NSeg + 1:2 * NSeg + 1]), w, keep1)
+        _copy!(grads_Ω2s, @view(pair_buff[2 * NSeg + 2:3 * NSeg + 2]), w, keep2)
+    end
+end
+
+@inline function _evaluate_obj_args(kern::CoupleKernel{NSeg,NIons},
+                                    x, has_grad) where {NSeg,NIons}
+    pair_idx = 0
+    τs = @inbounds @view(x[1:NSeg])
+    @inbounds for ion1 in 1:NIons - 1
+        offset1 = NSeg + (ion1 - 1) * (NSeg + 1)
+        Ω1s = @view(x[offset1 + 1:offset1 + NSeg + 1])
+        for ion2 in ion1 + 1:NIons
+            pair_idx += 1
+            offset2 = NSeg + (ion2 - 1) * (NSeg + 1)
+            Ω2s = @view(x[offset2 + 1:offset2 + NSeg + 1])
+            weight = kern.couples[pair_idx]
+            pair_buff = @view(kern.pair_buffs[:, pair_idx])
+            if dynamic(has_grad)
+                kern.obj_args_buff[pair_idx] =
+                    enclosed_area_seq_couple(τs, Ω1s, Ω2s, weight,
+                                             @view(pair_buff[1:NSeg]),
+                                             @view(pair_buff[NSeg + 1:2 * NSeg + 1]),
+                                             @view(pair_buff[2 * NSeg + 2:3 * NSeg + 2]))
+            else
+                kern.obj_args_buff[pair_idx] =
+                    enclosed_area_seq_couple(τs, Ω1s, Ω2s, weight, (), (), ())
+            end
+        end
+    end
+end
+
+@inline function _evaluate(kern::CoupleKernel{NSeg,NIons}, @specialize(obj),
+                           x, grads_out, has_grad) where {NSeg,NIons}
+    _evaluate_obj_args(kern, x, has_grad)
+    if !dynamic(has_grad)
+        return obj(kern.obj_args_buff, ())
+    end
+    res = obj(kern.obj_args_buff, kern.obj_grad_buff)
+    pair_idx = 0
+    grads_τs = @inbounds @view(grads_out[1:NSeg])
+    @inbounds for ion1 in 1:NIons - 1
+        offset1 = NSeg + (ion1 - 1) * (NSeg + 1)
+        grads_Ω1s = @view(grads_out[offset1 + 1:offset1 + NSeg + 1])
+        for ion2 in ion1 + 1:NIons
+            pair_idx += 1
+            offset2 = NSeg + (ion2 - 1) * (NSeg + 1)
+            grads_Ω2s = @view(grads_out[offset2 + 1:offset2 + NSeg + 1])
+            pair_buff = @view(kern.pair_buffs[:, pair_idx])
+            grad_weight = kern.obj_grad_buff[pair_idx]
+            if ion1 > 1
+                _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, pair_buff,
+                             grad_weight, static(true), static(true), NSeg)
+            elseif pair_idx > 1
+                _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, pair_buff,
+                             grad_weight, static(true), static(false), NSeg)
+            else
+                _copy_grads!(grads_τs, grads_Ω1s, grads_Ω2s, pair_buff,
+                             grad_weight, static(false), static(false), NSeg)
+            end
+        end
+    end
+    return res
+end
+
+(kern::CoupleKernel)(@specialize(obj), x, grads_out) = if isempty(grads_out)
+    return _evaluate(kern, obj, x, (), static(false))
+else
+    return _evaluate(kern, obj, x, grads_out, static(true))
+end
+
+function AreaTargets(kern::CoupleKernel{NSeg,NIons}, x) where {NSeg,NIons}
     _evaluate_obj_args(kern, x, static(false))
     tgt = AreaTargets{NIons}()
     tgt.targets .= kern.obj_args_buff
