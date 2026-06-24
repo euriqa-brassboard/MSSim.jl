@@ -34,7 +34,7 @@ jobs:
             arch: aarch64
             nproc: 0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Disable multiprocess
         if: ${{ matrix.nproc == 0 }}
         run: echo "MSSIM_NPROC=0" >> $GITHUB_ENV
