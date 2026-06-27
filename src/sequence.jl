@@ -252,6 +252,12 @@ _each_mode_arg(args::RawParams, modes::Modes; δ=0.0) =
 
 adjust(args::RawParams; kws...) = RawParams(get(args; kws...))
 
+function RawParams(spec::ModSpec{NSeg}, x;
+                   buff=Vector{Float64}(undef, NSeg * 5)) where {NSeg}
+    transform_argument(spec, buff, x)
+    return RawParams(buff)
+end
+
 function get_trajectory(params::RawParams, npoints; kws...)
     args = get(params; kws...)
     nargs = length(args)
@@ -769,11 +775,7 @@ const _VecOrTup0 = Union{AbstractVector,Tuple{}}
                            :(m.objargs), :(m.objgrads))
 end
 
-function RawParams(m::Objective{pmask,ObjArg,NSeg}, x;
-                   buff=Vector{Float64}(undef, NSeg * 5)) where {pmask,ObjArg,NSeg}
-    transform_argument(m.param, buff, x)
-    return RawParams(buff)
-end
+RawParams(m::Objective, x; kws...) = RawParams(m.param, x; kws...)
 
 @inline _dummy_obj(x) = x[1]
 
